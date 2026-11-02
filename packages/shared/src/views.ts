@@ -28,11 +28,14 @@ export type ViewCoverage = {
 };
 
 /** 依照片手動指定的視角，列出每個標準視角「已有照片」或「缺少照片」；順序同標準清單 */
-export function viewCoverage(_photos: readonly { id: string; viewKey: string | null }[]): ViewCoverage[] {
-  throw new Error('尚未實作');
+export function viewCoverage(photos: readonly { id: string; viewKey: string | null }[]): ViewCoverage[] {
+  return STANDARD_VIEWS.map((view) => {
+    const photoIds = photos.filter((photo) => photo.viewKey === view.key).map((photo) => photo.id);
+    return { key: view.key, name: view.name, status: photoIds.length > 0 ? 'has_photo' : 'missing', photoIds };
+  });
 }
 
 /** 視角名稱；不在清單裡時回傳原本的 key */
-export function viewName(_key: string): string {
-  throw new Error('尚未實作');
+export function viewName(key: string): string {
+  return STANDARD_VIEWS.find((view) => view.key === key)?.name ?? key;
 }

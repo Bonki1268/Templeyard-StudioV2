@@ -14,7 +14,16 @@ declare global {
   }
 }
 
-/** 取得人臉偵測器；第一次呼叫時才載入 MediaPipe 模型 */
+let loading: Promise<FaceDetector> | null = null;
+
+/** 取得人臉偵測器；第一次呼叫時才載入 MediaPipe 模型（之後重複使用）。載入失敗時下次會重試 */
 export function getFaceDetector(): Promise<FaceDetector> {
-  throw new Error('尚未實作');
+  if (import.meta.env.DEV && window.__templeyardFaceDetector) return Promise.resolve(window.__templeyardFaceDetector);
+  loading ??= import('./mediapipeDetector')
+    .then((module) => module.createMediapipeDetector())
+    .catch((error: unknown) => {
+      loading = null;
+      throw error;
+    });
+  return loading;
 }

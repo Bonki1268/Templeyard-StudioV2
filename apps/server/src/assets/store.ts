@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import type { AssetKind } from '@templeyard/shared';
 
 // 檔案存在 data/assets/ 底下；資料庫只存相對路徑。
@@ -14,6 +17,50 @@ export type AssetStore = {
   exists(relativePath: string): boolean;
 };
 
-export function createAssetStore(_rootDir: string): AssetStore {
-  throw new Error('尚未實作');
+const FOLDERS: Record<AssetKind, string> = {
+  original_photo: 'originals',
+  deid_photo: 'deid',
+  view: 'views',
+  character_sheet: 'characters',
+  frame: 'frames',
+  clip: 'clips',
+  final: 'finals',
+  subtitle: 'subtitles',
+  audio: 'audio',
+};
+
+const EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
+
+export function createAssetStore(rootDir: string): AssetStore {
+  const root = path.resolve(rootDir);
+
+  // 相對路徑一律限制在資產資料夾內
+  function resolveInside(relativePath: string): string {
+    const absolute = path.resolve(root, relativePath);
+    if (absolute !== root && !absolute.startsWith(root + path.sep)) {
+      throw new Error('檔案路徑不在資產資料夾內');
+    }
+    return absolute;
+  }
+
+  return {
+    save({ id, kind, mime, bytes }) {
+      const extension = EXTENSIONS[mime] ?? 'bin';
+      const relativePath = `${FOLDERS[kind]}/${id}.${extension}`;
+      const absolute = resolveInside(relativePath);
+      mkdirSync(path.dirname(absolute), { recursive: true });
+      writeFileSync(absolute, bytes, { flag: 'wx' });
+      return { path: relativePath, sha256: createHash('sha256').update(bytes).digest('hex') };
+    },
+    read(relativePath) {
+      return readFileSync(resolveInside(relativePath));
+    },
+    exists(relativePath) {
+      return existsSync(resolveInside(relativePath));
+    },
+  };
 }

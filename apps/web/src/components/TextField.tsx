@@ -6,6 +6,8 @@ export type TextFieldProps = {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  /** 離開欄位時，例如自動儲存 */
+  onBlur?: () => void;
   /** 多行輸入 */
   multiline?: boolean;
   /** 錯誤訊息：顯示在欄位下方 */
@@ -16,7 +18,17 @@ export type TextFieldProps = {
   placeholder?: string;
 };
 
-export function TextField({ label, value, onChange, multiline, error, labelAccessory, maxLength, placeholder }: TextFieldProps) {
+export function TextField({
+  label,
+  value,
+  onChange,
+  onBlur,
+  multiline,
+  error,
+  labelAccessory,
+  maxLength,
+  placeholder,
+}: TextFieldProps) {
   const id = useId();
   const errorId = `${id}-error`;
   const common = {
@@ -25,6 +37,7 @@ export function TextField({ label, value, onChange, multiline, error, labelAcces
     value,
     maxLength,
     placeholder,
+    onBlur,
     'aria-invalid': error ? true : undefined,
     'aria-describedby': error ? errorId : undefined,
   };

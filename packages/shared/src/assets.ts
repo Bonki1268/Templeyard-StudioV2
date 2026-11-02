@@ -31,8 +31,8 @@ export type Asset = z.infer<typeof assetSchema>;
 export const assetResponseSchema = z.object({ asset: assetSchema });
 
 /** 依資產種類決定能不能送往雲端：原圖（original_photo）永遠不行 */
-export function cloudOkForKind(_kind: AssetKind): boolean {
-  throw new Error('尚未實作');
+export function cloudOkForKind(kind: AssetKind): boolean {
+  return kind !== 'original_photo';
 }
 
 declare const cloudOkBrand: unique symbol;
@@ -52,6 +52,8 @@ export class NotCloudOkError extends Error {
 }
 
 /** 執行期檢查：原圖或 cloudOk 為 false 的資產一律丟出 NotCloudOkError */
-export function requireCloudOk(_asset: Asset): CloudOkAsset {
-  throw new Error('尚未實作');
+export function requireCloudOk(asset: Asset): CloudOkAsset {
+  // 種類優先：即使 cloudOk 被改成 true，原圖仍然擋下
+  if (!cloudOkForKind(asset.kind) || asset.cloudOk !== true) throw new NotCloudOkError(asset.id);
+  return asset as CloudOkAsset;
 }

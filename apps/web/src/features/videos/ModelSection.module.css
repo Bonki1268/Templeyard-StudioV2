@@ -1,0 +1,136 @@
+.section {
+  display: grid;
+  gap: var(--space-5);
+  margin-bottom: var(--space-8);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.number {
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.lockNote {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-ai-text);
+}
+
+.group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* 選取：2px 深色框＋淺底＋粗體 */
+.option[aria-pressed='true'] {
+  border: 2px solid var(--color-text);
+  background: var(--color-surface-muted);
+}
+
+.option[aria-pressed='true'] .optionName {
+  font-weight: 700;
+}
+
+.option:disabled {
+  cursor: not-allowed;
+}
+
+.optionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.optionName {
+  font-weight: 500;
+}
+
+.optionDescription {
+  display: grid;
+  gap: var(--space-1);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.price {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-surface);
+  color: var(--color-text);
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-error-surface);
+  color: var(--color-error);
+}

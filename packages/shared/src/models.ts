@@ -64,6 +64,6 @@ export function videoModelLabel(key: string): string {
 }
 
 /** 參考單價的顯示文字；還沒實測時以方括號占位（04 文案規則） */
-export function referencePriceText(_price: number | null): string {
-  throw new Error('尚未實作');
+export function referencePriceText(price: number | null): string {
+  return price === null ? '參考單價 [待實測]' : `參考單價 約 ${price} 點`;
 }

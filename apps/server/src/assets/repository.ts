@@ -1,5 +1,7 @@
-import type { Asset, AssetKind, CloudOkAsset } from '@templeyard/shared';
+import { NotCloudOkError, cloudOkForKind, requireCloudOk, type Asset, type AssetKind, type CloudOkAsset } from '@templeyard/shared';
+import { eq } from 'drizzle-orm';
 import type { AppDatabase } from '../db/client.js';
+import { assets, type AssetRow } from '../db/schema.js';
 
 export type NewAsset = {
   id: string;
@@ -19,17 +21,48 @@ export class AssetNotFoundError extends Error {
   }
 }
 
+function toAsset(row: AssetRow): Asset {
+  return {
+    id: row.id,
+    kind: row.kind,
+    mime: row.mime,
+    width: row.width,
+    height: row.height,
+    durationSec: row.durationSec,
+    sha256: row.sha256,
+    cloudOk: row.cloudOk,
+  };
+}
+
 /** 寫入資產；cloud_ok 一律由種類決定，呼叫端不能指定 */
-export function insertAsset(_db: AppDatabase, _input: NewAsset): Asset {
-  throw new Error('尚未實作');
+export function insertAsset(db: AppDatabase, input: NewAsset): Asset {
+  const row = db
+    .insert(assets)
+    .values({
+      id: input.id,
+      kind: input.kind,
+      path: input.path,
+      mime: input.mime,
+      sha256: input.sha256,
+      width: input.width ?? null,
+      height: input.height ?? null,
+      cloudOk: cloudOkForKind(input.kind),
+    })
+    .returning()
+    .get();
+  return toAsset(row);
 }
 
 /** 找不到時回傳 null */
-export function findAsset(_db: AppDatabase, _id: string): (Asset & { path: string }) | null {
-  throw new Error('尚未實作');
+export function findAsset(db: AppDatabase, id: string): (Asset & { path: string }) | null {
+  const row = db.select().from(assets).where(eq(assets.id, id)).get();
+  return row ? { ...toAsset(row), path: row.path } : null;
 }
 
 /** 取得可以送往雲端的資產：找不到丟 AssetNotFoundError，原圖丟 NotCloudOkError */
-export function getCloudOkAsset(_db: AppDatabase, _id: string): CloudOkAsset {
-  throw new Error('尚未實作');
+export function getCloudOkAsset(db: AppDatabase, id: string): CloudOkAsset {
+  const row = db.select().from(assets).where(eq(assets.id, id)).get();
+  if (!row) throw new AssetNotFoundError(id);
+  if (!row.cloudOk) throw new NotCloudOkError(id);
+  return requireCloudOk(toAsset(row));
 }

@@ -1,0 +1,141 @@
+.section {
+  margin-bottom: var(--space-8);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-5);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.number {
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.search {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.results {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.result:hover {
+  background: var(--color-surface-muted);
+}
+
+.resultName {
+  font-weight: 700;
+}
+
+.resultMeta {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.cancel {
+  justify-self: start;
+}
+
+.card {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 2px solid var(--color-text);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.cardHead {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+.cardName {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.fact dt {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.fact dd {
+  margin: 0;
+}
+
+.source {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.notes {
+  margin-top: var(--space-5);
+}
+
+.notesAccessory {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.saved {
+  min-height: 1.6em;
+  margin: var(--space-1) 0 0;
+  font-size: 13px;
+  color: var(--color-success);
+}
+
+.muted {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-error-surface);
+  color: var(--color-error);
+}

@@ -21,7 +21,7 @@ try {
   console.error('寺廟資料匯入失敗，請執行 pnpm db:import 重試', error);
 }
 
-const app = buildApp({ db });
+const app = buildApp({ db, assetsDir: path.join(dataDir, 'assets') });
 
 app.listen({ port, host: '127.0.0.1' }).then(
   () => {

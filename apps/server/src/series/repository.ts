@@ -46,3 +46,9 @@ export function updateSeries(db: AppDatabase, id: string, input: UpdateSeriesInp
     .get();
   return row ? toSeries(row) : null;
 }
+
+/** 找不到時回傳 null */
+export function findSeries(db: AppDatabase, id: string): Series | null {
+  const row = db.select().from(series).where(eq(series.id, id)).get();
+  return row ? toSeries(row) : null;
+}

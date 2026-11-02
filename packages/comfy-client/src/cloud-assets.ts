@@ -1,4 +1,4 @@
-import type { CloudOkAsset } from '@templeyard/shared';
+import { requireCloudOk, type CloudOkAsset } from '@templeyard/shared';
 
 // 把本機檔案交給 Comfy Cloud。
 // 07 實測紀錄：「圖片怎麼交給 MCP」還沒驗證（待測 tools/list），所以真實的傳送格式不在這裡猜，
@@ -20,6 +20,10 @@ export type CloudAssetSenderDeps = {
 };
 
 /** 建立送檔函式：原圖在型別上傳不進來；即使被強制轉型，執行期也會在讀檔之前擋下 */
-export function createCloudAssetSender(_deps: CloudAssetSenderDeps): (asset: CloudOkAsset) => Promise<CloudAssetRef> {
-  throw new Error('尚未實作');
+export function createCloudAssetSender(deps: CloudAssetSenderDeps): (asset: CloudOkAsset) => Promise<CloudAssetRef> {
+  return async (asset) => {
+    const checked = requireCloudOk(asset);
+    const bytes = await deps.readBytes(checked);
+    return deps.transport.send({ asset: checked, bytes });
+  };
 }

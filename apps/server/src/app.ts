@@ -1,9 +1,15 @@
 import { randomUUID } from 'node:crypto';
+import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { HealthResponse } from '@templeyard/shared';
+import { createAssetStore } from './assets/store.js';
 import type { AppDatabase } from './db/client.js';
+import { resolveDataDir } from './paths.js';
+import { registerAssetRoutes } from './routes/assets.js';
+import { registerPhotoRoutes } from './routes/photos.js';
 import { registerSeriesRoutes } from './routes/series.js';
 import { registerTempleRoutes } from './routes/temples.js';
+import { registerVideoRoutes } from './routes/videos.js';
 import type { Clock } from './series/repository.js';
 
 export type AppDeps = {
@@ -21,8 +27,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   const app = Fastify({ logger: false });
 
   app.get('/api/health', async (): Promise<HealthResponse> => ({ status: 'ok' }));
+  const clock = deps.clock ?? systemClock;
+  const store = createAssetStore(deps.assetsDir ?? path.join(resolveDataDir(), 'assets'));
+
   registerTempleRoutes(app, deps.db);
-  registerSeriesRoutes(app, deps.db, deps.clock ?? systemClock);
+  registerSeriesRoutes(app, deps.db, clock);
+  registerVideoRoutes(app, deps.db, clock);
+  registerPhotoRoutes(app, deps.db, clock, store);
+  registerAssetRoutes(app, deps.db, store);
 
   return app;
 }

@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.1.1",
     "@tanstack/react-query": "5.105.1",
     "@templeyard/shared": "workspace:^",
     "lucide-react": "1.66.0",

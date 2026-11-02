@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Route, Routes } from 'react-router';
+import { CreateVideoPage } from './pages/CreateVideoPage';
 import { SeriesHomePage } from './pages/SeriesHomePage';
 
 // 路由依 docs/03-App-Flow.md「路由表」
@@ -12,6 +13,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <Routes>
         <Route path="/" element={<SeriesHomePage />} />
+        <Route path="/series/:sid/videos/new" element={<CreateVideoPage />} />
       </Routes>
     </QueryClientProvider>
   );
