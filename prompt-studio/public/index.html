@@ -31,6 +31,9 @@
   .editor-head h2 { margin: 0; font-size: 18px; flex: 1; min-width: 160px; }
   .meta { color: var(--quiet); font-size: 12px; }
   .status { font-size: 12px; min-height: 18px; }
+  .locks h4 { margin: 12px 0 4px; font-size: 13px; }
+  .locks ul { margin: 0; padding-left: 18px; font-size: 13px; }
+  .rule { margin-bottom: 10px; }
   .status.dirty { color: var(--warn); } .status.ok { color: var(--ok); } .status.bad { color: var(--bad); }
   .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
   .grid .wide { grid-column: span 2; } .grid .full { grid-column: 1 / -1; }
@@ -88,6 +91,7 @@
     <div class="vars" id="vars"></div>
     <button class="btn" id="renderBtn" type="button">組裝預覽</button>
     <div class="status" id="renderStatus"></div>
+    <div class="locks" id="locks"></div>
     <div class="tabs" role="tablist">
       <button type="button" class="active" data-tab="request">送給 AI 的內容</button>
       <button type="button" data-tab="compiled">JavaScript</button>
@@ -102,6 +106,9 @@ const KIND_NAMES = { text: '文字', image: '圖片', video: '影片' };
 const PH = /\{\{\s*([a-zA-Z_][\w.]*)\s*\}\}/g;
 
 let list = [];
+let workflowModels = {}; // 模型代號 -> { label, kind, status }（workflows/models.json）
+const SLOT_NAMES = ['prompt', 'aspectRatio', 'durationSec', 'seed'];
+const SLOT_HINTS = { prompt: '最終指令', aspectRatio: '畫面比例', durationSec: '秒數', seed: '亂數種子（留白＝每次隨機）' };
 let saved = null;      // 目前檔案內容（伺服器版本）
 let draft = null;      // 編輯中的內容
 let lastRender = null;
@@ -127,8 +134,11 @@ function setStatus(text, kind = '') {
 
 async function loadList(selectId) {
   list = (await api('GET', '/api/prompts')).prompts;
-  renderList(selectId || draft?.id);
-  if (!draft && list.length) await open(selectId || list[0].id);
+  // 網址的 #id 記住目前選的 prompt，重新整理後回到同一個
+  const fromHash = decodeURIComponent(location.hash.slice(1));
+  const initial = selectId || draft?.id || (list.some(p => p.id === fromHash) ? fromHash : list[0]?.id);
+  renderList(initial);
+  if (!draft && initial) await open(initial);
 }
 
 function renderList(activeId) {
@@ -152,6 +162,8 @@ async function open(id) {
   saved = prompt;
   draft = structuredClone(prompt);
   lastRender = null;
+  history.replaceState(null, '', '#' + encodeURIComponent(id));
+  renderLocks(null);
   renderList(id);
   renderEditor();
   renderVars();
@@ -216,10 +228,44 @@ function renderEditor() {
         </div>
       </div>
     </section>
+    ${renderRuleFields(p)}
+    ${renderBindingFields(p)}
     <ul class="errors" id="errors"></ul>`;
   renderVarRows();
   renderPlaceholders();
   updateDirty();
+}
+
+// 這個節點會用到的模型：指定了模型就只有那一個，否則是同類型的所有模型；另外列出檔案裡已有寫法的模型
+function ruleModels(p) {
+  const keys = Object.entries(workflowModels)
+    .filter(([key, m]) => (p.target.model ? key === p.target.model : m.kind === p.target.kind))
+    .map(([key]) => key);
+  for (const key of Object.keys(p.modelRules || {})) if (!keys.includes(key)) keys.push(key);
+  return keys;
+}
+
+function renderRuleFields(p) {
+  if (p.target.kind === 'text') return '';
+  const fields = ruleModels(p).map(key => {
+    const label = workflowModels[key]?.label || key;
+    return `<div class="rule"><label for="f-rule-${esc(key)}">模型寫法：${esc(label)}</label>
+      <textarea id="f-rule-${esc(key)}" data-rule="${esc(key)}" rows="4">${esc(p.modelRules?.[key] || '')}</textarea></div>`;
+  });
+  return `<section class="block">
+      <h3>模型寫法 <span class="hint">生成時套用這支影片所選模型的寫法，附加在 System 指令之後；留白＝不加</span></h3>
+      ${fields.join('') || '<div class="hint">沒有可用的模型</div>'}
+    </section>`;
+}
+
+function renderBindingFields(p) {
+  if (p.target.kind === 'text') return '';
+  const rows = SLOT_NAMES.map(slot => `<div><label for="f-bind-${slot}">呼叫綁定 ${slot}</label>
+      <input type="text" id="f-bind-${slot}" data-binding="${slot}" value="${esc(p.bindings?.[slot] || '')}" placeholder="${esc(SLOT_HINTS[slot])}" style="font-family:var(--mono)"></div>`);
+  return `<section class="block">
+      <h3>呼叫綁定 <span class="hint">哪個資料寫進 MCP 呼叫的哪個位置：output.prompt（第 1 段寫好的最終指令）、target.aspectRatio，或上面宣告的變數；留白＝不綁定</span></h3>
+      <div class="grid">${rows.join('')}</div>
+    </section>`;
 }
 
 function setPath(obj, path, value) {
@@ -239,6 +285,13 @@ $('#editor').addEventListener('input', e => {
     const v = draft.variables[Number(el.dataset.var)];
     if (el.dataset.field === 'required') v.required = el.checked; else v[el.dataset.field] = el.value;
     if (el.dataset.field === 'name') { renderPlaceholders(); renderVars(); }
+  } else if (el.dataset.rule !== undefined) {
+    draft.modelRules = draft.modelRules || {};
+    if (el.value.trim()) draft.modelRules[el.dataset.rule] = el.value; else delete draft.modelRules[el.dataset.rule];
+  } else if (el.dataset.binding !== undefined) {
+    draft.bindings = draft.bindings || {};
+    if (el.value.trim()) draft.bindings[el.dataset.binding] = el.value.trim(); else delete draft.bindings[el.dataset.binding];
+    if (!Object.keys(draft.bindings).length) delete draft.bindings;
   } else if (el.id === 'f-outformat') {
     const f = el.value;
     if (f === 'none') delete draft.output;
@@ -368,6 +421,7 @@ $('#renderBtn').addEventListener('click', async () => {
     const data = await api('POST', `/api/prompts/${draft.id}/render`, { prompt: draft, variables: nest(values), allowMissing: true });
     lastRender = data;
     renderVars(data.missing);
+    renderLocks(data.locks || []);
     st.className = 'status ' + (data.missing.length ? 'bad' : 'ok');
     st.textContent = data.missing.length ? `缺少必要變數：${data.missing.join('、')}（正式呼叫時會被拒絕）` : '組裝完成';
     showOutput();
@@ -383,12 +437,23 @@ document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click
   showOutput();
 }));
 
+// 組裝預覽：列出會逐字帶進最終指令的連續性鎖
+function renderLocks(locks) {
+  const el = $('#locks');
+  if (!locks) { el.innerHTML = ''; return; }
+  el.innerHTML = `<h4 id="locks-title">連續性鎖</h4>` + (locks.length
+    ? `<ul aria-labelledby="locks-title">${locks.map(l => `<li><code>${esc(l)}</code></li>`).join('')}</ul>`
+      + '<div class="hint">撰寫最終指令時要逐字帶入；缺少時會請 Claude 重寫一次，仍缺少就回報錯誤。</div>'
+    : '<div class="hint">這次的資料沒有連續性鎖。</div>');
+}
+
 function showOutput() {
   if (!lastRender) return;
   $('#output').textContent = tab === 'request' ? JSON.stringify(lastRender.request, null, 2) : lastRender.compiled;
 }
 
-loadList().catch(err => { $('#editor').innerHTML = `<div class="empty">無法連到伺服器：${esc(err.message)}</div>`; });
+api('GET', '/api/workflows').then(data => { workflowModels = data.models || {}; }).catch(() => { workflowModels = {}; })
+  .then(() => loadList()).catch(err => { $('#editor').innerHTML = `<div class="empty">無法連到伺服器：${esc(err.message)}</div>`; });
 </script>
 </body>
 </html>

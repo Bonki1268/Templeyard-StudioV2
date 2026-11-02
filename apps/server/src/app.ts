@@ -1,11 +1,14 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
-import type { HealthResponse } from '@templeyard/shared';
+import { loadWorkflowConfig, workflowsFile } from '@templeyard/prompts';
+import type { HealthResponse, WorkflowConfig } from '@templeyard/shared';
 import { createAssetStore } from './assets/store.js';
+import { createConsentStore, type ConsentStore } from './costs/consents.js';
 import type { AppDatabase } from './db/client.js';
 import { resolveDataDir } from './paths.js';
 import { registerAssetRoutes } from './routes/assets.js';
+import { registerCostRoutes } from './routes/costs.js';
 import { registerPhotoRoutes } from './routes/photos.js';
 import { registerSeriesRoutes } from './routes/series.js';
 import { registerTempleRoutes } from './routes/temples.js';
@@ -18,6 +21,9 @@ export type AppDeps = {
   clock?: Clock;
   /** 檔案資料夾（data/assets/）；測試可指定暫存資料夾 */
   assetsDir?: string;
+  /** workflows/models.json；預設讀 repo 裡的設定檔 */
+  workflows?: WorkflowConfig;
+  consents?: ConsentStore;
 };
 
 const systemClock: Clock = { now: () => new Date(), newId: () => randomUUID() };
@@ -35,6 +41,11 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   registerVideoRoutes(app, deps.db, clock);
   registerPhotoRoutes(app, deps.db, clock, store);
   registerAssetRoutes(app, deps.db, store);
+
+  const workflows = deps.workflows ?? loadWorkflowConfig(workflowsFile);
+  // 同意憑證要猜不到：32 bytes 亂數
+  const consents = deps.consents ?? createConsentStore({ now: () => new Date(), newToken: () => randomBytes(32).toString('hex') });
+  registerCostRoutes(app, deps.db, workflows, consents);
 
   return app;
 }

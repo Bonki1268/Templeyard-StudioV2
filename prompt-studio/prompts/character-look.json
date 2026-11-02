@@ -96,6 +96,10 @@
   "modelRules": {
     "nano-banana-pro": "Nano Banana Pro 寫法：最終指令用英文自然語句寫成一段工作說明（連續性鎖本來就是英文，同語言最穩），第一句寫這張圖的用途與畫面比例 16:9；不用權重語法、標籤或「masterpiece、8K」這類套話；用「Image 1 / Image 2」依送入順序指稱參考圖，每張都說明它只負責什麼（身份、造型、地理、構圖、起始幀）；畫面內的中文（例如照片中清楚可讀的匾額）逐字保留原文。"
   },
+  "bindings": {
+    "prompt": "output.prompt",
+    "aspectRatio": "target.aspectRatio"
+  },
   "basis": [
     "docs/drama-skills/03_第3至5步_圖片提示詞/lookdev-frame.md",
     "docs/drama-skills/03_第3至5步_圖片提示詞/look-development.md",

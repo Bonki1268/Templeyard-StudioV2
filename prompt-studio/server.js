@@ -5,6 +5,7 @@ const http = require('node:http');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { validate, render, compileToJs } = require('./lib/prompt');
+const { loadWorkflows, validateBindings, listLocks } = require('./lib/bindings');
 
 const ROOT = __dirname;
 const PROMPT_DIR = process.env.PROMPT_DIR || path.join(ROOT, 'prompts');
@@ -79,6 +80,8 @@ async function savePrompt(id, incoming, expectedVersion) {
     }
     const next = { ...incoming, id, version: (current?.version || 0) + 1, updatedAt: new Date().toISOString() };
     const errors = validate(next);
+    // 呼叫綁定對不上工作流程時也拒絕儲存（規格書「生成指令管理」的儲存規則）
+    if (!errors.length) errors.push(...validateBindings(next, loadWorkflows()));
     if (errors.length) return { errors };
     if (current) {
       const dir = path.join(HISTORY_DIR, id);
@@ -123,6 +126,13 @@ async function handle(req, res) {
   const parts = url.pathname.split('/').filter(Boolean);
 
   if (parts[0] !== 'api') return serveStatic(res, url.pathname);
+
+  // GET /api/workflows：各模型的名稱與類型，給管理頁顯示模型寫法用
+  if (parts.length === 2 && parts[1] === 'workflows' && req.method === 'GET') {
+    const workflows = loadWorkflows();
+    const models = Object.fromEntries(Object.entries(workflows.models).map(([key, m]) => [key, { label: m.label, kind: m.kind, status: m.status }]));
+    return send(res, 200, { models });
+  }
 
   // GET /api/prompts
   if (parts.length === 2 && parts[1] === 'prompts' && req.method === 'GET') {
@@ -177,7 +187,7 @@ async function handle(req, res) {
     if (missing.length && !body.allowMissing) {
       return fail(res, 422, 'missing_variables', `缺少必要變數：${missing.join('、')}`, { missing, request });
     }
-    return send(res, 200, { request, missing, compiled: compileToJs(p) });
+    return send(res, 200, { request, missing, locks: listLocks(p, body.variables || {}), compiled: compileToJs(p) });
   }
 
   return fail(res, 405, 'method_not_allowed', '不支援的操作');

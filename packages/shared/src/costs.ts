@@ -45,6 +45,6 @@ export const COST_LIMIT_ERROR = '費用上限要是 0 以上的整數點數';
 export const costLimitSchema = credits(COST_LIMIT_ERROR).nullable();
 
 /** 「124 點」；null 顯示「[待實測]」（04 文案規則：未決定的數字用方括號占位） */
-export function creditsText(_value: number | null): string {
-  throw new Error('尚未實作');
+export function creditsText(value: number | null): string {
+  return value === null ? '[待實測]' : `${value.toLocaleString('en-US')} 點`;
 }

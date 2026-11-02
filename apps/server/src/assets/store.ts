@@ -33,6 +33,11 @@ const EXTENSIONS: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+  'text/x-ssa': 'ass',
 };
 
 export function createAssetStore(rootDir: string): AssetStore {

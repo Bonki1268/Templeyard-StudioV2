@@ -90,6 +90,10 @@
   "modelRules": {
     "nano-banana-2-lite": "Nano Banana 2 Lite 寫法：最終指令用英文，簡短幾句即可，只求構圖、站位與景別清楚；不寫材質與光影細節；第一句寫 storyboard sketch, 16:9。"
   },
+  "bindings": {
+    "prompt": "output.prompt",
+    "aspectRatio": "target.aspectRatio"
+  },
   "basis": [
     "docs/drama-skills/01_第3步_腳本與分鏡/keyframe-craft.md"
   ]

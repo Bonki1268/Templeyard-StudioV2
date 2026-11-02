@@ -9,6 +9,41 @@ export type ConsentStore = {
   consume(token: string | null | undefined, videoId: string, items: readonly CostItem[]): boolean;
 };
 
-export function createConsentStore(_options: { now: () => Date; newToken: () => string; ttlMs?: number }): ConsentStore {
-  throw new Error('尚未實作');
+const DEFAULT_TTL_MS = 10 * 60 * 1000;
+
+/** 項目的比對鍵：順序不同視為不同（使用者看到的就是這個順序） */
+function itemsKey(videoId: string, items: readonly CostItem[]): string {
+  return JSON.stringify([videoId, items.map((item) => [item.model, item.units])]);
+}
+
+export function createConsentStore(options: { now: () => Date; newToken: () => string; ttlMs?: number }): ConsentStore {
+  const ttlMs = options.ttlMs ?? DEFAULT_TTL_MS;
+  const consents = new Map<string, { key: string; expiresAt: number }>();
+
+  function sweep(now: number) {
+    for (const [token, consent] of consents) if (consent.expiresAt < now) consents.delete(token);
+  }
+
+  return {
+    issue(videoId, items) {
+      const now = options.now().getTime();
+      sweep(now);
+      const token = options.newToken();
+      const expiresAt = now + ttlMs;
+      consents.set(token, { key: itemsKey(videoId, items), expiresAt });
+      return { token, expiresAt: new Date(expiresAt).toISOString() };
+    },
+    consume(token, videoId, items) {
+      if (!token) return false;
+      const consent = consents.get(token);
+      if (!consent) return false;
+      if (consent.expiresAt < options.now().getTime()) {
+        consents.delete(token);
+        return false;
+      }
+      if (consent.key !== itemsKey(videoId, items)) return false;
+      consents.delete(token);
+      return true;
+    },
+  };
 }
