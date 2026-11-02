@@ -69,15 +69,26 @@ When('我打開這個系列的建立影片頁', async ({ page, state }) => {
   await page.goto(`/series/${requireSeriesId(state)}/videos/new`);
 });
 
+When('我打開一個不存在的系列的建立影片頁', async ({ page }) => {
+  await page.goto('/series/no-such-series/videos/new');
+});
+
+When(/^我按下連結「(.+)」$/, async ({ page }, name: string) => {
+  await page.getByRole('link', { name, exact: true }).click();
+});
+
 Then(/^步驟列依序是「(.+)」$/, async ({ page }, steps: string) => {
   const names = steps.split('、');
   await expect(stepList(page).getByRole('listitem')).toHaveText(names.map((name) => new RegExp(escapeRegExp(name))));
 });
 
 Then(/^目前步驟是「(.+)」$/, async ({ page }, step: string) => {
-  const current = stepList(page).locator('[aria-current="step"]');
-  await expect(current).toHaveCount(1);
-  await expect(current).toContainText(step);
+  // 目前步驟以 aria-current="step" 標示：先用角色找到步驟，再檢查它的 ARIA 狀態
+  const items = stepList(page).getByRole('listitem');
+  await expect(items.filter({ hasText: step })).toHaveAttribute('aria-current', 'step');
+  await expect
+    .poll(() => items.evaluateAll((els) => els.filter((el) => el.getAttribute('aria-current') === 'step').length))
+    .toBe(1);
 });
 
 When(/^我在搜尋結果選擇「(.+)」$/, async ({ page }, temple: string) => {
@@ -85,10 +96,13 @@ When(/^我在搜尋結果選擇「(.+)」$/, async ({ page }, temple: string) =>
 });
 
 Then(/^寺廟資料卡的「(.+)」是「(.+)」$/, async ({ page }, label: string, value: string) => {
-  // Playwright 依 ARIA 規則不讓 definition（dd）有名稱，所以先找 dt，再取緊接在後面的 dd
-  const term = templeCard(page).getByRole('term').filter({ has: page.getByText(label, { exact: true }) });
-  await expect(term).toHaveCount(1);
-  await expect(term.locator('xpath=following-sibling::dd[1]')).toHaveText(value);
+  // Playwright 依 ARIA 規則不讓 definition（dd）有名稱，所以依順序配對 term 與 definition
+  const terms = templeCard(page).getByRole('term');
+  await expect(terms.filter({ hasText: new RegExp(`^${escapeRegExp(label)}$`) })).toHaveCount(1);
+  const labels = await terms.allTextContents();
+  const index = labels.findIndex((text) => text.trim() === label);
+  expect(index).toBeGreaterThanOrEqual(0);
+  await expect(templeCard(page).getByRole('definition').nth(index)).toHaveText(value);
 });
 
 Then('網址帶有這支影片的編號', async ({ page }) => {

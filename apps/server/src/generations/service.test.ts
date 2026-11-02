@@ -180,10 +180,16 @@ describe('付費生成前的同意', () => {
 
     expect(first.status).toBe('accepted');
     expect(second.status).toBe('consent_required');
+    // 等送出的任務結束，背景輪詢才不會在下一個測試繼續推進假時間
+    if (first.status === 'accepted') await generation.whenSettled(first.generationId);
   });
 
   it('門檻內不需要憑證', async () => {
-    expect((await service().submit(request('廟埕'))).status).toBe('accepted');
+    const generation = service();
+    const outcome = await generation.submit(request('廟埕'));
+
+    expect(outcome.status).toBe('accepted');
+    if (outcome.status === 'accepted') await generation.whenSettled(outcome.generationId);
   });
 });
 

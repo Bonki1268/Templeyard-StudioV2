@@ -259,6 +259,15 @@ Then(/^遮蔽框清單的「(.+)」標示「(.+)」$/, async ({ page }, label: s
   await expect(boxItem(page, label).getByText(tag, { exact: true })).toBeVisible();
 });
 
+Then(/^遮蔽框清單的「(.+)」沒有標示「(.+)」$/, async ({ page }, label: string, tag: string) => {
+  await expect(boxItem(page, label)).toHaveCount(1);
+  await expect(boxItem(page, label).getByText(tag, { exact: true })).toHaveCount(0);
+});
+
+Then('遮蔽編輯對話框已關閉', async ({ page }) => {
+  await expect(maskDialog(page)).toHaveCount(0);
+});
+
 Then(/^遮蔽框清單(有|沒有)「(.+)」$/, async ({ page }, has: string, label: string) => {
   await expect(boxItem(page, label)).toHaveCount(has === '有' ? 1 : 0);
 });
@@ -287,7 +296,8 @@ When(/^我把「(.+)」的「拍到的視角」選成「(.+)」$/, async ({ page
 });
 
 Then(/^「(.+)」的「拍到的視角」是「(.+)」$/, async ({ page }, photo: string, view: string) => {
-  await expect(photoCard(page, photo).getByLabel('拍到的視角').locator('option:checked')).toHaveText(view);
+  const select = photoCard(page, photo).getByLabel('拍到的視角');
+  await expect(select.getByRole('option', { name: view, exact: true, selected: true })).toHaveCount(1);
 });
 
 // ── 照片 API ──

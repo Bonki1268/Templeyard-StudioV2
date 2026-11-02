@@ -30,7 +30,8 @@ describe('底部操作列', () => {
         <button type="button">建立系列</button>
       </BottomActionBar>,
     );
-    expect(container.querySelector('p')).toBeNull();
+    // 整個操作列只有按鈕的文字，沒有其他說明文字
+    expect(container).toHaveTextContent(/^建立系列$/);
     expect(screen.getByRole('button', { name: '建立系列' })).not.toHaveAccessibleDescription();
   });
 });
