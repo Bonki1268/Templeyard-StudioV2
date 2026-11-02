@@ -67,9 +67,9 @@ describe('失敗原因', () => {
 describe('輸出連結', () => {
   it('有短連結時只用短連結', () => {
     const urls = findFileUrls(
-      result('- https://cloud.comfy.org/api/s/AbC\n- https://storage.googleapis.com/b/x.png?sig=1\\u0026a=2'),
+      result('- https://comfy.example.test/api/s/AbC\n- https://storage.googleapis.com/b/x.png?sig=1\\u0026a=2'),
     );
-    expect(urls).toEqual(['https://cloud.comfy.org/api/s/AbC']);
+    expect(urls).toEqual(['https://comfy.example.test/api/s/AbC']);
   });
 
   it('沒有短連結時用 storage 連結，並還原跳脫的 &', () => {
@@ -79,8 +79,8 @@ describe('輸出連結', () => {
   });
 
   it('重複的連結只留一個；無關的連結不算', () => {
-    expect(findFileUrls(result('https://cloud.comfy.org/api/s/A https://cloud.comfy.org/api/s/A https://docs.comfy.org'))).toEqual([
-      'https://cloud.comfy.org/api/s/A',
+    expect(findFileUrls(result('https://comfy.example.test/api/s/A https://comfy.example.test/api/s/A https://docs.example.test'))).toEqual([
+      'https://comfy.example.test/api/s/A',
     ]);
   });
 });

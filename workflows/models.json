@@ -1,6 +1,7 @@
 {
   "version": 1,
   "note": "各模型的 Comfy Cloud MCP 呼叫設定（docs/02-TRD.md「各模型的呼叫方式」、docs/07-實測紀錄.md）。status：verified 已實測、unverified 有代號但還沒實測、unknown 呼叫方式還沒確認。price.credits 為 null 表示參考單價待實測。slots 的 path 是寫進 MCP 呼叫參數的位置；沒有 path 的 slot 只用在 template。",
+  "upload": null,
   "models": {
     "gemini-omni-1.1-flash": {
       "label": "Gemini Omni 1.1 Flash",

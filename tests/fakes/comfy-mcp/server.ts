@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
@@ -9,6 +9,8 @@ import type { AddressInfo } from 'node:net';
 // - get_job_status 回 { result: { status, job_status, raw_status } }
 // - get_output 回短連結與 storage 連結，短連結可以下載
 // 任務結果由指令裡的標記決定：[fail] 失敗、[cancel] 取消、[never] 一直在跑、其他第 2 次查詢時完成
+// - fake_upload_file：假的上傳工具（真的上傳方式待實測，07「下一輪測試」第 1 項），回 { file_ref }，記下收到的檔案 sha256
+// - GET /__calls：情境測試查詢收到的呼叫與上傳（只有假伺服器有）
 
 export const FAKE_API_KEY = 'fake-comfy-key';
 export const FAKE_PNG = Buffer.from(
@@ -18,11 +20,13 @@ export const FAKE_PNG = Buffer.from(
 
 type Job = { id: string; tool: string; prompt: string; polls: number };
 export type RecordedCall = { method: string; tool?: string; args?: Record<string, unknown>; sessionId?: string };
+export type RecordedUpload = { ref: string; sha256: string; mime: string; filename: string };
 
 export type FakeComfyMcp = {
   url: string;
   calls: RecordedCall[];
   jobs: Map<string, Job>;
+  uploads: RecordedUpload[];
   /** 讓目前所有 session 失效，下一次請求會收到 404 */
   expireSessions(): void;
   /** 之後的回應改用 text/event-stream（真的 MCP 有時這樣回） */
@@ -41,10 +45,11 @@ async function readBody(req: IncomingMessage): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-export async function startFakeComfyMcp(): Promise<FakeComfyMcp> {
+export async function startFakeComfyMcp(options: { port?: number } = {}): Promise<FakeComfyMcp> {
   const sessions = new Set<string>();
   const jobs = new Map<string, Job>();
   const calls: RecordedCall[] = [];
+  const uploads: RecordedUpload[] = [];
   let eventStream = false;
   let base = '';
 
@@ -69,6 +74,13 @@ export async function startFakeComfyMcp(): Promise<FakeComfyMcp> {
       const id = randomUUID();
       jobs.set(id, { id, tool, prompt: promptOf(args), polls: 0 });
       return text(JSON.stringify({ prompt_id: id, status: 'queued' }));
+    }
+    if (tool === 'fake_upload_file') {
+      if (typeof args.data_base64 !== 'string' || args.data_base64 === '') return text('沒有檔案內容', true);
+      const sha256 = createHash('sha256').update(Buffer.from(args.data_base64, 'base64')).digest('hex');
+      const ref = `fake-ref-${sha256.slice(0, 12)}-${uploads.length + 1}`;
+      uploads.push({ ref, sha256, mime: String(args.mime ?? ''), filename: String(args.filename ?? '') });
+      return { ...text(JSON.stringify({ file_ref: ref })), structuredContent: { file_ref: ref } };
     }
     if (tool === 'get_job_status') {
       const job = jobs.get(String(args.prompt_id));
@@ -97,6 +109,11 @@ export async function startFakeComfyMcp(): Promise<FakeComfyMcp> {
   }
 
   const server = createServer(async (req, res) => {
+    if (req.method === 'GET' && req.url === '/__calls') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ calls, uploads }));
+      return;
+    }
     if (req.method === 'GET' && req.url?.startsWith('/api/s/')) {
       const id = req.url.slice('/api/s/'.length);
       if (!jobs.has(id)) {
@@ -148,13 +165,14 @@ export async function startFakeComfyMcp(): Promise<FakeComfyMcp> {
     res.end(JSON.stringify({ jsonrpc: '2.0', id: body.id, error: { code: -32601, message: `未知的方法：${body.method}` } }));
   });
 
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  await new Promise<void>((resolve) => server.listen(options.port ?? 0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
   return {
     url: `${base}/mcp`,
     calls,
     jobs,
+    uploads,
     expireSessions: () => sessions.clear(),
     useEventStream: (on) => {
       eventStream = on;

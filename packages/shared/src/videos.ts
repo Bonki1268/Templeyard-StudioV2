@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { costLimitSchema } from './costs.js';
 import { IMAGE_MODEL_KEYS, VIDEO_MODEL_KEYS } from './models.js';
 import { photoSchema } from './photos.js';
+import { reusableTempleBoardSchema } from './templeBoards.js';
 import { templeSummarySchema } from './temples.js';
 
 // 影片（docs/05-Backend-Schema.md「videos」）
@@ -54,6 +55,8 @@ export const videoSchema = z.object({
   videoModel: z.string(),
   /** 產生寺廟定裝版時寫入（第 5 階段）；有值後兩個模型不能再改 */
   modelsLockedAt: z.string().nullable(),
+  /** 這支影片使用的寺廟定裝版版本 */
+  templeBoardVersionId: z.string().nullable().default(null),
   /** 使用者貼上的寺廟歷史與簡介；來源標示「使用者提供」 */
   userTempleNotes: z.string(),
   /** 本支影片的費用上限（點數）；null 表示不設上限 */
@@ -63,12 +66,18 @@ export const videoSchema = z.object({
 });
 export type Video = z.infer<typeof videoSchema>;
 
+/** 模型鎖定後更換模型的錯誤訊息 */
+export const MODELS_LOCKED_MESSAGE = '模型已在產生寺廟定裝版時鎖定，不能更換';
+export const TEMPLE_LOCKED_MESSAGE = '已產生寺廟定裝版，不能更換寺廟';
+
 export const videoResponseSchema = z.object({ video: videoSchema });
 
-/** GET /api/videos/:id：影片、寺廟資料卡、這間廟的照片 */
+/** GET /api/videos/:id：影片、寺廟資料卡、這間廟的照片、可以沿用的定裝版 */
 export const videoDetailResponseSchema = z.object({
   video: videoSchema,
   temple: templeSummarySchema,
   photos: z.array(photoSchema),
+  /** 同系列同一間廟目前確認過的定裝版；這支影片還沒有定裝版時才有值 */
+  reusableBoard: reusableTempleBoardSchema.nullable().default(null),
 });
 export type VideoDetail = z.infer<typeof videoDetailResponseSchema>;

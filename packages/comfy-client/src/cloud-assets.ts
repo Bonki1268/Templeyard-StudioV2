@@ -1,4 +1,5 @@
-import { requireCloudOk, type CloudOkAsset } from '@templeyard/shared';
+import { requireCloudOk, type CloudOkAsset, type UploadConfig } from '@templeyard/shared';
+import type { McpSession } from './rpc.js';
 
 // 把本機檔案交給 Comfy Cloud。
 // 07 實測紀錄：「圖片怎麼交給 MCP」還沒驗證（待測 tools/list），所以真實的傳送格式不在這裡猜，
@@ -26,4 +27,21 @@ export function createCloudAssetSender(deps: CloudAssetSenderDeps): (asset: Clou
     const bytes = await deps.readBytes(checked);
     return deps.transport.send({ asset: checked, bytes });
   };
+}
+
+/** 還不知道怎麼把圖片上傳到 Comfy Cloud（workflows 設定檔的 upload 是 null） */
+export class UploadNotConfiguredError extends Error {
+  override name = 'UploadNotConfiguredError';
+  constructor() {
+    super('圖片上傳到 Comfy Cloud 的方式還沒實測（07「下一輪測試」第 1 項），不能用照片生成');
+  }
+}
+
+/**
+ * 依 workflows 設定檔的 upload 設定，用 MCP 工具上傳檔案：
+ * 把 base64、MIME、檔名寫到設定的位置，從回應的 refPath 取出雲端參照。
+ * upload 是 null 時，send 一律丟出 UploadNotConfiguredError（不猜真的格式）。
+ */
+export function createMcpUploadTransport(_session: McpSession, _upload: UploadConfig | null): CloudAssetTransport {
+  throw new Error('尚未實作');
 }

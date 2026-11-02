@@ -42,7 +42,8 @@ export function registerVideoRoutes(app: FastifyInstance, db: AppDatabase, clock
     if (!video) return reply.status(404).send(errorBody(VIDEO_NOT_FOUND));
     const temple = findTemple(db, video.templeId);
     if (!temple) return reply.status(404).send(errorBody(TEMPLE_NOT_FOUND));
-    const body: VideoDetail = { video, temple: toTempleSummary(temple), photos: listPhotosForVideo(db, video) };
+    // 可以沿用的定裝版在第 5 階段綠燈接上
+    const body: VideoDetail = { video, temple: toTempleSummary(temple), photos: listPhotosForVideo(db, video), reusableBoard: null };
     return body;
   });
 

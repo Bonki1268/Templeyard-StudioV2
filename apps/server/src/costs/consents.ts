@@ -7,6 +7,8 @@ export type ConsentStore = {
   issue(videoId: string, items: readonly CostItem[]): { token: string; expiresAt: string };
   /** 憑證存在、沒過期、沒用過，而且影片與項目都相同時回傳 true，並作廢 */
   consume(token: string | null | undefined, videoId: string, items: readonly CostItem[]): boolean;
+  /** 和 consume 的條件相同，但不作廢；用來在呼叫撰寫者、上傳參考圖之前先確認 */
+  peek(token: string | null | undefined, videoId: string, items: readonly CostItem[]): boolean;
 };
 
 const DEFAULT_TTL_MS = 10 * 60 * 1000;
@@ -44,6 +46,9 @@ export function createConsentStore(options: { now: () => Date; newToken: () => s
       if (consent.key !== itemsKey(videoId, items)) return false;
       consents.delete(token);
       return true;
+    },
+    peek() {
+      throw new Error('尚未實作');
     },
   };
 }

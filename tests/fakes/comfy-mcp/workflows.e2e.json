@@ -1,0 +1,284 @@
+{
+  "version": 1,
+  "note": "情境測試用：照 workflows/models.json，另外填上假的 MCP 伺服器的上傳工具與 Nano Banana Pro 的參考圖位置。真的格式待實測（07 下一輪測試第 1、4 項），不能拿這份當正式設定。",
+  "upload": {
+    "tool": "fake_upload_file",
+    "args": {},
+    "dataPath": [
+      "data_base64"
+    ],
+    "mimePath": [
+      "mime"
+    ],
+    "namePath": [
+      "filename"
+    ],
+    "refPath": [
+      "file_ref"
+    ]
+  },
+  "models": {
+    "gemini-omni-1.1-flash": {
+      "label": "Gemini Omni 1.1 Flash",
+      "kind": "video",
+      "status": "verified",
+      "tool": "run_template",
+      "args": {
+        "name": "api_google_gemini_omni_flash_1_1_t2v",
+        "input_overrides": {
+          "26": {
+            "model.resolution": "720p",
+            "model.task_type": "text_to_video"
+          }
+        }
+      },
+      "slots": {
+        "prompt": {
+          "paths": [
+            [
+              "input_overrides",
+              "26",
+              "model.prompt"
+            ]
+          ],
+          "template": "A {{durationSec}}-second, {{aspectRatio}} clip. {{prompt}}"
+        },
+        "aspectRatio": {
+          "paths": [
+            [
+              "input_overrides",
+              "26",
+              "model.aspect_ratio"
+            ]
+          ],
+          "allowed": [
+            "16:9",
+            "9:16"
+          ]
+        },
+        "durationSec": {
+          "paths": [],
+          "min": 3,
+          "max": 10
+        },
+        "seed": {
+          "paths": [
+            [
+              "input_overrides",
+              "26",
+              "model.seed"
+            ]
+          ]
+        }
+      },
+      "price": {
+        "unit": "second",
+        "credits": 31,
+        "verified": false
+      }
+    },
+    "seedance-2.0": {
+      "label": "Seedance 2.0",
+      "kind": "video",
+      "status": "verified",
+      "tool": "partner_generate",
+      "args": {
+        "type": "video",
+        "model": "byteplus/seedance-2.0-t2v",
+        "client_os": "darwin",
+        "params": {
+          "model": "Seedance 2.0 Mini",
+          "resolution": "720p"
+        }
+      },
+      "slots": {
+        "prompt": {
+          "paths": [
+            [
+              "prompt"
+            ]
+          ]
+        },
+        "aspectRatio": {
+          "paths": [
+            [
+              "params",
+              "ratio"
+            ]
+          ],
+          "allowed": [
+            "16:9",
+            "9:16",
+            "1:1"
+          ]
+        },
+        "durationSec": {
+          "paths": [
+            [
+              "params",
+              "duration"
+            ]
+          ],
+          "min": 4,
+          "max": 15
+        }
+      },
+      "price": {
+        "unit": "second",
+        "credits": null,
+        "verified": false
+      }
+    },
+    "wan-2.2": {
+      "label": "Wan 2.2",
+      "kind": "video",
+      "status": "unknown",
+      "price": {
+        "unit": "second",
+        "credits": null,
+        "verified": false
+      }
+    },
+    "nano-banana-pro": {
+      "label": "Nano Banana Pro",
+      "kind": "image",
+      "status": "unverified",
+      "tool": "partner_generate",
+      "args": {
+        "type": "image",
+        "model": "vertexai/nano-banana-pro",
+        "client_os": "darwin"
+      },
+      "slots": {
+        "prompt": {
+          "paths": [
+            [
+              "prompt"
+            ]
+          ]
+        },
+        "aspectRatio": {
+          "paths": [
+            [
+              "aspect_ratio"
+            ]
+          ],
+          "allowed": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4"
+          ]
+        }
+      },
+      "price": {
+        "unit": "image",
+        "credits": null,
+        "verified": false
+      },
+      "references": {
+        "paths": [
+          [
+            "fake_reference_images"
+          ]
+        ],
+        "max": 6
+      }
+    },
+    "nano-banana-2-lite": {
+      "label": "Nano Banana 2 Lite",
+      "kind": "image",
+      "status": "verified",
+      "tool": "partner_generate",
+      "args": {
+        "type": "image",
+        "model": "vertexai/nano-banana-2-lite",
+        "client_os": "darwin"
+      },
+      "slots": {
+        "prompt": {
+          "paths": [
+            [
+              "prompt"
+            ]
+          ]
+        },
+        "aspectRatio": {
+          "paths": [
+            [
+              "aspect_ratio"
+            ]
+          ],
+          "allowed": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4"
+          ]
+        }
+      },
+      "price": {
+        "unit": "image",
+        "credits": null,
+        "verified": false
+      }
+    },
+    "ace-step-1.5": {
+      "label": "ACE-Step 1.5 XL Turbo",
+      "kind": "audio",
+      "status": "verified",
+      "tool": "run_template",
+      "args": {
+        "name": "audio_ace_step1_5_xl_turbo",
+        "input_overrides": {
+          "94": {
+            "lyrics": "[Instrumental]"
+          }
+        }
+      },
+      "slots": {
+        "prompt": {
+          "paths": [
+            [
+              "input_overrides",
+              "94",
+              "tags"
+            ]
+          ]
+        },
+        "durationSec": {
+          "paths": [
+            [
+              "input_overrides",
+              "94",
+              "duration"
+            ],
+            [
+              "input_overrides",
+              "98",
+              "seconds"
+            ]
+          ],
+          "min": 10,
+          "max": 240
+        },
+        "seed": {
+          "paths": [
+            [
+              "input_overrides",
+              "109",
+              "value"
+            ]
+          ]
+        }
+      },
+      "price": {
+        "unit": "run",
+        "credits": null,
+        "verified": false
+      }
+    }
+  }
+}

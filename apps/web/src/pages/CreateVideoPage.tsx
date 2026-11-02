@@ -22,7 +22,7 @@ export function CreateVideoPage() {
   const series = seriesList.data?.find((item) => item.id === sid);
   const detailQuery = useVideoDetail(videoId);
   const detail = detailQuery.data ?? null;
-  const progress = { hasVideo: detail !== null, photoCount: detail?.photos.length ?? 0 };
+  const progress = { hasVideo: detail !== null, photoCount: detail?.photos.length ?? 0, plannedViewCount: 0 };
 
   return (
     <div className={styles.page}>
@@ -71,7 +71,7 @@ export function CreateVideoPage() {
         {detail && <PhotoSection detail={detail} />}
       </main>
 
-      <BottomActionBar note={bottomNote(progress)} noteId={noteId}>
+      <BottomActionBar note={bottomNote(progress, '')} noteId={noteId}>
         <Button variant="primary" disabled aria-describedby={noteId}>
           產生寺廟定裝版
         </Button>

@@ -2,7 +2,9 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { loadWorkflowConfig, workflowsFile } from '@templeyard/prompts';
-import type { HealthResponse, WorkflowConfig } from '@templeyard/shared';
+import type { CloudAssetTransport, ComfyClient } from '@templeyard/comfy-client';
+import type { PromptWriter } from '@templeyard/prompts';
+import type { HealthResponse, PromptFile, WorkflowConfig } from '@templeyard/shared';
 import { createAssetStore } from './assets/store.js';
 import { createConsentStore, type ConsentStore } from './costs/consents.js';
 import type { AppDatabase } from './db/client.js';
@@ -24,6 +26,22 @@ export type AppDeps = {
   /** workflows/models.json；預設讀 repo 裡的設定檔 */
   workflows?: WorkflowConfig;
   consents?: ConsentStore;
+  /**
+   * 生成用的外部連線（Comfy Cloud MCP、Claude 撰寫者、圖片上傳）；沒有設定時為 null，
+   * 生成端點回 503 並說明 generationUnavailableMessage
+   */
+  generation?: GenerationRuntime | null;
+  generationUnavailableMessage?: string;
+  /** prompt-studio/prompts 的內容；預設讀 repo 裡的檔案 */
+  prompts?: ReadonlyMap<string, PromptFile>;
+};
+
+export type GenerationRuntime = {
+  comfy: ComfyClient;
+  writer: PromptWriter;
+  transport: CloudAssetTransport;
+  /** 同時執行數（COMFY_MAX_CONCURRENT），預設 1 */
+  maxConcurrent?: number;
 };
 
 const systemClock: Clock = { now: () => new Date(), newId: () => randomUUID() };

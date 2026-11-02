@@ -1,0 +1,21 @@
+{
+  "note": "假的 Claude API 用的錄製回應。match 是 system 裡要出現的文字；text 裡的 {{user}} 換成使用者訊息原文（這樣連續性鎖會逐字出現）。AI 產生的文字不做快照比對，測試只驗證格式與流程。",
+  "recordings": [
+    {
+      "match": "寺廟定裝版的視角圖",
+      "text": "{\"prompt\": \"Reference plate for one fixed view of a real temple, 16:9, empty of people. {{user}}\", \"notes\": \"錄製的回應：依照片寫出建築外觀與光線\"}"
+    },
+    {
+      "match": "測試：回傳不合法的內容",
+      "text": "這不是 JSON，只是一段說明文字"
+    },
+    {
+      "match": "測試：用程式碼區塊包起來",
+      "text": "```json\n{\"prompt\": \"fenced prompt\", \"notes\": \"包在程式碼區塊裡\"}\n```"
+    },
+    {
+      "match": "測試：照實回傳使用者內容",
+      "text": "{\"prompt\": \"echo: {{user}}\"}"
+    }
+  ]
+}

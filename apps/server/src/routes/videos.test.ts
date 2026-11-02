@@ -91,6 +91,7 @@ describe('建立影片 POST /api/videos', () => {
       imageModel: 'nano-banana-pro',
       videoModel: 'seedance-2.0',
       modelsLockedAt: null,
+      templeBoardVersionId: null,
       userTempleNotes: '',
       costLimit: null,
       createdAt: expect.any(String),

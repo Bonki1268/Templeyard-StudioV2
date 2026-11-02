@@ -14,6 +14,8 @@ type ScenarioState = {
   videoIds?: string[];
   /** 最後一次上傳的照片檔名（e2e/fixtures/photos/ 底下） */
   uploadedFiles?: string[];
+  /** 定裝版產生完成時，各視角（名稱）的視角圖編號；用來判斷重生後換了圖 */
+  boardAssets?: Record<string, string | null>;
 };
 
 export const test = base.extend<{ state: ScenarioState }>({

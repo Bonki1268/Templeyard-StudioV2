@@ -7,6 +7,7 @@ export * from './models.js';
 export * from './photos.js';
 export * from './promptFiles.js';
 export * from './series.js';
+export * from './templeBoards.js';
 export * from './temples.js';
 export * from './videos.js';
 export * from './views.js';

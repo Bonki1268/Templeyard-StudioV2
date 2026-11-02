@@ -31,6 +31,13 @@ export type SubmitOutcome =
   | { status: 'consent_required'; check: CostCheck }
   | { status: 'accepted'; generationId: string };
 
+export type BatchOutcome =
+  | { status: 'consent_required'; check: CostCheck }
+  | { status: 'accepted'; generationIds: string[] };
+
+/** 付費生成前的檢查結果（不作廢同意憑證） */
+export type Precheck = { ok: true } | { ok: false; check: CostCheck };
+
 /** 生成成功後，由各節點把資產接到自己的資料表（第 5 階段起註冊） */
 export type SucceededHandler = (generation: GenerationRow, assetIds: string[]) => void;
 
@@ -55,6 +62,13 @@ export type GenerationService = {
    * 有空位時等到送出完成才回傳（送出失敗可以馬上知道）；要排隊時直接回傳
    */
   submit(request: GenerationRequest): Promise<SubmitOutcome>;
+  /**
+   * 一次送出好幾筆（例如定裝版的每個視角）：把所有項目合起來預估、檢查一次同意，
+   * 只作廢一次同意憑證；需要同意時一筆都不送出、不留紀錄
+   */
+  submitBatch(requests: readonly Omit<GenerationRequest, 'consentToken'>[], consentToken: string | null | undefined): Promise<BatchOutcome>;
+  /** 和 submit 一樣的預估與同意檢查，但不送出、不作廢同意憑證 */
+  precheck(videoId: string, costItems: readonly CostItem[], consentToken: string | null | undefined): Precheck;
   /** 等某筆生成結束（成功、失敗或逾時），回傳最後的紀錄 */
   whenSettled(generationId: string): Promise<GenerationRow>;
   /** 啟動時呼叫：已送出、生成中的紀錄以 prompt_id 繼續追蹤，不重新送出；還沒送出的標示失敗 */
@@ -66,6 +80,11 @@ const NOT_SUBMITTED_MESSAGE = '系統重新啟動時這筆生成還沒送出，�
 
 /** 每筆生成的輸出種類：成功時下載到這種資產（重啟後從輸入紀錄取回） */
 const OUTPUT_KIND_KEY = 'outputKind';
+
+/** 生成紀錄的 model 欄位：供應商的模型代號或範本名稱（05「generations」），例如 vertexai/nano-banana-pro */
+export function providerModelOf(_call: McpCall): string {
+  throw new Error('尚未實作');
+}
 
 export function createGenerationService(deps: GenerationServiceDeps): GenerationService {
   const { db, comfy, store, clock } = deps;
@@ -203,6 +222,14 @@ export function createGenerationService(deps: GenerationServiceDeps): Generation
       // 有空位時等送出完成（prompt_id 已寫入或已失敗）才回應；排隊中的直接回應
       if (deps.limiter.waiting === 0) await submitted;
       return { status: 'accepted', generationId: id };
+    },
+
+    async submitBatch() {
+      throw new Error('尚未實作');
+    },
+
+    precheck() {
+      throw new Error('尚未實作');
     },
 
     whenSettled(generationId) {

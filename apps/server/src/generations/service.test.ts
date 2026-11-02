@@ -14,7 +14,7 @@ import { updateSettings } from '../costs/repository.js';
 import { openDatabase, type AppDatabase } from '../db/client.js';
 import { generations, series, temples, videos, type GenerationRow } from '../db/schema.js';
 import type { Clock } from '../series/repository.js';
-import { createGenerationService, type GenerationRequest, type GenerationService } from './service.js';
+import { createGenerationService, providerModelOf, type GenerationRequest, type GenerationService } from './service.js';
 
 let workflows: WorkflowConfig;
 
@@ -210,7 +210,8 @@ describe('送出、雲端確認、追蹤與結算', () => {
       promptIdRef: 'shot-video',
       promptVersion: 4,
       mcpTool: 'run_template',
-      model: 'gemini-omni-1.1-flash',
+      // 05：供應商的模型代號或範本名稱（第 4 階段稽核：原本存成系統內代號）
+      model: 'api_google_gemini_omni_flash_1_1_t2v',
       callConfigVersion: 1,
       confirmRequired: true,
       confirmMessage: expect.stringContaining('confirm: true'),
@@ -348,5 +349,76 @@ describe('重啟後取回', () => {
       error: '系統重新啟動時這筆生成還沒送出，沒有重送；需要時請重新生成',
     });
     expect(generateCalls()).toEqual([]);
+  });
+});
+
+describe('一次送出好幾筆（定裝版的每個視角）', () => {
+  const second = (prompt: string) => request(prompt, { target: { shotKey: 's2' } });
+
+  it('把所有項目合起來檢查一次同意：憑證要對應合計的秒數', async () => {
+    updateSettings(db, { consentThresholdCredits: 100 });
+    const generation = service();
+    const single = consents.issue('video-1', [{ model: 'gemini-omni-1.1-flash', units: 4 }]).token;
+
+    expect((await generation.submitBatch([request('a'), second('b')], single)).status).toBe('consent_required');
+    expect(generateCalls()).toEqual([]);
+    expect(db.select().from(generations).all()).toEqual([]);
+
+    const combined = consents.issue('video-1', [{ model: 'gemini-omni-1.1-flash', units: 8 }]).token;
+    const outcome = await generation.submitBatch([request('a'), second('b')], combined);
+
+    expect(outcome.status).toBe('accepted');
+    if (outcome.status !== 'accepted') return;
+    expect(outcome.generationIds).toHaveLength(2);
+    await Promise.all(outcome.generationIds.map((id) => generation.whenSettled(id)));
+    expect(outcome.generationIds.map((id) => row(id).status)).toEqual(['succeeded', 'succeeded']);
+    // 同一張憑證不能再用
+    expect((await generation.submitBatch([request('a'), second('b')], combined)).status).toBe('consent_required');
+  });
+
+  it('門檻內不需要憑證；每筆各自預估與結算', async () => {
+    const generation = service();
+
+    const outcome = await generation.submitBatch([request('a'), second('b')], null);
+
+    if (outcome.status !== 'accepted') throw new Error('沒有送出');
+    await Promise.all(outcome.generationIds.map((id) => generation.whenSettled(id)));
+    expect(outcome.generationIds.map((id) => row(id).actualCost)).toEqual([124, 124]);
+  });
+
+  it('沒有任何一筆時不送出', async () => {
+    await expect(service().submitBatch([], null)).rejects.toThrow('沒有要送出的生成');
+  });
+});
+
+describe('送出前的檢查', () => {
+  it('需要同意時回傳檢查結果；有效的憑證通過但不作廢', async () => {
+    updateSettings(db, { consentThresholdCredits: 100 });
+    const generation = service();
+    const items = [{ model: 'gemini-omni-1.1-flash', units: 4 }];
+
+    const without = generation.precheck('video-1', items, null);
+    expect(without.ok).toBe(false);
+    if (!without.ok) expect(without.check.consent.reasons.map((r) => r.code)).toEqual(['over_threshold']);
+
+    const { token } = consents.issue('video-1', items);
+    expect(generation.precheck('video-1', items, token)).toEqual({ ok: true });
+    expect(generation.precheck('video-1', items, token)).toEqual({ ok: true });
+    expect((await generation.submit(request('廟埕', { consentToken: token }))).status).toBe('accepted');
+    expect(generation.precheck('video-1', items, token).ok).toBe(false);
+    await Promise.all(db.select().from(generations).all().map((g) => generation.whenSettled(g.id)));
+  });
+});
+
+describe('生成紀錄的模型欄位', () => {
+  it.each([
+    [{ tool: 'partner_generate', args: { model: 'vertexai/nano-banana-pro', prompt: 'p' } }, 'vertexai/nano-banana-pro'],
+    [{ tool: 'run_template', args: { name: 'api_google_gemini_omni_flash_1_1_t2v' } }, 'api_google_gemini_omni_flash_1_1_t2v'],
+  ] as const)('%o → %s', (call, expected) => {
+    expect(providerModelOf(call)).toBe(expected);
+  });
+
+  it('呼叫裡沒有模型代號或範本名稱時丟出錯誤', () => {
+    expect(() => providerModelOf({ tool: 'partner_generate', args: {} })).toThrow('MCP 呼叫裡沒有模型代號或範本名稱');
   });
 });

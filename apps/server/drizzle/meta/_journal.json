@@ -29,6 +29,13 @@
       "when": 1793636037190,
       "tag": "0003_generations_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793650334228,
+      "tag": "0004_temple_boards",
+      "breakpoints": true
     }
   ]
 }

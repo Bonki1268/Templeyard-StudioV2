@@ -164,3 +164,53 @@ describe('追蹤與取回', () => {
     expect(await comfy.waitForJob('no-such-job', { startedAt: now })).toEqual({ kind: 'failed', message: '找不到這個任務' });
   });
 });
+
+describe('一般的 HTTP 錯誤與網路中斷（第 4 階段稽核補上）', () => {
+  function sessionWith(fetchImpl: typeof fetch) {
+    return createMcpSession({ url: 'http://127.0.0.1:9/mcp', apiKey: FAKE_API_KEY, fetch: fetchImpl });
+  }
+
+  it('Comfy Cloud 回 HTTP 5xx 時丟出帶狀態碼的錯誤，不當成 session 過期重送', async () => {
+    let posts = 0;
+    const session = sessionWith(async () => {
+      posts += 1;
+      return new Response('upstream error', { status: 503 });
+    });
+
+    await expect(session.callTool('get_job_status', { prompt_id: 'x' })).rejects.toThrow('Comfy Cloud 回應 HTTP 503');
+    expect(posts).toBe(1);
+  });
+
+  it('網路中斷（fetch 丟出例外）時丟出「連不上 Comfy Cloud」', async () => {
+    const session = sessionWith(async () => {
+      throw new TypeError('fetch failed');
+    });
+
+    await expect(session.callTool('get_job_status', { prompt_id: 'x' })).rejects.toThrow('連不上 Comfy Cloud，請確認網路');
+  });
+
+  it('輪詢時連續 5 次 5xx 才算失敗；中間恢復就繼續追蹤', async () => {
+    const sent = await client().submit(call('輪詢中斷'), { confirm: true });
+    if (sent.kind !== 'submitted') throw new Error('假的 MCP 伺服器沒有建立任務');
+    const promptId = sent.promptId;
+    let failuresLeft = 3;
+    const flaky = createComfyClient({
+      session: {
+        callTool: async (name, args) => {
+          if (name === 'get_job_status' && failuresLeft > 0) {
+            failuresLeft -= 1;
+            throw new Error('Comfy Cloud 回應 HTTP 502');
+          }
+          return createMcpSession({ url: fake.url, apiKey: FAKE_API_KEY }).callTool(name, args);
+        },
+      },
+      pollMs: 1000,
+      now: () => now,
+      sleep: async (ms) => {
+        now += ms;
+      },
+    });
+
+    expect((await flaky.waitForJob(promptId, { startedAt: now })).kind).toBe('completed');
+  });
+});

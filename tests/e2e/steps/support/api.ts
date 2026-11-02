@@ -7,10 +7,12 @@ import {
   assetResponseSchema,
   photoResponseSchema,
   seriesResponseSchema,
+  templeBoardResponseSchema,
   templeSearchResponseSchema,
   videoDetailResponseSchema,
   videoResponseSchema,
   type CreateSeriesInput,
+  type TempleBoard,
   type VideoDetail,
   type VideoModelKey,
 } from '@templeyard/shared';
@@ -108,4 +110,43 @@ export async function uploadPhotoViaApi(request: APIRequestContext, videoId: str
 
 export async function photoFrom(response: { json: () => Promise<unknown> }) {
   return photoResponseSchema.parse(await response.json()).photo;
+}
+
+// ── 寺廟定裝版（第 5 階段） ──
+
+/** 同意這次的費用，回傳同意憑證 */
+export async function consentViaApi(request: APIRequestContext, videoId: string, units: number, model = 'nano-banana-pro'): Promise<string> {
+  const response = await request.post(`/api/videos/${videoId}/consents`, { data: { items: [{ model, units }] } });
+  expect(response.status()).toBe(201);
+  return ((await response.json()) as { consentToken: string }).consentToken;
+}
+
+export async function fetchBoard(request: APIRequestContext, videoId: string): Promise<TempleBoard> {
+  const response = await request.get(`/api/videos/${videoId}/temple-board`);
+  expect(response.status()).toBe(200);
+  return templeBoardResponseSchema.parse(await response.json()).board;
+}
+
+/** 等定裝版所有視角都產生完成（假的雲端第 2 次查詢就完成） */
+export async function waitBoardReady(request: APIRequestContext, videoId: string): Promise<TempleBoard> {
+  await expect
+    .poll(async () => (await fetchBoard(request, videoId)).views.every((view) => view.state === 'ready'), { timeout: 15_000 })
+    .toBe(true);
+  return fetchBoard(request, videoId);
+}
+
+/** 上傳指定視角的照片、同意費用、產生定裝版，等到完成 */
+export async function generateBoardViaApi(
+  request: APIRequestContext,
+  videoId: string,
+  options: { viewKey?: string; inferredViewKeys?: string[] } = {},
+): Promise<TempleBoard> {
+  const photo = await uploadPhotoViaApi(request, videoId, { viewKey: options.viewKey ?? 'front_overview' });
+  expect(photo.status()).toBe(201);
+  const inferred = options.inferredViewKeys ?? [];
+  const response = await request.post(`/api/videos/${videoId}/temple-board/generate`, {
+    data: { inferredViewKeys: inferred, consentToken: await consentViaApi(request, videoId, 1 + inferred.length) },
+  });
+  expect(response.status()).toBe(202);
+  return waitBoardReady(request, videoId);
 }

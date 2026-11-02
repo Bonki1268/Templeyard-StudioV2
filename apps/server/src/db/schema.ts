@@ -1,6 +1,15 @@
 import { sql } from 'drizzle-orm';
-import { check, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import type { AssetKind, DeidBox, GenerationStatus, TempleFlag, TempleStatus, VideoStage } from '@templeyard/shared';
+import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import type {
+  AssetKind,
+  ConfirmationPoint,
+  DeidBox,
+  GenerationStatus,
+  TempleFlag,
+  TempleStatus,
+  TempleViewSource,
+  VideoStage,
+} from '@templeyard/shared';
 
 // 資料表依 docs/05-Backend-Schema.md
 
@@ -163,3 +172,78 @@ export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   value: text('value', { mode: 'json' }).$type<unknown>(),
 });
+
+/** temple_boards：寺廟定裝版；同系列同一間廟只有一份，current_version_id 指向目前確認過的版本 */
+export const templeBoards = sqliteTable(
+  'temple_boards',
+  {
+    id: text('id').primaryKey(),
+    seriesId: text('series_id')
+      .notNull()
+      .references(() => series.id),
+    // 不設外鍵：pnpm db:import 會整批重建 temples
+    templeId: text('temple_id').notNull(),
+    currentVersionId: text('current_version_id'),
+  },
+  (table) => [uniqueIndex('temple_boards_series_temple_uq').on(table.seriesId, table.templeId)],
+);
+
+export type TempleBoardRow = typeof templeBoards.$inferSelect;
+
+/** temple_board_versions：定裝版的版本；另存新版本時新增一列，確認後不再修改 */
+export const templeBoardVersions = sqliteTable(
+  'temple_board_versions',
+  {
+    id: text('id').primaryKey(),
+    boardId: text('board_id')
+      .notNull()
+      .references(() => templeBoards.id),
+    version: integer('version').notNull(),
+    imageModel: text('image_model').notNull(),
+    appearanceLocks: text('appearance_locks', { mode: 'json' }).$type<string[]>().notNull(),
+    defaultLighting: text('default_lighting').notNull(),
+    confirmedAt: text('confirmed_at'),
+  },
+  (table) => [uniqueIndex('temple_board_versions_board_version_uq').on(table.boardId, table.version)],
+);
+
+export type TempleBoardVersionRow = typeof templeBoardVersions.$inferSelect;
+
+/** temple_views：某一版定裝版的一張視角圖；補充視角也是一列 */
+export const templeViews = sqliteTable(
+  'temple_views',
+  {
+    id: text('id').primaryKey(),
+    boardVersionId: text('board_version_id')
+      .notNull()
+      .references(() => templeBoardVersions.id),
+    viewKey: text('view_key').notNull(),
+    viewName: text('view_name').notNull(),
+    source: text('source').$type<TempleViewSource>().notNull(),
+    photoId: text('photo_id').references(() => photos.id),
+    assetId: text('asset_id').references(() => assets.id),
+    confirmed: integer('confirmed', { mode: 'boolean' }).notNull().default(false),
+    createdFromVideoId: text('created_from_video_id').references(() => videos.id),
+  },
+  (table) => [uniqueIndex('temple_views_version_view_uq').on(table.boardVersionId, table.viewKey)],
+);
+
+export type TempleViewRow = typeof templeViews.$inferSelect;
+
+/** confirmations：確認紀錄；失效時寫 invalidated_at，不刪除 */
+export const confirmations = sqliteTable(
+  'confirmations',
+  {
+    id: text('id').primaryKey(),
+    videoId: text('video_id')
+      .notNull()
+      .references(() => videos.id),
+    point: text('point').$type<ConfirmationPoint>().notNull(),
+    contentRef: text('content_ref', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+    confirmedAt: text('confirmed_at').notNull(),
+    invalidatedAt: text('invalidated_at'),
+  },
+  (table) => [index('confirmations_video_idx').on(table.videoId)],
+);
+
+export type ConfirmationRow = typeof confirmations.$inferSelect;

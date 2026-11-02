@@ -51,3 +51,26 @@ describe('同意憑證', () => {
     expect(consents.consume('made-up', 'v1', items)).toBe(false);
   });
 });
+
+describe('先確認同意憑證但不作廢', () => {
+  it('條件和使用時相同，可以確認好幾次，使用後就不再有效', () => {
+    const { consents } = store();
+    const { token } = consents.issue('v1', items);
+
+    expect(consents.peek(token, 'v1', items)).toBe(true);
+    expect(consents.peek(token, 'v1', items)).toBe(true);
+    expect(consents.peek(token, 'v2', items)).toBe(false);
+    expect(consents.peek(token, 'v1', [{ model: 'gemini-omni-1.1-flash', units: 5 }])).toBe(false);
+    expect(consents.consume(token, 'v1', items)).toBe(true);
+    expect(consents.peek(token, 'v1', items)).toBe(false);
+  });
+
+  it('過期或沒有憑證時不通過', () => {
+    const { consents, advance } = store();
+    const { token } = consents.issue('v1', items);
+    advance(10 * 60 * 1000 + 1);
+
+    expect(consents.peek(token, 'v1', items)).toBe(false);
+    expect(consents.peek(null, 'v1', items)).toBe(false);
+  });
+});
