@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { costLimitSchema } from './costs.js';
 import { IMAGE_MODEL_KEYS, VIDEO_MODEL_KEYS } from './models.js';
 import { photoSchema } from './photos.js';
 import { templeSummarySchema } from './temples.js';
@@ -37,6 +38,8 @@ export const updateVideoSchema = z
     userTempleNotes: z
       .string({ error: '寺廟歷史與簡介要是文字' })
       .max(MAX_TEMPLE_NOTES_LENGTH, { error: `寺廟歷史與簡介最多 ${MAX_TEMPLE_NOTES_LENGTH} 字` }),
+    /** 本支影片的費用上限（點數）；null 表示不設上限 */
+    costLimit: costLimitSchema,
   })
   .partial()
   .refine((value) => Object.keys(value).length > 0, { error: '沒有要修改的欄位' });
@@ -53,6 +56,8 @@ export const videoSchema = z.object({
   modelsLockedAt: z.string().nullable(),
   /** 使用者貼上的寺廟歷史與簡介；來源標示「使用者提供」 */
   userTempleNotes: z.string(),
+  /** 本支影片的費用上限（點數）；null 表示不設上限 */
+  costLimit: z.number().int().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

@@ -99,3 +99,56 @@ test('拒絕不合法的 id 與路徑穿越', async () => {
   const res = await fetch(base + '/../server.js');
   assert.notEqual((await res.text()).includes('createServer'), true);
 });
+
+test('圖片與影片節點都有呼叫綁定：最終指令寫進 prompt、比例寫進 aspectRatio', async () => {
+  for (const id of ['temple-view', 'character-sheet', 'character-look', 'storyboard-image', 'refined-frame', 'keyframe', 'region-edit', 'shot-video']) {
+    const { body } = await call('GET', `/api/prompts/${id}`);
+    assert.equal(body.prompt.bindings.prompt, 'output.prompt', id);
+    assert.equal(body.prompt.bindings.aspectRatio, 'target.aspectRatio', id);
+  }
+  const video = await call('GET', '/api/prompts/shot-video');
+  assert.equal(video.body.prompt.bindings.durationSec, 'shot.durationSec');
+});
+
+test('儲存：呼叫綁定對不上工作流程時回 422，不覆蓋檔案', async () => {
+  const { body: { prompt } } = await call('GET', '/api/prompts/temple-view');
+  const cases = [
+    [{ ...prompt.bindings, frameCount: 'view.key' }, '呼叫綁定 frameCount 不是工作流程的位置'],
+    [{ ...prompt.bindings, prompt: 'shot.unknown' }, '呼叫綁定 prompt 用到 shot.unknown，但變數清單沒有宣告'],
+    [{ ...prompt.bindings, durationSec: 'view.key' }, '呼叫綁定 durationSec：Nano Banana Pro 的工作流程沒有這個位置'],
+    [{ aspectRatio: 'target.aspectRatio' }, '圖片與影片節點要有呼叫綁定 prompt'],
+  ];
+  for (const [bindings, message] of cases) {
+    const { status, body } = await call('PUT', '/api/prompts/temple-view', { prompt: { ...prompt, bindings }, expectedVersion: prompt.version });
+    assert.equal(status, 422, message);
+    assert.ok(body.error.details.includes(message), `${message}：${JSON.stringify(body.error.details)}`);
+  }
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(tmp, 'temple-view.json'), 'utf8')).bindings, prompt.bindings);
+});
+
+test('儲存：文字節點不能有呼叫綁定', async () => {
+  const { body: { prompt } } = await call('GET', '/api/prompts/copy-polish');
+  const { status, body } = await call('PUT', '/api/prompts/copy-polish', { prompt: { ...prompt, bindings: { prompt: 'story' } }, expectedVersion: prompt.version });
+  assert.equal(status, 422);
+  assert.ok(body.error.details.includes('文字節點直接送 Claude，不能有呼叫綁定'));
+});
+
+test('組裝：回傳逐字帶入的連續性鎖', async () => {
+  const vars = {
+    temple: { name: '鄞山寺', appearanceLocks: 'red swallowtail roof ridge; grey granite dragon columns' },
+    view: { name: '廟前全景', source: '依照片' },
+    photos: '照片 1',
+    series: { style: '寫實' },
+  };
+  const { status, body } = await call('POST', '/api/prompts/temple-view/render', { variables: vars, model: 'nano-banana-pro' });
+  assert.equal(status, 200);
+  assert.deepEqual(body.locks, ['red swallowtail roof ridge', 'grey granite dragon columns']);
+});
+
+test('列出工作流程的模型，給管理頁顯示模型名稱', async () => {
+  const { status, body } = await call('GET', '/api/workflows');
+  assert.equal(status, 200);
+  assert.equal(body.models['seedance-2.0'].label, 'Seedance 2.0');
+  assert.equal(body.models['seedance-2.0'].kind, 'video');
+});
+

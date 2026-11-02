@@ -59,6 +59,12 @@ importers:
 
   apps/server:
     dependencies:
+      '@templeyard/comfy-client':
+        specifier: workspace:^
+        version: link:../../packages/comfy-client
+      '@templeyard/prompts':
+        specifier: workspace:^
+        version: link:../../packages/prompts
       '@templeyard/shared':
         specifier: workspace:^
         version: link:../../packages/shared
@@ -148,6 +154,23 @@ importers:
       '@templeyard/shared':
         specifier: workspace:^
         version: link:../shared
+    devDependencies:
+      '@types/node':
+        specifier: '22'
+        version: 22.20.5
+
+  packages/prompts:
+    dependencies:
+      '@templeyard/shared':
+        specifier: workspace:^
+        version: link:../shared
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@types/node':
+        specifier: '22'
+        version: 22.20.5
 
   packages/shared:
     dependencies:

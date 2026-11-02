@@ -11,5 +11,8 @@
   },
   "dependencies": {
     "@templeyard/shared": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "22"
   }
 }

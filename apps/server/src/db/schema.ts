@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { check, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import type { AssetKind, DeidBox, TempleFlag, TempleStatus, VideoStage } from '@templeyard/shared';
+import type { AssetKind, DeidBox, GenerationStatus, TempleFlag, TempleStatus, VideoStage } from '@templeyard/shared';
 
 // 資料表依 docs/05-Backend-Schema.md
 
@@ -125,3 +125,41 @@ export const photos = sqliteTable(
 );
 
 export type PhotoRow = typeof photos.$inferSelect;
+
+/** generations：每次 AI 生成一筆（含 Claude 呼叫）；拿到 prompt_id 立刻寫入，重啟時據此取回 */
+export const generations = sqliteTable(
+  'generations',
+  {
+    id: text('id').primaryKey(),
+    videoId: text('video_id').references(() => videos.id),
+    node: text('node').notNull(),
+    target: text('target', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+    promptIdRef: text('prompt_id_ref'),
+    promptVersion: integer('prompt_version'),
+    mcpTool: text('mcp_tool').notNull(),
+    model: text('model').notNull(),
+    callConfigVersion: integer('call_config_version'),
+    providerTaskId: text('provider_task_id'),
+    confirmRequired: integer('confirm_required', { mode: 'boolean' }).notNull().default(false),
+    confirmMessage: text('confirm_message'),
+    status: text('status').$type<GenerationStatus>().notNull(),
+    // 組裝後的指令與參數（不含金鑰）
+    input: text('input', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+    userInstruction: text('user_instruction'),
+    estimatedCost: integer('estimated_cost'),
+    reservedCost: integer('reserved_cost').notNull().default(0),
+    actualCost: integer('actual_cost'),
+    error: text('error'),
+    createdAt: text('created_at').notNull(),
+    finishedAt: text('finished_at'),
+  },
+  (table) => [index('generations_status_idx').on(table.status)],
+);
+
+export type GenerationRow = typeof generations.$inferSelect;
+
+/** settings：系統設定（例如單筆同意門檻）；value 為 JSON */
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value', { mode: 'json' }).$type<unknown>(),
+});

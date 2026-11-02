@@ -92,6 +92,7 @@ describe('建立影片 POST /api/videos', () => {
       videoModel: 'seedance-2.0',
       modelsLockedAt: null,
       userTempleNotes: '',
+      costLimit: null,
       createdAt: expect.any(String),
       updatedAt: expect.any(String),
     });
@@ -200,6 +201,8 @@ describe('修改影片 PATCH /api/videos/:id', () => {
     ['imageModel', { imageModel: 'not-a-model' }, '請從清單選擇圖片模型'],
     ['videoModel', { videoModel: 'not-a-model' }, '請從清單選擇影片模型'],
     ['userTempleNotes', { userTempleNotes: '廟'.repeat(5001) }, '寺廟歷史與簡介最多 5000 字'],
+    ['costLimit', { costLimit: -1 }, '費用上限要是 0 以上的整數點數'],
+    ['costLimit', { costLimit: 1.5 }, '費用上限要是 0 以上的整數點數'],
   ])('%s 不正確時回應 400 與欄位說明', async (field, payload, message) => {
     const videoId = await createVideo(await createSeries());
 
@@ -207,6 +210,16 @@ describe('修改影片 PATCH /api/videos/:id', () => {
 
     expect(response.statusCode).toBe(400);
     expect(apiErrorSchema.parse(response.json()).fieldErrors?.[field]).toBe(message);
+  });
+
+  it('設定與取消本支影片的費用上限', async () => {
+    const videoId = await createVideo(await createSeries());
+
+    const set = videoResponseSchema.parse((await patchVideo(videoId, { costLimit: 3000 })).json()).video;
+    const cleared = videoResponseSchema.parse((await patchVideo(videoId, { costLimit: null })).json()).video;
+
+    expect(set.costLimit).toBe(3000);
+    expect(cleared.costLimit).toBeNull();
   });
 
   it('寺廟歷史剛好 5000 字可以儲存', async () => {

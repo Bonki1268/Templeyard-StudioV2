@@ -11,6 +11,8 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@templeyard/comfy-client": "workspace:^",
+    "@templeyard/prompts": "workspace:^",
     "@templeyard/shared": "workspace:^",
     "better-sqlite3": "12.11.1",
     "csv-parse": "7.0.3",

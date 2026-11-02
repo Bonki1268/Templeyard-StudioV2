@@ -16,6 +16,8 @@ function toVideo(row: VideoRow): Video {
     videoModel: row.videoModel,
     modelsLockedAt: row.modelsLockedAt,
     userTempleNotes: row.userTempleNotes,
+    // 第 4 階段：費用上限（尚未接上）
+    costLimit: null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
