@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@9.15.4",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "concurrently --names server,web --prefix-colors red,blue \"pnpm --filter @templeyard/server dev\" \"pnpm --filter @templeyard/web dev\"",
@@ -32,10 +32,5 @@
     "typescript-eslint": "8.72.1",
     "vite": "6.4.5",
     "vitest": "3.2.7"
-  },
-  "pnpm": {
-    "overrides": {
-      "light-my-request": "6.6.0"
-    }
   }
 }

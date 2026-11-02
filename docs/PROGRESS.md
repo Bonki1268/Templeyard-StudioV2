@@ -54,8 +54,8 @@
 ### 開發中發現的事項
 
 - [ ] 【第 0 階段】`prompt-studio/` 與 `prompts/` 不在 repo 裡：06 要求搬進來並確認原本 8 項測試仍通過。請把這兩個資料夾放到 repo 根目錄（最晚第 4 階段前，生成指令組裝會用到）。
-- [ ] 【第 0 階段】本機 Node 是 22.11.0。Fastify 測試用的 `light-my-request@6.8` 依賴只有 ESM 的 `cookie@2`，Node 22.11 不能 `require()` ESM，所以在根目錄 `package.json` 用 `pnpm.overrides` 把 `light-my-request` 鎖在 6.6.0。建議把 Node 升到 22.12 以上（或 24 LTS），升級後可移除這個 override。同樣因為 Node 版本，Vite 用 6、Vitest 用 3.2（新版要求 ≥22.12）。
-- [ ] 【第 0 階段】02 寫「Node.js 20」，但 Playwright 1.64 要求 Node ≥22；目前 `engines` 寫 `>=20`，實際開發用 22。是否把 02 的 Node 版本改成 22，請你決定（規格我沒動）。
+- [x] 【第 0 階段】本機 Node 是 22.11.0，所以鎖了 `light-my-request` 的版本。→ 2026-11-02 依使用者要求升級到 Node 24.22.2（nvm 預設、repo 加 `.nvmrc`），拿掉 override，`light-my-request` 回到 6.8.0，四項檢查全部通過。Vite 6、Vitest 3.2 先維持原版本；之後要升級到新的大版本可以另外處理。
+- [ ] 【第 0 階段】02 寫「Node.js 20」，實際開發用 Node 24（`engines` 為 `>=24`、`.nvmrc` 為 24）。要不要把 02 的 Node 版本改成 24，請你決定（規格我沒動）。
 - [x] 【第 0 階段稽核】`vitest.config.ts` 的 include 會一併收進 `*.live.test.ts`。→ 第 1 階段已處理：各專案都排除 `**/*.live.test.ts`（611e035）。
 - [x] 【第 0 階段稽核】`apps/server/src/app.test.ts` 的 app 生命週期。→ 第 1 階段紅燈時已處理：改成每個測試在 beforeEach 建立 app（85be4f0）。
 - [x] 【第 1 階段】重建年欄有 16 筆只有數字、沒寫紀年（例如 `58`、`105`、`7`）。規格說「無法判斷者留空」，我照字面留空，原始值有保留。這些很可能是民國年；要不要當成民國換算，請你決定（改一行規則加一組測試就好）。
