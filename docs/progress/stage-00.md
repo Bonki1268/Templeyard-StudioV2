@@ -90,4 +90,21 @@
 
 ## 6. 稽核結果
 
-（由稽核者填寫）
+稽核者：test-auditor（只讀，沒參與實作）· 2026-11-02 · **結果：通過**
+
+| 檢查 | 結果 |
+| --- | --- |
+| 1. 測試沒被動過 | ✔ `verify-tests-untouched.mjs af9f163` 通過；feat 提交沒有動到 features/、tests/、`*.test.*` |
+| 2. 全部通過 | ✔ test 2/2、e2e 2/2，typecheck 與 lint 的結束碼都是 0 |
+| 3. 範圍完整 | ✔ 實測、prompt-studio／prompts 沒做，都已記進「等你處理」，可以接受。e2e 是分別啟動前後端，沒有直接跑 `pnpm dev`；`pnpm dev` 以手動啟動驗證，可以接受 |
+| 4. 測試不空洞 | ✔ 都有實質斷言；沒有 `.skip`／`.only`；`forbidOnly: true` |
+| 5. 不花錢、不洩漏 | ✔ 沒有外部端點、沒有金鑰；`process.env` 只讀連接埠 |
+| 6. 原圖不上雲 | 不適用（第 3 階段才開始） |
+| 7. 沒有越界 | ✔ 路由、token 和 03、04 一致；自己取的名稱都已列出 |
+
+已知事項的判斷：綠燈時修改 `vitest.config.ts` 可以接受，因為它不是測試檔，也沒有改變任何測試的判定；其餘兩項已記進「等你處理」，可以接受。
+
+需要修正（不影響這次通過，已記進 PROGRESS）：
+
+- `vitest.config.ts:13,20,29`：include 會一併收進 `*.live.test.ts`，以後 `pnpm test` 可能誤跑要花錢的實測。要排除 `**/*.live.test.ts`，最晚第 4 階段前處理。
+- `apps/server/src/app.test.ts:6-10`：app 在 describe 層建立、在 afterEach 關閉，以後加第二個測試就會出錯。下一次在紅燈階段動到這個檔案時，改成在 beforeEach 建立。

@@ -1,8 +1,8 @@
 # 開發進度
 
-目前階段: 0
-階段狀態: 完成
-測試提交: af9f163
+目前階段: 1
+階段狀態: 未開始
+測試提交:
 
 上面三行給 `/next-stage` 與 `/auto-dev` 讀取，格式不要改。階段狀態：未開始 → 情境 → 紅燈 → 綠燈 → 完成；中途停下來就是「停止」。
 
@@ -10,7 +10,7 @@
 
 | 階段 | 內容 | 狀態 | 報告 |
 | --- | --- | --- | --- |
-| 0 | 實測與專案骨架 | 完成（待稽核） | [stage-00](progress/stage-00.md) |
+| 0 | 實測與專案骨架 | 完成 | [stage-00](progress/stage-00.md) |
 | 1 | 寺廟資料庫 | 未開始 | |
 | 2 | 系列專案與首頁 | 未開始 | |
 | 3 | 建立影片、照片上傳與去識別 | 未開始 | |
@@ -56,6 +56,8 @@
 - [ ] 【第 0 階段】`prompt-studio/` 與 `prompts/` 不在 repo 裡：06 要求搬進來並確認原本 8 項測試仍通過。請把這兩個資料夾放到 repo 根目錄（最晚第 4 階段前，生成指令組裝會用到）。
 - [ ] 【第 0 階段】本機 Node 是 22.11.0。Fastify 測試用的 `light-my-request@6.8` 依賴只有 ESM 的 `cookie@2`，Node 22.11 不能 `require()` ESM，所以在根目錄 `package.json` 用 `pnpm.overrides` 把 `light-my-request` 鎖在 6.6.0。建議把 Node 升到 22.12 以上（或 24 LTS），升級後可移除這個 override。同樣因為 Node 版本，Vite 用 6、Vitest 用 3.2（新版要求 ≥22.12）。
 - [ ] 【第 0 階段】02 寫「Node.js 20」，但 Playwright 1.64 要求 Node ≥22；目前 `engines` 寫 `>=20`，實際開發用 22。是否把 02 的 Node 版本改成 22，請你決定（規格我沒動）。
+- [ ] 【第 0 階段稽核】`vitest.config.ts` 的 include 會一併收進 `*.live.test.ts`，以後 `pnpm test` 可能誤跑要花錢的實測。最晚第 4 階段前，要在 exclude 加上 `**/*.live.test.ts`（Claude 會在那時處理）。
+- [ ] 【第 0 階段稽核】`apps/server/src/app.test.ts` 的 app 在 describe 層建立、在 afterEach 關閉，以後加第二個測試就會出錯。下一次在紅燈階段動到這個檔案時，改成在 beforeEach 建立（Claude 會處理）。
 
 ## 停止紀錄
 
