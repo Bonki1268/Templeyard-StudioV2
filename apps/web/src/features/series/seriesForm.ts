@@ -1,4 +1,12 @@
-import type { CreateSeriesInput, ImageModelKey, Series, VideoModelKey } from '@templeyard/shared';
+import {
+  DEFAULT_IMAGE_MODEL,
+  DEFAULT_SERIES_DURATION,
+  DEFAULT_VIDEO_MODEL,
+  type CreateSeriesInput,
+  type ImageModelKey,
+  type Series,
+  type VideoModelKey,
+} from '@templeyard/shared';
 
 export type SeriesFormState = {
   name: string;
@@ -13,29 +21,48 @@ export type SeriesFormState = {
 
 /** 表單初始值：秒數 30、系列預設模型 */
 export function initialSeriesForm(): SeriesFormState {
-  throw new Error('尚未實作');
+  return {
+    name: '',
+    visualStyle: '',
+    durationSec: DEFAULT_SERIES_DURATION,
+    directionOption: null,
+    directionOther: '',
+    defaultImageModel: DEFAULT_IMAGE_MODEL,
+    defaultVideoModel: DEFAULT_VIDEO_MODEL,
+  };
 }
 
 /** 影片方向：自己寫的優先，其次是選項 */
-export function resolveDirection(_state: SeriesFormState): string {
-  throw new Error('尚未實作');
+export function resolveDirection(state: SeriesFormState): string {
+  return state.directionOther.trim() || state.directionOption?.trim() || '';
 }
 
 /** 還沒填的必填欄位名稱 */
-export function pendingItems(_state: SeriesFormState): string[] {
-  throw new Error('尚未實作');
+export function pendingItems(state: SeriesFormState): string[] {
+  const items: string[] = [];
+  if (!state.name.trim()) items.push('系列名稱');
+  if (!state.visualStyle.trim()) items.push('整體視覺風格');
+  if (!resolveDirection(state)) items.push('影片方向');
+  return items;
 }
 
 /** 「還有 N 項待處理：…」；沒有待處理時回傳空字串 */
-export function pendingMessage(_items: readonly string[]): string {
-  throw new Error('尚未實作');
+export function pendingMessage(items: readonly string[]): string {
+  return items.length === 0 ? '' : `還有 ${items.length} 項待處理：${items.join('、')}`;
 }
 
-export function toCreateSeriesInput(_state: SeriesFormState): CreateSeriesInput {
-  throw new Error('尚未實作');
+export function toCreateSeriesInput(state: SeriesFormState): CreateSeriesInput {
+  return {
+    name: state.name.trim(),
+    visualStyle: state.visualStyle.trim(),
+    durationSec: state.durationSec,
+    direction: resolveDirection(state),
+    defaultImageModel: state.defaultImageModel,
+    defaultVideoModel: state.defaultVideoModel,
+  };
 }
 
 /** 系列卡片的說明列，例如「20 秒 · 節慶宣傳」 */
-export function seriesMeta(_series: Pick<Series, 'durationSec' | 'direction'>): string {
-  throw new Error('尚未實作');
+export function seriesMeta(series: Pick<Series, 'durationSec' | 'direction'>): string {
+  return `${series.durationSec} 秒 · ${series.direction}`;
 }

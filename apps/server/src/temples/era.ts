@@ -20,16 +20,24 @@ const ERAS: Readonly<Record<string, Era>> = {
 
 const MINGUO_FIRST_YEAR = 1912;
 
+// 只有數字、沒寫紀年：使用者決定（2026-11-02）視為民國年
+const BARE_NUMBER = /^\d+$/u;
+
 // 「民前95」「民國58」「民國69年6月1日」「民64年11月」「康熙16」……
 const PATTERN = /^(民前|民國|民|[一-鿿]{2})(\d+)(?:年(?:\d+月(?:\d+日)?)?)?$/u;
 
 /**
  * 把寺廟資料的紀年（民國、民前、清代年號、日本年號）換算成西元年。
  * 無法判斷時回傳 null；原始值由呼叫端另外保留。
- * 「日據」「不詳」、年數為 0、只有數字沒有紀年，都視為無法判斷。
+ * 「日據」「不詳」、年數為 0 都視為無法判斷；只有數字時視為民國年。
  */
 export function parseEraYear(raw: string): number | null {
-  const match = PATTERN.exec(raw.trim());
+  const text = raw.trim();
+  if (BARE_NUMBER.test(text)) {
+    const years = Number(text);
+    return years > 0 ? MINGUO_FIRST_YEAR - 1 + years : null;
+  }
+  const match = PATTERN.exec(text);
   if (!match) return null;
   const [, era = '', digits = ''] = match;
   const years = Number(digits);

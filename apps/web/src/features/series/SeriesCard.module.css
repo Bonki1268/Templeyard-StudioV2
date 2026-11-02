@@ -1,0 +1,53 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.meta {
+  margin: 0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.style {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.models {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.addVideo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 700;
+  text-decoration: none;
+}

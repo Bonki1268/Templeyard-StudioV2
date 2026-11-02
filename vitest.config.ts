@@ -34,6 +34,8 @@ export default defineConfig({
           include: ['src/**/*.test.{ts,tsx}'],
           environment: 'jsdom',
           exclude,
+          // 設計 token 的對比測試要讀 tokens.css 的原文（?raw），其他 CSS 照預設不處理
+          css: { include: [/tokens\.css/] },
           setupFiles: ['./src/test-setup.ts'],
         },
       },

@@ -1,0 +1,63 @@
+.group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.option {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* 選取：2px 深色框＋淺底＋粗體 */
+.option[aria-pressed='true'] {
+  border: 2px solid var(--color-text);
+  background: var(--color-surface-muted);
+  font-weight: 700;
+}
+
+.other {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.otherLabel {
+  flex: none;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.otherInput {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}

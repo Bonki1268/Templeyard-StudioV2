@@ -1,3 +1,6 @@
+import { useId } from 'react';
+import styles from './OptionGroup.module.css';
+
 export type Option<T extends string | number> = { value: T; label: string };
 
 export type OptionGroupProps<T extends string | number> = {
@@ -11,6 +14,37 @@ export type OptionGroupProps<T extends string | number> = {
 };
 
 /** 單選的選項按鈕群組：fieldset＋legend，選取狀態以 aria-pressed 標示 */
-export function OptionGroup<T extends string | number>(_props: OptionGroupProps<T>) {
-  return null;
+export function OptionGroup<T extends string | number>({ legend, options, value, onChange, other }: OptionGroupProps<T>) {
+  const otherId = useId();
+  return (
+    <fieldset className={styles.group}>
+      <legend className={styles.legend}>{legend}</legend>
+      <div className={styles.options}>
+        {options.map((option) => (
+          <button
+            key={String(option.value)}
+            type="button"
+            className={styles.option}
+            aria-pressed={option.value === value}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {other && (
+        <div className={styles.other}>
+          <label className={styles.otherLabel} htmlFor={otherId}>
+            或自己寫
+          </label>
+          <input
+            id={otherId}
+            className={styles.otherInput}
+            value={other.value}
+            onChange={(event) => other.onChange(event.target.value)}
+          />
+        </div>
+      )}
+    </fieldset>
+  );
 }
