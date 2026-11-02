@@ -22,7 +22,9 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      command: 'pnpm --filter @templeyard/server start',
+      // 每次執行前清空情境測試的資料庫，啟動時重新匯入寺廟資料
+      command:
+        "node -e \"require('node:fs').rmSync('.e2e-data', { recursive: true, force: true })\" && pnpm --filter @templeyard/server start",
       port: API_PORT,
       // 情境測試用獨立的資料庫，啟動時自動匯入 data/temples.csv
       env: { API_PORT: String(API_PORT), DATA_DIR: '.e2e-data' },

@@ -33,3 +33,19 @@ export const temples = sqliteTable(
 
 export type TempleRow = typeof temples.$inferSelect;
 export type NewTempleRow = typeof temples.$inferInsert;
+
+/** series：系列專案 */
+export const series = sqliteTable('series', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  visualStyle: text('visual_style').notNull(),
+  durationSec: integer('duration_sec').notNull(),
+  direction: text('direction').notNull(),
+  defaultImageModel: text('default_image_model').notNull(),
+  defaultVideoModel: text('default_video_model').notNull(),
+  questionnaireDefaults: text('questionnaire_defaults', { mode: 'json' }).$type<Record<string, unknown> | null>(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export type SeriesRow = typeof series.$inferSelect;

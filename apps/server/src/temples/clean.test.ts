@@ -1,10 +1,15 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import type { TempleRow } from '../db/schema.js';
 import { cleanTemples } from './clean.js';
 import { parseTemplesCsv } from './csv.js';
 
 const sample = readFileSync(new URL('./__fixtures__/temples-sample.csv', import.meta.url), 'utf8');
-const cleaned = cleanTemples(parseTemplesCsv(sample));
+// 在 beforeAll 準備資料：尚未實作時每個測試各自失敗，而不是整個檔案載入失敗
+let cleaned: TempleRow[] = [];
+beforeAll(() => {
+  cleaned = cleanTemples(parseTemplesCsv(sample));
+});
 const byId = (suffix: string) => {
   const row = cleaned.find((r) => r.id.endsWith(suffix));
   if (!row) throw new Error(`fixture 裡找不到 ${suffix}`);
@@ -42,7 +47,8 @@ describe('寺廟資料清理', () => {
       rebuiltRaw: '民國76年',
     });
     expect(byId('0005')).toMatchObject({ foundedYear: 1562, foundedRaw: '民前350' });
-    expect(byId('0010')).toMatchObject({ rebuiltYear: null, rebuiltRaw: '58' });
+    // 只有數字的重建年視為民國年（使用者決定）
+    expect(byId('0010')).toMatchObject({ rebuiltYear: 1969, rebuiltRaw: '58' });
   });
 
   it('電話正規化並保留原始值', () => {

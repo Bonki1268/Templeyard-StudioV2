@@ -1,12 +1,17 @@
 import { readFileSync } from 'node:fs';
 import { templeSearchQuerySchema, templeSummarySchema } from '@templeyard/shared';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import type { TempleRow } from '../db/schema.js';
 import { cleanTemples } from './clean.js';
 import { parseTemplesCsv } from './csv.js';
 import { searchTemples, toTempleSummary } from './search.js';
 
 const sample = readFileSync(new URL('./__fixtures__/temples-sample.csv', import.meta.url), 'utf8');
-const rows = cleanTemples(parseTemplesCsv(sample));
+// 在 beforeAll 準備資料：尚未實作時每個測試各自失敗，而不是整個檔案載入失敗
+let rows: TempleRow[] = [];
+beforeAll(() => {
+  rows = cleanTemples(parseTemplesCsv(sample));
+});
 
 const search = (params: Record<string, string>) =>
   searchTemples(rows, templeSearchQuerySchema.parse(params));

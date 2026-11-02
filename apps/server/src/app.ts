@@ -1,11 +1,18 @@
+import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { HealthResponse } from '@templeyard/shared';
 import type { AppDatabase } from './db/client.js';
+import { registerSeriesRoutes } from './routes/series.js';
 import { registerTempleRoutes } from './routes/temples.js';
+import type { Clock } from './series/repository.js';
 
 export type AppDeps = {
   db: AppDatabase;
+  /** 測試可注入固定的時間與 ID */
+  clock?: Clock;
 };
+
+const systemClock: Clock = { now: () => new Date(), newId: () => randomUUID() };
 
 // 建立 Fastify 應用；路由在這裡註冊，方便測試用 inject 呼叫。
 export function buildApp(deps: AppDeps): FastifyInstance {
@@ -13,6 +20,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
 
   app.get('/api/health', async (): Promise<HealthResponse> => ({ status: 'ok' }));
   registerTempleRoutes(app, deps.db);
+  registerSeriesRoutes(app, deps.db, deps.clock ?? systemClock);
 
   return app;
 }

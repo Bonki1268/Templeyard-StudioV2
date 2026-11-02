@@ -7,6 +7,9 @@ type ScenarioState = {
   lastResponse?: APIResponse;
   temples?: TempleSummary[];
   matched?: TempleSummary[];
+  /** 這個場景建立的系列（名稱每次不同，避免和其他場景衝突） */
+  seriesName?: string;
+  seriesId?: string;
 };
 
 export const test = base.extend<{ state: ScenarioState }>({

@@ -11,24 +11,22 @@ const sample = readFileSync(new URL('./temples/__fixtures__/temples-sample.csv',
 // 每個測試各自建立 app 與記憶體資料庫，互不影響
 let app: FastifyInstance | undefined;
 
-beforeEach(() => {
-  app = undefined;
-  const db = openDatabase(':memory:');
-  importTemples(db, sample);
-  app = buildApp({ db });
-});
+function currentApp(): FastifyInstance {
+  if (!app) throw new Error('app 沒有建立');
+  return app;
+}
 
 afterEach(async () => {
   await app?.close();
   app = undefined;
 });
 
-function currentApp(): FastifyInstance {
-  if (!app) throw new Error('app 沒有建立');
-  return app;
-}
-
 describe('健康檢查 GET /api/health', () => {
+  // 健康檢查不需要寺廟資料
+  beforeEach(() => {
+    app = buildApp({ db: openDatabase(':memory:') });
+  });
+
   it('後端正常時回應 200 與狀態 ok', async () => {
     const response = await currentApp().inject({ method: 'GET', url: '/api/health' });
 
@@ -38,6 +36,12 @@ describe('健康檢查 GET /api/health', () => {
 });
 
 describe('寺廟搜尋 GET /api/temples', () => {
+  beforeEach(() => {
+    const db = openDatabase(':memory:');
+    importTemples(db, sample);
+    app = buildApp({ db });
+  });
+
   it('依關鍵字回傳符合 schema 的結果', async () => {
     const response = await currentApp().inject({
       method: 'GET',
