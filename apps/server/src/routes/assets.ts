@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { findAsset } from '../assets/repository.js';
 import type { AssetStore } from '../assets/store.js';
 import type { AppDatabase } from '../db/client.js';
-import { errorBody } from '../http/notFound.js';
+import { errorBody } from '../http/errorBody.js';
 
 /** GET /api/assets/:id：讀本機檔案（後端只監聽 127.0.0.1） */
 export function registerAssetRoutes(app: FastifyInstance, db: AppDatabase, store: AssetStore): void {

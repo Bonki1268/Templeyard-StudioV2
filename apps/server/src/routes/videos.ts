@@ -2,7 +2,7 @@ import { createVideoSchema, updateVideoSchema, type VideoDetail } from '@templey
 import type { FastifyInstance } from 'fastify';
 import type { AppDatabase } from '../db/client.js';
 import { toValidationError } from '../http/errors.js';
-import { errorBody } from '../http/notFound.js';
+import { errorBody } from '../http/errorBody.js';
 import { listPhotosForVideo } from '../photos/repository.js';
 import { findSeries, type Clock } from '../series/repository.js';
 import { findTemple } from '../temples/repository.js';

@@ -14,7 +14,7 @@ import { sniffImageMime } from '../assets/sniff.js';
 import type { AssetStore } from '../assets/store.js';
 import type { AppDatabase } from '../db/client.js';
 import { toValidationError } from '../http/errors.js';
-import { errorBody } from '../http/notFound.js';
+import { errorBody } from '../http/errorBody.js';
 import { countTemplePhotos, findPhoto, insertPhoto, updatePhoto } from '../photos/repository.js';
 import type { Clock } from '../series/repository.js';
 import { findVideo } from '../videos/repository.js';
