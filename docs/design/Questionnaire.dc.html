@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>設定問卷</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F0}
+a{color:#B3261E}a:hover{color:#8C1D17}
+button,input,textarea,select{font:inherit}
+:focus-visible{outline:3px solid #1F1A17;outline-offset:2px}
+</style>
+</helmet>
+<div style="font-family: 'Noto Sans TC', system-ui, sans-serif; color: #1F1A17; background: #F7F5F0; min-height: 100vh; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; background: #FFFFFF; border-bottom: 1px solid #E3DDD3">
+<div style="display: flex; align-items: center; gap: 10px">
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟</span>
+<span style="font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟埕影室</span>
+</div>
+<nav aria-label="目前位置" style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #5E5650">
+<span>新北廟宇故事</span><span aria-hidden="true">›</span><span style="color: #1F1A17; font-weight: 500">板橋慈惠宮</span>
+</nav>
+<div style="flex: 1"></div>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>圖片 Nano Banana Pro</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>影片 Gemini Omni 1.1 Flash</span>
+<span style="font-size: 13px; color: #3D3631">費用 [累計] / 上限 [上限]</span>
+</header>
+<div style="flex: 1; display: flex; flex-wrap: wrap; align-items: stretch">
+<aside aria-label="與創作助理的對話" style="flex: 1 1 340px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E3DDD3; display: flex; flex-direction: column">
+<div style="flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="align-self: flex-end; max-width: 85%; padding: 12px 16px; border-radius: 12px; background: #1F1A17; color: #FFFFFF; font-size: 15px; line-height: 1.7">講媽祖顯靈救漁民的故事</div>
+<div style="align-self: flex-start; max-width: 92%; padding: 14px 16px; border-radius: 12px; background: #F2EEE6; font-size: 15px; line-height: 1.7">好的。我先確認幾個會影響成果的條件，大部分已經依這個系列的預設帶入，你看過後送出，我就排分鏡方案。</div>
+<div style="align-self: flex-start; display: flex; align-items: center; gap: 8px; font-size: 14px; color: #5E5650"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>已開啟設定問卷</div>
+</div>
+<div style="padding: 16px; border-top: 1px solid #E3DDD3; display: flex; align-items: center; gap: 8px">
+<label for="chat" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">傳訊息給創作助理</label>
+<input id="chat" type="text" placeholder="傳訊息給創作助理…" style="flex: 1; min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 10px; color: #1F1A17">
+<button type="button" aria-label="送出" style="width: 44px; height: 44px; border-radius: 999px; border: none; background: #1F1A17; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+</div>
+</aside>
+<main style="flex: 999 1 560px; min-width: 0; padding: 32px 32px 120px; display: flex; flex-direction: column; gap: 16px">
+<div style="max-width: 820px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: 'Noto Serif TC', serif; font-size: 28px; font-weight: 700">設定問卷</h1>
+<p style="margin: 0; font-size: 15px; color: #5E5650">每一題都可以點選項，或用自己的話寫。留白的題目由系統決定，並在分鏡方案中說明選了什麼。</p>
+</div>
+<section aria-labelledby="q1" style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px">
+<label id="q1" for="story" style="font-size: 17px; font-weight: 700">想講的故事</label>
+<button type="button" style="min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid #8A6A1F; background: #FFFFFF; color: #6E5418; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/></svg>AI 幫我寫</button>
+</div>
+<textarea id="story" rows="3" style="padding: 10px 12px; border: 1px solid #CFC7BA; border-radius: 8px; color: #1F1A17; resize: vertical; line-height: 1.7">講媽祖顯靈救漁民的故事</textarea>
+<span style="font-size: 13px; color: #5E5650">帶入自你的創作輸入</span>
+</section>
+<fieldset style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 20px; margin: 0; display: flex; flex-direction: column; gap: 10px">
+<legend style="float: left; width: 100%; padding: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 17px; font-weight: 700">這支影片想達成什麼？</span><span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #E8EEF6; color: #1F4E79">自己寫</span></legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">吸引參拜</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">介紹歷史</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">宣傳活動</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">推薦景點</button>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<label for="o-goal" style="font-size: 14px; color: #3D3631">或自己寫</label>
+<input id="o-goal" type="text" value="讓年輕人知道，這間廟和討海人的關係" style="flex: 1 1 220px; min-height: 44px; padding: 0 12px; border: 2px solid #1F1A17; border-radius: 8px; background: #FFFFFF; color: #1F1A17">
+<button type="button" aria-label="AI 幫我寫：這支影片想達成什麼" style="min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid #8A6A1F; background: #FFFFFF; color: #6E5418; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/></svg>AI 幫我寫</button>
+</div>
+</fieldset>
+<fieldset style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 20px; margin: 0; display: flex; flex-direction: column; gap: 10px">
+<legend style="float: left; width: 100%; padding: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 17px; font-weight: 700">主要觀眾是誰？</span><span style="font-size: 13px; color: #5E5650">未作答・系統將會選擇</span></legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">在地居民</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">外地遊客</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">年輕族群</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">信眾</button>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<label for="o-aud" style="font-size: 14px; color: #3D3631">或自己寫</label>
+<input id="o-aud" type="text" placeholder="例如：帶小孩來參加遶境的家庭" style="flex: 1 1 220px; min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 8px; background: #FFFFFF; color: #1F1A17">
+<button type="button" aria-label="AI 幫我寫：主要觀眾" style="min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid #8A6A1F; background: #FFFFFF; color: #6E5418; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/></svg>AI 幫我寫</button>
+</div>
+</fieldset>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px">
+<fieldset style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 20px; margin: 0; display: flex; flex-direction: column; gap: 10px">
+<legend style="float: left; width: 100%; padding: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 17px; font-weight: 700">故事怎麼說？</span><span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #FBF0D6; color: #6E5418">系列預設</span></legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" aria-pressed="true" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 2px solid #1F1A17; background: #F2EEE6; color: #1F1A17; font-weight: 700; cursor: pointer">角色對鏡說話</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">旁白敘述</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">只有字幕</button>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<label for="o-tell" style="font-size: 14px; color: #3D3631">或自己寫</label>
+<input id="o-tell" type="text" placeholder="用自己的話描述" style="flex: 1 1 160px; min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 8px; background: #FFFFFF; color: #1F1A17">
+<button type="button" aria-label="AI 幫我寫：故事怎麼說" style="min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid #8A6A1F; background: #FFFFFF; color: #6E5418; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/></svg>AI 幫我寫</button>
+</div>
+</fieldset>
+<fieldset style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 20px; margin: 0; display: flex; flex-direction: column; gap: 10px">
+<legend style="float: left; width: 100%; padding: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 17px; font-weight: 700">角色</span><span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #FBF0D6; color: #6E5418">系列預設</span></legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" aria-pressed="true" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 2px solid #1F1A17; background: #F2EEE6; color: #1F1A17; font-weight: 700; cursor: pointer">沿用：導覽員阿嬤</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">建立新角色</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">不出現角色</button>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<label for="o-char" style="font-size: 14px; color: #3D3631">或自己寫</label>
+<input id="o-char" type="text" placeholder="例如：阿嬤和她的孫子" style="flex: 1 1 160px; min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 8px; background: #FFFFFF; color: #1F1A17">
+<button type="button" aria-label="AI 幫我寫：角色" style="min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid #8A6A1F; background: #FFFFFF; color: #6E5418; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/></svg>AI 幫我寫</button>
+</div>
+</fieldset>
+<fieldset style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 20px; margin: 0; display: flex; flex-direction: column; gap: 10px">
+<legend style="float: left; width: 100%; padding: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 17px; font-weight: 700">語氣</span><span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #FBF0D6; color: #6E5418">系列預設</span></legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">莊重</button>
+<button type="button" aria-pressed="true" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 2px solid #1F1A17; background: #F2EEE6; color: #1F1A17; font-weight: 700; cursor: pointer">溫暖</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">輕鬆</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">懸疑</button>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<label for="o-tone" style="font-size: 14px; color: #3D3631">或自己寫</label>
+<input id="o-tone" type="text" placeholder="例如：溫暖，結尾帶一點幽默" style="flex: 1 1 160px; min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 8px; background: #FFFFFF; color: #1F1A17">
+<button type="button" aria-label="AI 幫我寫：語氣" style="min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid #8A6A1F; background: #FFFFFF; color: #6E5418; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/></svg>AI 幫我寫</button>
+</div>
+</fieldset>
+<fieldset style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 20px; margin: 0; display: flex; flex-direction: column; gap: 10px">
+<legend style="float: left; width: 100%; padding: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 17px; font-weight: 700">長度</span><span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #FBF0D6; color: #6E5418">系列預設</span></legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" aria-pressed="false" style="min-height: 44px; min-width: 76px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">15 秒</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; min-width: 76px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">20 秒</button>
+<button type="button" aria-pressed="true" style="min-height: 44px; min-width: 76px; border-radius: 8px; border: 2px solid #1F1A17; background: #F2EEE6; color: #1F1A17; font-weight: 700; cursor: pointer">30 秒</button>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<label for="o-len" style="font-size: 14px; color: #3D3631">或自己填</label>
+<input id="o-len" type="number" min="5" max="30" placeholder="秒數（30 以內）" style="flex: 1 1 140px; min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 8px; background: #FFFFFF; color: #1F1A17">
+</div>
+</fieldset>
+</div>
+<fieldset style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 20px; margin: 0; display: flex; flex-direction: column; gap: 10px">
+<legend style="float: left; width: 100%; padding: 0; font-size: 17px; font-weight: 700">一定要出現的照片</legend>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px">
+<label style="display: flex; flex-direction: column; gap: 6px; cursor: pointer"><span aria-hidden="true" style="aspect-ratio: 4 / 3; border-radius: 8px; background: #E4DACB; border: 3px solid #1F1A17"></span><span style="display: flex; align-items: center; gap: 6px; font-size: 14px"><input type="checkbox" checked style="width: 18px; height: 18px">廟前全景</span></label>
+<label style="display: flex; flex-direction: column; gap: 6px; cursor: pointer"><span aria-hidden="true" style="aspect-ratio: 4 / 3; border-radius: 8px; background: #DCCFBC"></span><span style="display: flex; align-items: center; gap: 6px; font-size: 14px"><input type="checkbox" style="width: 18px; height: 18px">三川殿</span></label>
+<label style="display: flex; flex-direction: column; gap: 6px; cursor: pointer"><span aria-hidden="true" style="aspect-ratio: 4 / 3; border-radius: 8px; background: #D2C2AA; border: 3px solid #1F1A17"></span><span style="display: flex; align-items: center; gap: 6px; font-size: 14px"><input type="checkbox" checked style="width: 18px; height: 18px">正殿內部</span></label>
+<label style="display: flex; flex-direction: column; gap: 6px; cursor: pointer"><span aria-hidden="true" style="aspect-ratio: 4 / 3; border-radius: 8px; background: #E9DFCF"></span><span style="display: flex; align-items: center; gap: 6px; font-size: 14px"><input type="checkbox" style="width: 18px; height: 18px">屋脊剪黏</span></label>
+</div>
+</fieldset>
+<section aria-labelledby="q9" style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px">
+<label id="q9" for="must" style="font-size: 17px; font-weight: 700">一定要說到的事</label>
+<button type="button" style="min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid #8A6A1F; background: #FFFFFF; color: #6E5418; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/></svg>AI 幫我寫</button>
+</div>
+<textarea id="must" rows="2" placeholder="例如：廟的名字、要邀請大家來參拜" style="padding: 10px 12px; border: 1px solid #CFC7BA; border-radius: 8px; color: #1F1A17; resize: vertical; line-height: 1.7"></textarea>
+</section>
+</div>
+</main>
+</div>
+<div style="position: sticky; bottom: 0; background: #FFFFFF; border-top: 1px solid #E3DDD3; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 16px">
+<span style="font-size: 14px; color: #5E5650">送出後依這些答案排分鏡方案，不會產生費用</span>
+<button type="button" style="min-height: 48px; padding: 0 24px; border-radius: 8px; border: none; background: {{accent}}; color: #FFFFFF; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>建立分鏡方案</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#B3261E","options":["#B3261E","#1F4E79","#2E6B4F"]},"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#B3261E' };
+  }
+}
+</script>
+</body>
+</html>

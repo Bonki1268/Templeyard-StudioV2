@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>系列首頁</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F0}
+a{color:#B3261E}a:hover{color:#8C1D17}
+button,input,textarea,select{font:inherit}
+:focus-visible{outline:3px solid #1F1A17;outline-offset:2px}
+</style>
+</helmet>
+<div style="font-family: 'Noto Sans TC', system-ui, sans-serif; color: #1F1A17; background: #F7F5F0; min-height: 100vh">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; background: #FFFFFF; border-bottom: 1px solid #E3DDD3">
+<div style="display: flex; align-items: center; gap: 10px">
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟</span>
+<span style="font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟埕影室</span>
+</div>
+</header>
+<main style="max-width: 1200px; margin: 0 auto; padding: 40px 24px 64px; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+<section aria-labelledby="series-title" style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+<h1 id="series-title" style="margin: 0; font-family: 'Noto Serif TC', serif; font-size: 32px; font-weight: 700">你的系列</h1>
+<p style="margin: 0; font-size: 15px; color: #5E5650; line-height: 1.6">一個系列共用風格、秒數、角色與預設模型，可以用一致的樣子介紹多間廟。</p>
+<article style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<h2 style="margin: 0; font-size: 18px; font-weight: 700">新北廟宇故事</h2>
+<span style="font-size: 13px; color: #5E5650">30 秒 · 歷史故事</span>
+</div>
+<p style="margin: 0; font-size: 14px; color: #5E5650; line-height: 1.6">寫實電影感、清晨暖光、淺景深</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<span style="font-size: 13px; padding: 4px 10px; border-radius: 999px; background: #F2EEE6; color: #1F1A17">板橋慈惠宮</span>
+<span style="font-size: 13px; padding: 4px 10px; border-radius: 999px; background: #F2EEE6; color: #1F1A17">角色：導覽員阿嬤</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px">
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: none; background: {{accent}}; color: #FFFFFF; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>新增影片</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">系列設定</button>
+</div>
+</article>
+<article style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<h2 style="margin: 0; font-size: 18px; font-weight: 700">廟會節慶</h2>
+<span style="font-size: 13px; color: #5E5650">20 秒 · 節慶宣傳</span>
+</div>
+<p style="margin: 0; font-size: 14px; color: #5E5650; line-height: 1.6">還沒有影片</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">新增第一支影片</button>
+</div>
+</article>
+</section>
+<section aria-labelledby="new-title" style="flex: 1 1 520px; min-width: 0; background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 28px; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h2 id="new-title" style="margin: 0; font-family: 'Noto Serif TC', serif; font-size: 24px; font-weight: 700">建立新系列</h2>
+<p style="margin: 0; font-size: 14px; color: #5E5650">這些設定會套用到系列裡的每一支影片，之後可以修改。</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="s-name" style="font-size: 15px; font-weight: 500">系列名稱</label>
+<input id="s-name" type="text" value="三峽老街廟宇" style="min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 8px; background: #FFFFFF; color: #1F1A17">
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<label for="s-style" style="font-size: 15px; font-weight: 500">整體視覺風格</label>
+<button type="button" style="min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid #8A6A1F; background: #FFFFFF; color: #6E5418; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/><path d="M18 15l.8 2.2 2.2.8-2.2.8L18 21l-.8-2.2-2.2-.8 2.2-.8z"/></svg>AI 幫我寫</button>
+</div>
+<textarea id="s-style" rows="2" style="padding: 10px 12px; border: 1px solid #CFC7BA; border-radius: 8px; background: #FFFFFF; color: #1F1A17; resize: vertical; line-height: 1.6">紅磚老街、懷舊</textarea>
+<div role="region" aria-label="AI 建議" style="background: #FBF6EA; border: 1px solid #E5D6AE; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 13px; font-weight: 700; color: #6E5418">AI 建議</span>
+<p style="margin: 0; font-size: 14px; line-height: 1.7">寫實電影感；紅磚拱廊與木作窗櫺的暖色調；午後斜光、淺景深；色彩偏低飽和，保留老街磚牆的紋理。</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" style="min-height: 36px; padding: 0 14px; border-radius: 8px; border: none; background: #1F1A17; color: #FFFFFF; font-size: 14px; cursor: pointer">採用</button>
+<button type="button" style="min-height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; font-size: 14px; cursor: pointer">再寫一版</button>
+</div>
+</div>
+</div>
+<fieldset style="border: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="font-size: 15px; font-weight: 500; padding: 0 0 8px">影片秒數</legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" aria-pressed="false" style="min-height: 44px; min-width: 88px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">15 秒</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; min-width: 88px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">20 秒</button>
+<button type="button" aria-pressed="true" style="min-height: 44px; min-width: 88px; border-radius: 8px; border: 2px solid #1F1A17; background: #F2EEE6; color: #1F1A17; font-weight: 700; cursor: pointer">30 秒</button>
+</div>
+</fieldset>
+<fieldset style="border: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="font-size: 15px; font-weight: 500; padding: 0 0 8px">影片方向</legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" aria-pressed="true" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 2px solid #1F1A17; background: #F2EEE6; color: #1F1A17; font-weight: 700; cursor: pointer">歷史故事</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">節慶宣傳</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">景點導覽</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">人物代言</button>
+</div>
+</fieldset>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 15px; font-weight: 500">共同角色</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px dashed #A89E8F; background: #FFFFFF; color: #1F1A17; cursor: pointer; display: flex; align-items: center; gap: 6px">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>新增角色</button>
+<span style="font-size: 14px; color: #5E5650; align-self: center">也可以在第一支影片的分鏡方案中建立</span>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+<div style="flex: 1 1 220px; display: flex; flex-direction: column; gap: 8px">
+<label for="s-img" style="font-size: 15px; font-weight: 500">預設圖片模型</label>
+<select id="s-img" style="min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 8px; background: #FFFFFF; color: #1F1A17">
+<option>Nano Banana Pro</option>
+</select>
+</div>
+<div style="flex: 1 1 220px; display: flex; flex-direction: column; gap: 8px">
+<label for="s-vid" style="font-size: 15px; font-weight: 500">預設影片模型</label>
+<select id="s-vid" style="min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 8px; background: #FFFFFF; color: #1F1A17">
+<option>Gemini Omni 1.1 Flash</option>
+<option>Seedance 2.0</option>
+<option>Wan 2.2</option>
+</select>
+</div>
+</div>
+<p style="margin: 0; padding: 12px 14px; border-radius: 8px; background: #F2EEE6; font-size: 14px; line-height: 1.6; color: #3D3631">這個系列第一支影片送出的問卷答案，會存成系列的問卷預設值，之後的影片自動帶入。</p>
+<div style="display: flex; justify-content: flex-end">
+<button type="button" style="min-height: 48px; padding: 0 28px; border-radius: 8px; border: none; background: {{accent}}; color: #FFFFFF; font-size: 16px; font-weight: 700; cursor: pointer">建立系列</button>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#B3261E","options":["#B3261E","#1F4E79","#2E6B4F"]},"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#B3261E' };
+  }
+}
+</script>
+</body>
+</html>

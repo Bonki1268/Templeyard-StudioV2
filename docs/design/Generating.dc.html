@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>生成中</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F0}
+a{color:#B3261E}a:hover{color:#8C1D17}
+button,input,textarea,select{font:inherit}
+:focus-visible{outline:3px solid #1F1A17;outline-offset:2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.spin{animation:none !important}}
+</style>
+</helmet>
+<div style="font-family: 'Noto Sans TC', system-ui, sans-serif; color: #1F1A17; background: #F7F5F0; min-height: 100vh; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; background: #FFFFFF; border-bottom: 1px solid #E3DDD3">
+<div style="display: flex; align-items: center; gap: 10px">
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟</span>
+<span style="font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟埕影室</span>
+</div>
+<nav aria-label="目前位置" style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #5E5650">
+<span>新北廟宇故事</span><span aria-hidden="true">›</span><span style="color: #1F1A17; font-weight: 500">板橋慈惠宮</span>
+</nav>
+<div style="flex: 1"></div>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>圖片 Nano Banana Pro</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>影片 Gemini Omni 1.1 Flash</span>
+<span style="font-size: 13px; color: #3D3631">費用 [累計] / 上限 [上限]</span>
+</header>
+<div style="flex: 1; display: flex; flex-wrap: wrap; align-items: stretch">
+<aside aria-label="與創作助理的對話" style="flex: 1 1 340px; max-width: 100%; min-height: 760px; background: #FFFFFF; border-right: 1px solid #E3DDD3; display: flex; flex-direction: column">
+<div style="flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="align-self: flex-start; max-width: 92%; padding: 14px 16px; border-radius: 12px; background: #F2EEE6; font-size: 15px; line-height: 1.7">已開始生成 8 格精緻圖。完成後會一次顯示，並通知你。</div>
+</div>
+<div style="padding: 16px; border-top: 1px solid #E3DDD3; display: flex; align-items: center; gap: 8px">
+<label for="chat" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">傳訊息給創作助理</label>
+<input id="chat" type="text" placeholder="傳訊息給創作助理…" style="flex: 1; min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 10px; color: #1F1A17">
+<button type="button" aria-label="送出" style="width: 44px; height: 44px; border-radius: 999px; border: none; background: #1F1A17; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+</div>
+</aside>
+<main style="flex: 999 1 560px; min-width: 0; padding: 48px 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px">
+<svg class="spin" aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" style="animation: spin 1.4s linear infinite"><circle cx="36" cy="36" r="30" fill="none" stroke="#E3DDD3" stroke-width="6"/><path d="M36 6a30 30 0 0 1 30 30" fill="none" stroke="#1F1A17" stroke-width="6" stroke-linecap="round"/></svg>
+<div role="status" aria-live="polite" style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+<h1 style="margin: 0; font-family: 'Noto Serif TC', serif; font-size: 36px; font-weight: 700">生成中</h1>
+<p style="margin: 0; font-size: 16px; color: #3D3631">精緻圖・8 格</p>
+</div>
+<p style="margin: 0; max-width: 420px; text-align: center; font-size: 15px; color: #5E5650; line-height: 1.7">完成後會一次顯示所有結果，並發送通知。你可以先離開這個頁面。</p>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">回到分鏡方案查看</button>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#B3261E","options":["#B3261E","#1F4E79","#2E6B4F"]},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#B3261E' };
+  }
+}
+</script>
+</body>
+</html>

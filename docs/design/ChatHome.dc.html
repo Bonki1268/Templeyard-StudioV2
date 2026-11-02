@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>創作對話</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F0}
+a{color:#B3261E}a:hover{color:#8C1D17}
+button,input,textarea,select{font:inherit}
+:focus-visible{outline:3px solid #1F1A17;outline-offset:2px}
+</style>
+</helmet>
+<div style="font-family: 'Noto Sans TC', system-ui, sans-serif; color: #1F1A17; background: #F7F5F0; min-height: 100vh; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; background: #FFFFFF; border-bottom: 1px solid #E3DDD3">
+<div style="display: flex; align-items: center; gap: 10px">
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟</span>
+<span style="font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟埕影室</span>
+</div>
+<nav aria-label="目前位置" style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #5E5650">
+<span>新北廟宇故事</span><span aria-hidden="true">›</span><span style="color: #1F1A17; font-weight: 500">板橋慈惠宮</span>
+</nav>
+<div style="flex: 1"></div>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>圖片 Nano Banana Pro</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>影片 Gemini Omni 1.1 Flash</span>
+<span style="font-size: 13px; color: #3D3631">費用 [累計] / 上限 [上限]</span>
+</header>
+<div style="flex: 1; display: flex; flex-wrap: wrap; align-items: stretch">
+<aside aria-label="與創作助理的對話" style="flex: 1 1 340px; max-width: 100%; min-height: 760px; background: #FFFFFF; border-right: 1px solid #E3DDD3; display: flex; flex-direction: column">
+<div style="flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="align-self: flex-start; max-width: 92%; padding: 14px 16px; border-radius: 12px; background: #F2EEE6; font-size: 15px; line-height: 1.7">寺廟定裝版已確認。跟我說你想為板橋慈惠宮做什麼樣的影片，一句話就夠了，我會再用幾題問卷補齊細節。</div>
+</div>
+<div style="padding: 16px; border-top: 1px solid #E3DDD3; display: flex; flex-direction: column; gap: 10px">
+<label for="chat" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">傳訊息給創作助理</label>
+<textarea id="chat" rows="2" placeholder="傳訊息給創作助理…" style="padding: 10px 12px; border: 1px solid #CFC7BA; border-radius: 10px; color: #1F1A17; resize: none; line-height: 1.6"></textarea>
+<div style="display: flex; align-items: center; gap: 8px">
+<button type="button" aria-label="上傳照片" style="width: 44px; height: 44px; border-radius: 999px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+<button type="button" aria-label="語音輸入" style="width: 44px; height: 44px; border-radius: 999px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+<div style="flex: 1"></div>
+<button type="button" aria-label="送出" style="width: 44px; height: 44px; border-radius: 999px; border: none; background: #1F1A17; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+</div>
+</div>
+</aside>
+<main style="flex: 999 1 560px; min-width: 0; padding: 72px 32px; display: flex; flex-direction: column; align-items: center; gap: 28px">
+<div role="img" aria-label="板橋慈惠宮廟前全景縮圖" style="width: 220px; aspect-ratio: 16 / 9; border-radius: 10px; background: #D9CBB5; transform: rotate(-3deg)"></div>
+<h1 style="margin: 0; text-align: center; font-family: 'Noto Serif TC', serif; font-size: 40px; font-weight: 700; line-height: 1.3; text-wrap: balance">你想為板橋慈惠宮創作什麼？</h1>
+<div style="width: 100%; max-width: 760px; background: #FFFFFF; border: 2px solid #CFC7BA; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<label for="ask" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">創作需求</label>
+<textarea id="ask" rows="3" style="border: none; padding: 4px; color: #1F1A17; resize: none; font-size: 17px; line-height: 1.7">講媽祖顯靈救漁民的故事</textarea>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/></svg>寺廟照片 4 張已帶入</span>
+<button type="button" style="min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>補充照片</button>
+<div style="flex: 1"></div>
+<button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid #8A6A1F; background: #FFFFFF; color: #6E5418; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/></svg>AI 幫我寫</button>
+<button type="button" aria-label="送出創作需求" style="width: 48px; height: 48px; border-radius: 999px; border: none; background: {{accent}}; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+</div>
+</div>
+<div role="group" aria-label="快速開頭" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px">
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">歷史故事</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">神明傳說</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">節慶活動</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">景點導覽</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">人物代言</button>
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#B3261E","options":["#B3261E","#1F4E79","#2E6B4F"]},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#B3261E' };
+  }
+}
+</script>
+</body>
+</html>

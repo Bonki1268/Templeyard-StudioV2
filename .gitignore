@@ -1,0 +1,31 @@
+# 金鑰
+.env
+.env.local
+.env.*.local
+
+# 本機資料（寺廟原始資料 data/temples.csv 要 commit）
+data/app.db
+data/app.db-*
+data/assets/
+
+# 依賴與建置
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# 測試輸出
+coverage/
+test-results/
+playwright-report/
+.features-gen/
+
+# Claude Code 本機狀態
+.claude/state/
+.claude/settings.local.json
+
+# 系統
+.DS_Store
+
+# 待刪除的暫存檔
+_to_delete/

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>成品</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F0}
+a{color:#B3261E}a:hover{color:#8C1D17}
+button,input,textarea,select{font:inherit}
+:focus-visible{outline:3px solid #1F1A17;outline-offset:2px}
+</style>
+</helmet>
+<div style="font-family: 'Noto Sans TC', system-ui, sans-serif; color: #1F1A17; background: #F7F5F0; min-height: 100vh; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; background: #FFFFFF; border-bottom: 1px solid #E3DDD3">
+<div style="display: flex; align-items: center; gap: 10px">
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟</span>
+<span style="font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟埕影室</span>
+</div>
+<nav aria-label="目前位置" style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #5E5650">
+<span>新北廟宇故事</span><span aria-hidden="true">›</span><span style="color: #1F1A17; font-weight: 500">板橋慈惠宮</span>
+</nav>
+<div style="flex: 1"></div>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>圖片 Nano Banana Pro</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>影片 Gemini Omni 1.1 Flash</span>
+<span style="font-size: 13px; color: #3D3631">費用 [累計] / 上限 [上限]</span>
+</header>
+<div style="flex: 1; display: flex; flex-wrap: wrap; align-items: stretch">
+<aside aria-label="與創作助理的對話" style="flex: 1 1 340px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E3DDD3; display: flex; flex-direction: column">
+<div style="flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="align-self: flex-start; max-width: 92%; padding: 14px 16px; border-radius: 12px; background: #F2EEE6; font-size: 15px; line-height: 1.7">成品合成好了：30 秒、8 格，已加上旁白、背景音樂與字幕。</div>
+<div style="align-self: flex-end; max-width: 85%; padding: 12px 16px; border-radius: 12px; background: #1F1A17; color: #FFFFFF; font-size: 15px; line-height: 1.7">第 5 格的動作太快</div>
+<div style="align-self: flex-start; max-width: 92%; padding: 14px 16px; border-radius: 12px; background: #F2EEE6; font-size: 15px; line-height: 1.7; display: flex; flex-direction: column; gap: 10px">
+<span>我會用對話方式修改第 5 格，讓小船的移動放慢，其他格不動。費用 [金額]。</span>
+<div style="display: flex; gap: 8px"><button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 8px; border: none; background: #1F1A17; color: #FFFFFF; font-size: 14px; cursor: pointer">確認修改</button><button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; font-size: 14px; cursor: pointer">取消</button></div>
+</div>
+</div>
+<div style="padding: 16px; border-top: 1px solid #E3DDD3; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 8px">
+<label for="chat" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">傳訊息給創作助理</label>
+<input id="chat" type="text" placeholder="想改哪裡？" style="flex: 1; min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 10px; color: #1F1A17">
+<button type="button" aria-label="送出" style="width: 44px; height: 44px; border-radius: 999px; border: none; background: #1F1A17; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+</div>
+<button type="button" style="align-self: flex-start; min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid #8A6A1F; background: #FFFFFF; color: #6E5418; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/></svg>AI 幫我寫修改指令</button>
+</div>
+</aside>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<h1 style="margin: 0; font-family: 'Noto Serif TC', serif; font-size: 28px; font-weight: 700">成品</h1>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">複製這支影片</button>
+<button type="button" style="min-height: 44px; padding: 0 20px; border-radius: 8px; border: none; background: {{accent}}; color: #FFFFFF; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></svg>確認並下載</button>
+</div>
+</div>
+<div style="max-width: 960px; width: 100%; display: flex; flex-direction: column; gap: 0; border-radius: 12px; overflow: hidden; background: #1F1A17">
+<div role="img" aria-label="成品影片畫面" style="aspect-ratio: 16 / 9; background: #2B2420; display: flex; align-items: center; justify-content: center; position: relative">
+<button type="button" aria-label="播放成品" style="width: 72px; height: 72px; border-radius: 999px; border: none; background: rgba(255,255,255,0.92); color: #1F1A17; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l11 7-11 7z"/></svg></button>
+<span style="position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: #FFFFFF; font-size: 18px; text-shadow: 0 1px 3px rgba(0,0,0,0.6)">這座廟，守著板橋的人很久了。</span>
+</div>
+<div style="padding: 10px 14px; display: flex; align-items: center; gap: 12px; color: #FFFFFF; font-size: 13px">
+<span style="font-variant-numeric: tabular-nums">0:00 / 0:30</span>
+<div aria-hidden="true" style="flex: 1; height: 4px; border-radius: 999px; background: #5A514B"><div style="width: 4%; height: 4px; border-radius: 999px; background: #FFFFFF"></div></div>
+</div>
+</div>
+<section aria-labelledby="t-strip" style="max-width: 960px; width: 100%; display: flex; flex-direction: column; gap: 10px">
+<h2 id="t-strip" style="margin: 0; font-size: 16px; font-weight: 700">各格（點一下跳到該段，或進入細修）</h2>
+<div style="display: flex; gap: 4px">
+<sc-for list="{{segs}}" as="g" hint-placeholder-count="8">
+<button type="button" aria-label="第 {{g.n}} 格，{{g.t}}" style="flex-grow: {{g.s}}; flex-basis: 0; min-width: 0; padding: 0; border: {{g.border}}; border-radius: 6px; background: #FFFFFF; cursor: pointer; display: flex; flex-direction: column; overflow: hidden">
+<span aria-hidden="true" style="height: 48px; background: {{g.bg}}"></span>
+<span style="font-size: 12px; padding: 4px 6px; text-align: left; color: #1F1A17">{{g.n}}・{{g.s}}s</span>
+</button>
+</sc-for>
+</div>
+</section>
+<dl style="max-width: 960px; width: 100%; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+<div style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 10px; padding: 12px 14px"><dt style="font-size: 13px; color: #5E5650">圖片模型</dt><dd style="margin: 4px 0 0; font-weight: 700">Nano Banana Pro</dd></div>
+<div style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 10px; padding: 12px 14px"><dt style="font-size: 13px; color: #5E5650">影片模型</dt><dd style="margin: 4px 0 0; font-weight: 700">Gemini Omni 1.1 Flash</dd></div>
+<div style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 10px; padding: 12px 14px"><dt style="font-size: 13px; color: #5E5650">規格</dt><dd style="margin: 4px 0 0; font-weight: 700">30 秒・1920×1080・24 fps</dd></div>
+<div style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 10px; padding: 12px 14px"><dt style="font-size: 13px; color: #5E5650">本支影片費用</dt><dd style="margin: 4px 0 0; font-weight: 700">[累計] / [上限]</dd></div>
+</dl>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#B3261E","options":["#B3261E","#1F4E79","#2E6B4F"]},"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const segs = [
+      { s: 4, t: '0:00–0:04', bg: '#E4DACB' },
+      { s: 3, t: '0:04–0:07', bg: '#DCCFBC' },
+      { s: 3, t: '0:07–0:10', bg: '#D6C7B1' },
+      { s: 4, t: '0:10–0:14', bg: '#BFA886' },
+      { s: 4, t: '0:14–0:18', bg: '#C9CFD1' },
+      { s: 4, t: '0:18–0:22', bg: '#D2C2AA' },
+      { s: 4, t: '0:22–0:26', bg: '#E9DFCF' },
+      { s: 4, t: '0:26–0:30', bg: '#E4DACB' }
+    ];
+    return {
+      accent: this.props.accent ?? '#B3261E',
+      segs: segs.map((g, i) => ({ ...g, n: i + 1, border: i === 4 ? '2px solid #1F1A17' : '1px solid #E3DDD3' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

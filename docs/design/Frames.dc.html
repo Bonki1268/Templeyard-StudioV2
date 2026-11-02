@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>精緻圖</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F0}
+a{color:#B3261E}a:hover{color:#8C1D17}
+button,input,textarea,select{font:inherit}
+:focus-visible{outline:3px solid #1F1A17;outline-offset:2px}
+</style>
+</helmet>
+<div style="font-family: 'Noto Sans TC', system-ui, sans-serif; color: #1F1A17; background: #F7F5F0; min-height: 100vh; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; background: #FFFFFF; border-bottom: 1px solid #E3DDD3">
+<div style="display: flex; align-items: center; gap: 10px">
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟</span>
+<span style="font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟埕影室</span>
+</div>
+<nav aria-label="目前位置" style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #5E5650">
+<span>新北廟宇故事</span><span aria-hidden="true">›</span><span style="color: #1F1A17; font-weight: 500">板橋慈惠宮</span>
+</nav>
+<div style="flex: 1"></div>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>圖片 Nano Banana Pro</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>影片 Gemini Omni 1.1 Flash</span>
+<span style="font-size: 13px; color: #3D3631">費用 [累計] / 上限 [上限]</span>
+</header>
+<div style="flex: 1; display: flex; flex-wrap: wrap; align-items: stretch">
+<aside aria-label="與創作助理的對話" style="flex: 1 1 340px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E3DDD3; display: flex; flex-direction: column">
+<div style="flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="align-self: flex-start; max-width: 92%; padding: 14px 16px; border-radius: 12px; background: #F2EEE6; font-size: 15px; line-height: 1.7">8 格精緻圖都完成了。你剛才在細修頁改了第 4 格的台詞，所以第 4 格需要重新確認。</div>
+<div style="align-self: flex-end; max-width: 85%; padding: 12px 16px; border-radius: 12px; background: #1F1A17; color: #FFFFFF; font-size: 15px; line-height: 1.7">第 6 格漁民的臉太清楚了，背對鏡頭一點</div>
+<div style="align-self: flex-start; max-width: 92%; padding: 14px 16px; border-radius: 12px; background: #F2EEE6; font-size: 15px; line-height: 1.7">我會只重生第 6 格，讓漁民改成背對鏡頭。費用 [金額]，要執行嗎？</div>
+</div>
+<div style="padding: 16px; border-top: 1px solid #E3DDD3; display: flex; align-items: center; gap: 8px">
+<label for="chat" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">傳訊息給創作助理</label>
+<input id="chat" type="text" placeholder="傳訊息給創作助理…" style="flex: 1; min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 10px; color: #1F1A17">
+<button type="button" aria-label="送出" style="width: 44px; height: 44px; border-radius: 999px; border: none; background: #1F1A17; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+</div>
+</aside>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px 140px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: 'Noto Serif TC', serif; font-size: 28px; font-weight: 700">精緻圖</h1>
+<p style="margin: 0; font-size: 15px; color: #5E5650">確認每一格的畫面後再生成影片。點任一格可以進入分鏡細修。</p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px">
+<sc-for list="{{frames}}" as="f" hint-placeholder-count="8">
+<article style="background: #FFFFFF; border: {{f.border}}; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column">
+<div role="img" aria-label="第 {{f.n}} 格精緻圖" style="aspect-ratio: 16 / 9; background: {{f.bg}}"></div>
+<div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<span style="font-weight: 700">{{f.n}}<span style="font-weight: 400; font-size: 13px; color: #5E5650">｜{{f.t}}</span></span>
+<sc-if value="{{f.recheck}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #FBF0D6; color: #6E5418">需重新確認</span></sc-if>
+<sc-if value="{{f.ok}}" hint-placeholder-val="{{true}}"><span style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #245A40"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg>已選定</span></sc-if>
+</div>
+<span style="font-size: 13px; color: #3D3631; line-height: 1.5">{{f.desc}}</span>
+<div style="display: flex; gap: 8px">
+<button type="button" style="min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #1F1A17; background: #FFFFFF; color: #1F1A17; font-size: 14px; cursor: pointer">細修</button>
+<button type="button" style="min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 4px"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>重生</button>
+</div>
+</div>
+</article>
+</sc-for>
+</div>
+</main>
+</div>
+<div style="position: sticky; bottom: 0; background: #FFFFFF; border-top: 1px solid #E3DDD3; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 20px">
+<div style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 14px; color: #6E5418; font-weight: 700">第 4 格需要重新確認</span>
+<span style="font-size: 13px; color: #5E5650">影片費用預估 [金額]（上限 [上限]）</span>
+</div>
+<button type="button" style="min-height: 48px; padding: 0 20px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer">回到分鏡方案</button>
+<button type="button" disabled style="min-height: 48px; padding: 0 28px; border-radius: 8px; border: none; background: {{accent}}; color: #FFFFFF; font-size: 16px; font-weight: 700; opacity: 0.45; cursor: not-allowed">生成影片</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#B3261E","options":["#B3261E","#1F4E79","#2E6B4F"]},"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const list = [
+      { t: '0:00–0:04', bg: '#E4DACB', desc: '清晨的廟前全景，香煙升起' },
+      { t: '0:04–0:07', bg: '#DCCFBC', desc: '阿嬤站在廟門前轉身' },
+      { t: '0:07–0:10', bg: '#D6C7B1', desc: '特寫：阿嬤的手指向廟內' },
+      { t: '0:10–0:14', bg: '#BFA886', desc: '颱風夜，信眾在正殿守著燈火', recheck: true },
+      { t: '0:14–0:18', bg: '#C9CFD1', desc: '風雨中的小船，遠方一點光' },
+      { t: '0:18–0:22', bg: '#D2C2AA', desc: '天亮了，漁民走進正殿致謝' },
+      { t: '0:22–0:26', bg: '#E9DFCF', desc: '晨光照在屋脊剪黏上' },
+      { t: '0:26–0:30', bg: '#E4DACB', desc: '阿嬤在廟前微笑招手' }
+    ];
+    return {
+      accent: this.props.accent ?? '#B3261E',
+      frames: list.map((f, i) => ({
+        ...f,
+        n: i + 1,
+        recheck: !!f.recheck,
+        ok: !f.recheck,
+        border: f.recheck ? '2px solid #8A6A1F' : '1px solid #E3DDD3'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>分鏡方案</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&amp;family=Noto+Serif+TC:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F0}
+a{color:#B3261E}a:hover{color:#8C1D17}
+button,input,textarea,select{font:inherit}
+:focus-visible{outline:3px solid #1F1A17;outline-offset:2px}
+</style>
+</helmet>
+<div style="font-family: 'Noto Sans TC', system-ui, sans-serif; color: #1F1A17; background: #F7F5F0; min-height: 100vh; display: flex; flex-direction: column">
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; background: #FFFFFF; border-bottom: 1px solid #E3DDD3">
+<div style="display: flex; align-items: center; gap: 10px">
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟</span>
+<span style="font-family: 'Noto Serif TC', serif; font-weight: 700; font-size: 18px">廟埕影室</span>
+</div>
+<nav aria-label="目前位置" style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #5E5650">
+<span>新北廟宇故事</span><span aria-hidden="true">›</span><span style="color: #1F1A17; font-weight: 500">板橋慈惠宮</span>
+</nav>
+<div style="flex: 1"></div>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>圖片 Nano Banana Pro</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #F2EEE6"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>影片 Gemini Omni 1.1 Flash</span>
+<span style="font-size: 13px; color: #3D3631">費用 [累計] / 上限 [上限]</span>
+</header>
+<div style="flex: 1; display: flex; flex-wrap: wrap; align-items: stretch">
+<aside aria-label="與創作助理的對話" style="flex: 1 1 340px; max-width: 100%; background: #FFFFFF; border-right: 1px solid #E3DDD3; display: flex; flex-direction: column">
+<div style="flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="align-self: flex-start; max-width: 92%; padding: 14px 16px; border-radius: 12px; background: #F2EEE6; font-size: 15px; line-height: 1.7">方案排好了：8 格、共 30 秒。「主要觀眾」你留白，我選了外地遊客，所以結尾加了邀請來參拜的一句。</div>
+<div style="align-self: flex-end; max-width: 85%; padding: 12px 16px; border-radius: 12px; background: #1F1A17; color: #FFFFFF; font-size: 15px; line-height: 1.7">第 3 格改成特寫</div>
+<div style="align-self: flex-start; max-width: 92%; padding: 14px 16px; border-radius: 12px; background: #F2EEE6; font-size: 15px; line-height: 1.7; display: flex; flex-direction: column; gap: 8px">
+<span>已把第 3 格改成特寫，存成方案 v2。</span>
+<span>另外有兩件事要處理：第 4 格的台詞放不下，第 5 格需要「海邊」視角，定裝版裡還沒有。</span>
+</div>
+</div>
+<div style="padding: 16px; border-top: 1px solid #E3DDD3; display: flex; align-items: center; gap: 8px">
+<label for="chat" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">傳訊息給創作助理</label>
+<input id="chat" type="text" placeholder="例如：把結尾延長到 5 秒" style="flex: 1; min-height: 44px; padding: 0 12px; border: 1px solid #CFC7BA; border-radius: 10px; color: #1F1A17">
+<button type="button" aria-label="送出" style="width: 44px; height: 44px; border-radius: 999px; border: none; background: #1F1A17; color: #FFFFFF; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+</div>
+</aside>
+<main style="flex: 999 1 560px; min-width: 0; padding: 28px 32px 140px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<h1 style="margin: 0; font-family: 'Noto Serif TC', serif; font-size: 28px; font-weight: 700">分鏡方案</h1>
+<div style="display: flex; align-items: center; gap: 8px">
+<label for="ver" style="font-size: 14px; color: #5E5650">版本</label>
+<select id="ver" style="min-height: 40px; padding: 0 10px; border: 1px solid #CFC7BA; border-radius: 8px; background: #FFFFFF; color: #1F1A17"><option>v2・對話修改：第 3 格</option><option>v1・Agent 初稿</option></select>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px">
+<section aria-labelledby="t-style" style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<h2 id="t-style" style="margin: 0; font-size: 16px; font-weight: 700">外觀與風格</h2>
+<p style="margin: 0; font-size: 14px; color: #3D3631; line-height: 1.6">寫實電影感、清晨暖光、淺景深</p>
+<button type="button" style="align-self: flex-start; min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; font-size: 14px; cursor: pointer">換風格範本</button>
+</section>
+<section aria-labelledby="t-char" style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<h2 id="t-char" style="margin: 0; font-size: 16px; font-weight: 700">角色</h2>
+<div style="display: flex; align-items: center; gap: 12px">
+<div role="img" aria-label="導覽員阿嬤定裝圖" style="width: 56px; height: 72px; border-radius: 8px; background: #C9B8A0; flex: none"></div>
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+<span style="font-weight: 700">導覽員阿嬤</span>
+<span style="font-size: 12px; color: #245A40">系列角色・已確認</span>
+<span style="font-family: ui-monospace, monospace; font-size: 12px; color: #3D3631; overflow-wrap: anywhere">[連續性鎖]</span>
+</div>
+</div>
+</section>
+<section aria-labelledby="t-scene" style="background: #FFFFFF; border: 1px solid #E3DDD3; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<h2 id="t-scene" style="margin: 0; font-size: 16px; font-weight: 700">場景・寺廟定裝版</h2>
+<div style="display: flex; gap: 6px">
+<span role="img" aria-label="廟前全景" style="flex: 1; aspect-ratio: 16 / 9; border-radius: 6px; background: #D9CBB5"></span>
+<span role="img" aria-label="三川殿" style="flex: 1; aspect-ratio: 16 / 9; border-radius: 6px; background: #CDBB9F"></span>
+<span role="img" aria-label="正殿內部" style="flex: 1; aspect-ratio: 16 / 9; border-radius: 6px; background: #BFA886"></span>
+<span role="img" aria-label="廟埕" style="flex: 1; aspect-ratio: 16 / 9; border-radius: 6px; background: #E7DDCD"></span>
+<span role="img" aria-label="屋脊剪黏" style="flex: 1; aspect-ratio: 16 / 9; border-radius: 6px; background: #DCCDB7"></span>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #FBF6EA">
+<span style="flex: 1 1 120px; font-size: 13px; color: #6E5418">缺少視角：海邊</span>
+<button type="button" style="min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; font-size: 13px; cursor: pointer">補充視角</button>
+</div>
+</section>
+</div>
+<section aria-labelledby="t-shots" style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px">
+<h2 id="t-shots" style="margin: 0; font-size: 20px; font-weight: 700">分鏡</h2>
+<span style="font-size: 14px; color: #3D3631">總長度 <strong>30 秒</strong> / 目標 30 秒・8 格</span>
+</div>
+<div role="img" aria-label="時間軸：8 格依秒數排列，第 4 格有對白問題" style="display: flex; gap: 3px; height: 44px">
+<sc-for list="{{shots}}" as="s" hint-placeholder-count="8">
+<div style="flex-grow: {{s.s}}; flex-basis: 0; border-radius: 6px; background: {{s.barBg}}; border: {{s.barBorder}}; color: #1F1A17; display: flex; flex-direction: column; justify-content: center; padding: 0 8px; font-size: 12px; overflow: hidden">
+<span style="font-weight: 700">{{s.n}}</span><span>{{s.s}} 秒</span>
+</div>
+</sc-for>
+</div>
+<sc-for list="{{shots}}" as="s" hint-placeholder-count="8">
+<article style="background: #FFFFFF; border: {{s.cardBorder}}; border-radius: 12px; padding: 16px; display: flex; flex-wrap: wrap; gap: 16px">
+<div style="flex: 0 0 132px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 18px; font-weight: 700">{{s.n}}<span style="font-size: 14px; font-weight: 400; color: #5E5650">｜{{s.t}}</span></span>
+<div role="img" aria-label="對應照片縮圖" style="aspect-ratio: 4 / 3; border-radius: 8px; background: {{s.photo}}"></div>
+</div>
+<div style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="font-size: 13px; padding: 3px 10px; border-radius: 999px; background: #F2EEE6">{{s.shot}}</span>
+<span style="font-size: 13px; padding: 3px 10px; border-radius: 999px; background: #F2EEE6">視角：{{s.view}}</span>
+<sc-if value="{{s.changed}}" hint-placeholder-val="{{false}}"><span style="font-size: 13px; padding: 3px 10px; border-radius: 999px; background: #E8EEF6; color: #1F4E79">v2 已修改</span></sc-if>
+<sc-if value="{{s.missing}}" hint-placeholder-val="{{false}}"><span style="font-size: 13px; padding: 3px 10px; border-radius: 999px; background: #FBF0D6; color: #6E5418">缺少視角</span></sc-if>
+</div>
+<p style="margin: 0; font-size: 15px; line-height: 1.7">{{s.desc}}</p>
+<p style="margin: 0; font-size: 15px; line-height: 1.7; color: #3D3631">{{s.line}}</p>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px">
+<span style="color: #5E5650">字幕：{{s.sub}}</span>
+<sc-if value="{{s.ok}}" hint-placeholder-val="{{true}}"><span style="display: flex; align-items: center; gap: 4px; color: #245A40"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg>對白估時 {{s.est}}</span></sc-if>
+<sc-if value="{{s.bad}}" hint-placeholder-val="{{false}}"><span style="display: flex; align-items: center; gap: 4px; color: #9E1F18; font-weight: 700"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg>對白估時 {{s.est}}</span></sc-if>
+<span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #F2EEE6; color: #3D3631">來源：使用者提供</span>
+</div>
+<sc-if value="{{s.bad}}" hint-placeholder-val="{{false}}">
+<div role="region" aria-label="AI 建議" style="background: #FBF6EA; border: 1px solid #E5D6AE; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 13px; font-weight: 700; color: #6E5418">AI 建議</span>
+<p style="margin: 0; font-size: 14px; line-height: 1.7">把台詞縮短為「颱風夜，大家守著燈，等船回來。」（約 3.5 秒，放得下）；或把這一格拆成兩格。</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px"><button type="button" style="min-height: 36px; padding: 0 14px; border-radius: 8px; border: none; background: #1F1A17; color: #FFFFFF; font-size: 14px; cursor: pointer">採用縮短</button><button type="button" style="min-height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; font-size: 14px; cursor: pointer">拆成兩格</button><button type="button" style="min-height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; font-size: 14px; cursor: pointer">再寫一版</button></div>
+</div>
+</sc-if>
+</div>
+<div style="flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px">
+<button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid #1F1A17; background: #FFFFFF; color: #1F1A17; font-size: 14px; font-weight: 500; cursor: pointer">細修</button>
+<button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid #8A6A1F; background: #FFFFFF; color: #6E5418; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/></svg>AI 幫我寫</button>
+<button type="button" aria-label="第 {{s.n}} 格的更多操作" style="min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid #CFC7BA; background: #FFFFFF; color: #1F1A17; cursor: pointer"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+</div>
+</article>
+</sc-for>
+<button type="button" style="min-height: 48px; border-radius: 12px; border: 1px dashed #A89E8F; background: #FFFFFF; color: #3D3631; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>新增一格</button>
+</section>
+</main>
+</div>
+<div style="position: sticky; bottom: 0; background: #FFFFFF; border-top: 1px solid #E3DDD3; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 20px">
+<div style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 4px">
+<span style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #9E1F18; font-weight: 700"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg>還有 2 項待處理：第 4 格對白放不下、第 5 格缺少視角</span>
+<span style="font-size: 13px; color: #5E5650">費用預估　精緻圖 [金額]・影片 [金額]・合計 [金額]（上限 [上限]）</span>
+</div>
+<label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer"><input type="checkbox" style="width: 20px; height: 20px">一次到底（精緻圖完成後直接生成影片）</label>
+<button type="button" disabled style="min-height: 48px; padding: 0 28px; border-radius: 8px; border: none; background: {{accent}}; color: #FFFFFF; font-size: 16px; font-weight: 700; opacity: 0.45; cursor: not-allowed">生成</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#B3261E","options":["#B3261E","#1F4E79","#2E6B4F"]},"$preview":{"width":1440,"height":2300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const shots = [
+      { n: 1, t: '0:00–0:04', s: 4, shot: '遠景・緩推', view: '廟前全景', desc: '清晨的廟前全景，香煙慢慢升起，鏡頭緩緩推近三川殿。', line: '旁白：「這座廟，守著板橋的人很久了。」', sub: '這座廟，守著板橋的人很久了。', est: '約 3.3 秒', photo: '#E4DACB' },
+      { n: 2, t: '0:04–0:07', s: 3, shot: '中景・固定', view: '三川殿', desc: '導覽員阿嬤站在廟門前，轉身看向鏡頭。', line: '阿嬤：「你知道媽祖救過漁民嗎？」', sub: '你知道媽祖救過漁民嗎？', est: '約 2.8 秒', photo: '#DCCFBC' },
+      { n: 3, t: '0:07–0:10', s: 3, shot: '特寫・固定', view: '三川殿', desc: '阿嬤的手指向廟內。', line: '無台詞', sub: '—', est: '無台詞', photo: '#DCCFBC', changed: true },
+      { n: 4, t: '0:10–0:14', s: 4, shot: '中景・搖', view: '正殿內部', desc: '回想畫面：颱風夜，信眾在正殿守著燈火等待。', line: '旁白：「那年颱風夜，海上的船回不來，大家只能在廟裡守著燈，一直等到天亮。」', sub: '那年颱風夜，海上的船回不來……', est: '約 7.5 秒（暫估），放不下', photo: '#D2C2AA', bad: true },
+      { n: 5, t: '0:14–0:18', s: 4, shot: '遠景・固定', view: '海邊（待補充）', desc: '風雨中的小船，遠方出現一點光。', line: '無台詞', sub: '—', est: '無台詞', photo: '#E9E4DA', missing: true },
+      { n: 6, t: '0:18–0:22', s: 4, shot: '中景・固定', view: '正殿內部', desc: '天亮了，漁民走進正殿，向媽祖致謝。', line: '無台詞', sub: '—', est: '無台詞', photo: '#D2C2AA' },
+      { n: 7, t: '0:22–0:26', s: 4, shot: '特寫・緩推', view: '屋脊剪黏', desc: '晨光照在屋脊剪黏上。', line: '旁白：「這份守護，一直留在這裡。」', sub: '這份守護，一直留在這裡。', est: '約 3 秒', photo: '#E9DFCF' },
+      { n: 8, t: '0:26–0:30', s: 4, shot: '中景・固定', view: '廟前全景', desc: '阿嬤站在廟前，對著鏡頭微笑招手。', line: '阿嬤：「有空，來慈惠宮走走。」', sub: '有空，來慈惠宮走走。', est: '約 2.5 秒', photo: '#E4DACB' }
+    ];
+    return {
+      accent: this.props.accent ?? '#B3261E',
+      shots: shots.map((x) => ({
+        ...x,
+        ok: !x.bad,
+        changed: !!x.changed,
+        missing: !!x.missing,
+        bad: !!x.bad,
+        barBg: x.bad ? '#F6E3DF' : (x.missing ? '#FBF0D6' : '#E9E3D8'),
+        barBorder: x.bad ? '2px solid #9E1F18' : '1px solid #D6CEC2',
+        cardBorder: x.bad ? '2px solid #9E1F18' : (x.changed ? '2px solid #1F4E79' : '1px solid #E3DDD3')
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>
