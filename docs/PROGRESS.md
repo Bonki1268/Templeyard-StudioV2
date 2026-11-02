@@ -53,7 +53,8 @@
 
 ### 開發中發現的事項
 
-- [ ] 【第 0 階段】`prompt-studio/` 與 `prompts/` 不在 repo 裡：06 要求搬進來並確認原本 8 項測試仍通過。請把這兩個資料夾放到 repo 根目錄（最晚第 4 階段前，生成指令組裝會用到）。
+- [x] 【第 0 階段】`prompt-studio/` 與 `prompts/` 不在 repo 裡：06 要求搬進來並確認原本 8 項測試仍通過。請把這兩個資料夾放到 repo 根目錄（最晚第 4 階段前，生成指令組裝會用到）。
+  → 2026-11-02 使用者已把 `prompt-studio/` 放進 repo（`prompts/` 在 `prompt-studio/prompts/`）。同日在對話中依規格書 v8 與 drama-skills 更新為 11 個節點（新增 character-look、keyframe、region-edit；temple-board 改名 temple-view），圖片與影片節點改為「Claude 先寫最終指令再生成」的兩段式，02「生成指令組裝」已同步；測試由 8 項改為 9 項（節點數與步驟順序更新、新增一項模型代號與輸出格式檢查），全部通過。尚未 commit。
 - [x] 【第 0 階段】本機 Node 是 22.11.0，所以鎖了 `light-my-request` 的版本。→ 2026-11-02 依使用者要求升級到 Node 24.22.2（nvm 預設、repo 加 `.nvmrc`），拿掉 override，`light-my-request` 回到 6.8.0，四項檢查全部通過。Vite 6、Vitest 3.2 先維持原版本；之後要升級到新的大版本可以另外處理。
 - [ ] 【第 0 階段】02 寫「Node.js 20」，實際開發用 Node 24（`engines` 為 `>=24`、`.nvmrc` 為 24）。要不要把 02 的 Node 版本改成 24，請你決定（規格我沒動）。
 - [x] 【第 0 階段稽核】`vitest.config.ts` 的 include 會一併收進 `*.live.test.ts`。→ 第 1 階段已處理：各專案都排除 `**/*.live.test.ts`（611e035）。

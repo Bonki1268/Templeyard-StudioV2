@@ -1,0 +1,289 @@
+{
+  "id": "story-script",
+  "step": 5,
+  "name": "分鏡方案",
+  "description": "步驟 5：依創作輸入、問卷、寺廟定裝版與系列設定，產生 16:9 觀光短片的分鏡方案；方案修改也沿用這套寫法。",
+  "version": 4,
+  "updatedAt": "2026-11-02T15:19:04.767Z",
+  "target": {
+    "kind": "text",
+    "model": ""
+  },
+  "system": "你是觀光短片的導演兼分鏡師，負責把故事拆成 16:9 橫式、30 秒以內的寫實短片分鏡。每一格要能用一張首格圖加一段短影片完成。\n\n拆鏡與秒數：\n1. 先排聲音：把每句台詞與旁白依序排成時間線，再決定每格秒數。不要先定一個短秒數再要求角色講快；一句話放不下時延長這一格，或把它拆到說話者與聽者兩格，語速不變。\n2. 對白估時：依中文語速估算說話時間（含開口前約 0.5 秒與說完後約 0.5～1 秒），寫進 dialogueEstimateSec；語速依下方提供的數字，標示為估計。\n3. 秒數加總等於目標長度；每格至少 1 秒。短於影片模型最短生成長度的格子仍可保留，系統會生成最短長度再裁切。\n4. 遠景（廟宇全景）、中景（角色與場景）、特寫（臉部、手部、照片與物件）交錯使用，通常 8～12 格。\n\n每一格：\n5. 一格只有一個主要變化。寫清起點（actionStart）與終點（actionEnd）：姿態、身體朝向、視線落點、雙手與持物；起點只寫起點當下成立的狀態。\n6. 動作用日常影像中常見、整體的動作（走進、坐下、回頭、點香、遞東西、抬頭看）。精細手部操作、精確攔截、否定式動作（「沒有回頭」）與「忽然明白」這類看不見的內心狀態，改寫成看得見的常見動作與停留。\n7. 如果某個動作是這一格存在的理由，讓它落在首格或末格，或拆成獨立一格，不要只寄望中間由模型補上。需要控制中間轉折時，在 keyframeSuggestions 建議時間點（彼此至少相隔 1 秒，最多 4 個）。\n8. viewKey 從寺廟定裝版的視角清單中選；清單沒有合適視角時寫「missing:視角名稱」，不要硬套。\n9. description 用相對位置寫構圖：誰在畫面哪一側、與哪個固定錨點的關係、視覺重點在哪裡。\n10. 字幕（subtitle）逐字取自台詞或旁白；沒有台詞的格子字幕可留空字串。\n11. 引用寺廟事實時，在 factSources 標示「寺廟資料庫」或「使用者提供」；沒有來源的寺廟事實不得出現。\n12. 系列角色沿用原名稱與鎖面；新角色才寫 description 與建議的 continuityLocks（英文最小片語，例如「crimson silk embroidered vest」）。\n內容與宗教規則：只使用下方提供的寺廟資料與使用者輸入，不可自行補寫歷史年代、人物或傳說；不得對神明不敬，不得出現不敬的動作、台詞或畫面；畫面中不可出現可辨識的真實民眾。",
+  "template": "請為以下內容寫一支 {{series.duration}} 秒的 16:9 橫式觀光短片分鏡方案{{shotCountHint}}。\n\n寺廟：{{temple.name}}（{{temple.district}}，主祀{{temple.deity}}，創建於{{temple.builtYear}}）\n寺廟地址：{{temple.address}}\n寺廟歷史與簡介（使用者提供）：{{temple.history}}\n寺廟定裝版的視角清單：{{templeViews}}\n系列風格：{{series.style}}\n影片方向：{{series.direction}}\n系列共同角色：{{characters}}\n使用者上傳的照片：{{photos}}\n問卷答案：{{questionnaire}}\n影片模型：{{video.model}}（最短生成長度 {{video.minSeconds}} 秒）\n中文語速（估計）：每秒約 {{speechRate}} 字\n\n想講的故事：\n{{story}}\n\n使用者調整指令：{{instruction}}",
+  "variables": [
+    {
+      "name": "temple.name",
+      "label": "廟名",
+      "required": true,
+      "example": "鄞山寺"
+    },
+    {
+      "name": "temple.district",
+      "label": "行政區",
+      "required": false,
+      "example": "淡水區"
+    },
+    {
+      "name": "temple.deity",
+      "label": "主祀神明",
+      "required": false,
+      "example": "定光古佛"
+    },
+    {
+      "name": "temple.builtYear",
+      "label": "創建年（西元）",
+      "required": false,
+      "example": "1824"
+    },
+    {
+      "name": "temple.address",
+      "label": "寺廟地址",
+      "required": false,
+      "example": "新北市淡水區鄧公里鄧公路15號"
+    },
+    {
+      "name": "temple.history",
+      "label": "寺廟歷史與簡介（使用者提供）",
+      "required": false,
+      "example": "清道光年間由汀州移民興建。"
+    },
+    {
+      "name": "templeViews",
+      "label": "寺廟定裝版的視角清單",
+      "required": false,
+      "example": "front_overview 廟前全景；sanchuan_hall 三川殿；courtyard 廟埕；detail_roof 屋脊剪黏"
+    },
+    {
+      "name": "series.style",
+      "label": "系列視覺風格",
+      "required": true,
+      "example": "溫暖寫實、黃昏暖色調"
+    },
+    {
+      "name": "series.direction",
+      "label": "影片方向",
+      "required": false,
+      "example": "在地歷史故事"
+    },
+    {
+      "name": "series.duration",
+      "label": "影片秒數",
+      "required": true,
+      "example": "30"
+    },
+    {
+      "name": "shotCountHint",
+      "label": "格數提示（例如「，約 10 格」）",
+      "required": false,
+      "example": "，約 10 格"
+    },
+    {
+      "name": "characters",
+      "label": "系列共同角色（含鎖面）",
+      "required": false,
+      "example": "導覽員阿亮：20 多歲青年；鎖面 white linen shirt with rolled sleeves"
+    },
+    {
+      "name": "photos",
+      "label": "照片說明",
+      "required": false,
+      "example": "1. 廟宇正面；2. 廟埕石獅；3. 屋脊剪黏"
+    },
+    {
+      "name": "questionnaire",
+      "label": "問卷答案",
+      "required": false,
+      "example": "語氣：溫暖；節奏：慢；一定要說到：渡海來台"
+    },
+    {
+      "name": "video.model",
+      "label": "影片模型",
+      "required": false,
+      "example": "Gemini Omni 1.1 Flash"
+    },
+    {
+      "name": "video.minSeconds",
+      "label": "影片模型最短生成長度（秒）",
+      "required": false,
+      "example": "3"
+    },
+    {
+      "name": "speechRate",
+      "label": "中文語速（字／秒）",
+      "required": false,
+      "example": "4"
+    },
+    {
+      "name": "story",
+      "label": "想講的故事（已確認版）",
+      "required": true,
+      "example": "老一輩說，當年移民渡海來台，帶著定光古佛的香火在淡水落腳。"
+    },
+    {
+      "name": "instruction",
+      "label": "使用者調整指令",
+      "required": false,
+      "example": ""
+    }
+  ],
+  "output": {
+    "format": "json",
+    "schema": {
+      "type": "object",
+      "required": [
+        "title",
+        "styleNote",
+        "characters",
+        "shots"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "logline": {
+          "type": "string"
+        },
+        "styleNote": {
+          "type": "string",
+          "description": "這支影片的風格說明"
+        },
+        "characters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "isSeriesCharacter": {
+                "type": "boolean"
+              },
+              "description": {
+                "type": "string",
+                "description": "新角色才需要"
+              },
+              "continuityLocks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "新角色建議的英文鎖面片語"
+              }
+            }
+          }
+        },
+        "shots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "seq",
+              "durationSec",
+              "shotSize",
+              "cameraMove",
+              "description",
+              "actionStart",
+              "viewKey",
+              "subtitle"
+            ],
+            "properties": {
+              "seq": {
+                "type": "integer"
+              },
+              "durationSec": {
+                "type": "number"
+              },
+              "shotSize": {
+                "type": "string",
+                "enum": [
+                  "遠景",
+                  "中景",
+                  "特寫"
+                ]
+              },
+              "cameraMove": {
+                "type": "string",
+                "description": "推、拉、搖、固定"
+              },
+              "cameraSpeed": {
+                "type": "string"
+              },
+              "cameraAngle": {
+                "type": "string",
+                "description": "平視、仰角、俯角"
+              },
+              "description": {
+                "type": "string",
+                "description": "畫面內容與構圖：誰在哪裡、彼此相對位置、視覺重點"
+              },
+              "actionStart": {
+                "type": "string",
+                "description": "起點：姿態、朝向、視線、雙手與持物"
+              },
+              "actionEnd": {
+                "type": "string",
+                "description": "終點：同一組欄位"
+              },
+              "viewKey": {
+                "type": "string",
+                "description": "使用寺廟定裝版的哪個視角；沒有合適視角時寫 missing:<名稱>"
+              },
+              "lighting": {
+                "type": "string"
+              },
+              "characters": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "dialogue": {
+                "type": "string",
+                "description": "逐字台詞或旁白"
+              },
+              "speaker": {
+                "type": "string"
+              },
+              "subtitle": {
+                "type": "string"
+              },
+              "photoIndex": {
+                "type": "integer"
+              },
+              "dialogueEstimateSec": {
+                "type": "number",
+                "description": "含開口前與說完後停頓的估計秒數"
+              },
+              "keyframeSuggestions": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "建議的中間關鍵畫格時間點（秒）"
+              },
+              "factSources": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "引用寺廟事實的來源：寺廟資料庫／使用者提供"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "basis": [
+    "docs/drama-skills/01_第3步_腳本與分鏡/shot-craft.md",
+    "docs/drama-skills/01_第3步_腳本與分鏡/production-shot-grammar.md",
+    "docs/drama-skills/01_第3步_腳本與分鏡/keyframe-craft.md",
+    "docs/drama-skills/01_第3步_腳本與分鏡/screenplay-to-keyframe-example.md",
+    "docs/drama-skills/04_第5b與6步_影片提示詞/generability.md",
+    "docs/drama-skills/07_品質檢查/production-quality-gates.md"
+  ]
+}

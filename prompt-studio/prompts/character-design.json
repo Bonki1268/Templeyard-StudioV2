@@ -1,0 +1,100 @@
+{
+  "id": "character-design",
+  "step": 1,
+  "name": "角色外觀描述與連續性鎖（AI 幫我寫）",
+  "description": "步驟 1、5：依使用者構想寫出角色的身份錨點、一套造型與連續性鎖，供角色三視圖、定裝圖與之後所有生成使用。",
+  "version": 2,
+  "updatedAt": "2026-11-02T15:19:04.727Z",
+  "target": {
+    "kind": "text",
+    "model": ""
+  },
+  "system": "你是寫實觀光短片的角色設計師，負責把簡短的角色構想寫成可直接交給繪圖模型、也能跨鏡頭保持一致的角色設定。\n\n寫法：\n1. 身份錨點：換了衣服仍然成立、看得見、彼此不重複的特徵，例如臉型、髮際與髮型輪廓、體型比例、一個永久的小特徵。寫 2～4 項，不寫「帥氣、親切」這類看不見的形容。\n2. 造型：從頭到腳只寫一套——髮型整理方式、上衣、下裝、鞋、配件與佩戴位置；先寫剪裁、材質與主次色，再寫氣質。\n3. 連續性鎖：從造型中挑出跨鏡頭不會改變、觀眾一眼看得出不一致的東西，各寫成一條最小可辨識的英文片語，通常是「顏色＋材質或形制＋物體」，例如「white linen shirt with rolled sleeves」。不含動作、姿勢、狀態、數量、鏡頭或劇情；一個物體一條；一個角色通常 1～3 條。\n4. 不寫個性、經歷或劇情；不套用與角色無關的審美模板（例如九頭身、完美五官）。\n角色不可描述成神明本身，也不可模仿可辨識的真實人物。\n內容與宗教規則：只使用下方提供的寺廟資料與使用者輸入，不可自行補寫歷史年代、人物或傳說；不得對神明不敬，不得出現不敬的動作、台詞或畫面；畫面中不可出現可辨識的真實民眾。",
+  "template": "請依構想寫出一位角色的設定。若使用者沒有給角色名稱，請取一個簡短、符合在地氛圍的稱呼。\n\n角色名稱：{{character.name}}\n角色構想：{{idea}}\n系列名稱：{{series.name}}\n系列視覺風格：{{series.style}}\n影片方向：{{series.direction}}\n使用者調整指令：{{instruction}}\n\ndescription 是給使用者看的完整外觀描述（80～150 字，繁體中文），內容要與 identityAnchors、look 一致。",
+  "variables": [
+    {
+      "name": "character.name",
+      "label": "角色名稱",
+      "required": false,
+      "example": "廟公阿伯"
+    },
+    {
+      "name": "idea",
+      "label": "角色構想",
+      "required": false,
+      "example": "在廟口顧了四十年的老廟公，個性溫和"
+    },
+    {
+      "name": "series.name",
+      "label": "系列名稱",
+      "required": false,
+      "example": "淡水廟宇故事"
+    },
+    {
+      "name": "series.style",
+      "label": "系列視覺風格",
+      "required": true,
+      "example": "溫暖寫實、黃昏暖色調"
+    },
+    {
+      "name": "series.direction",
+      "label": "影片方向",
+      "required": false,
+      "example": "在地歷史故事"
+    },
+    {
+      "name": "instruction",
+      "label": "使用者調整指令",
+      "required": false,
+      "example": ""
+    }
+  ],
+  "output": {
+    "format": "json",
+    "schema": {
+      "type": "object",
+      "required": [
+        "name",
+        "description",
+        "identityAnchors",
+        "look",
+        "continuityLocks"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string",
+          "description": "完整外觀描述，80～150 字"
+        },
+        "identityAnchors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "身份錨點，換裝後仍成立"
+        },
+        "look": {
+          "type": "string",
+          "description": "一套造型，從頭到腳"
+        },
+        "continuityLocks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "英文鎖面片語，逐字帶入後續生成"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "basis": [
+    "docs/drama-skills/02_第4步_角色與一致性/continuity-lock.md",
+    "docs/drama-skills/02_第4步_角色與一致性/identity-vs-variant.md",
+    "docs/drama-skills/02_第4步_角色與一致性/character-turnaround-sheet-prompts.md"
+  ]
+}

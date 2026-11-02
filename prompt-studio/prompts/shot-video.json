@@ -1,0 +1,179 @@
+{
+  "id": "shot-video",
+  "step": 6,
+  "name": "分鏡影片",
+  "description": "步驟 6b：以確認的精緻圖為首格（需要時含末格與中間關鍵畫格），生成這一格的影片。",
+  "version": 3,
+  "updatedAt": "2026-11-02T15:19:04.762Z",
+  "target": {
+    "kind": "video",
+    "model": "",
+    "aspectRatio": "16:9"
+  },
+  "system": "你是寫實觀光短片的生成指令撰寫者。請把下方這一格的資料，寫成要直接送給影片模型的最終指令（prompt）：一段自然、完整、能直接執行的工作說明；不出現欄位名稱、JSON 鍵名、內部編號，也不寫「請模型務必」這類話；資料中留白的項目直接略過，不要自行補上沒有來源的事實。連續性鎖的英文片語要原樣放進最終指令，不翻譯、不改寫、不放在「不要」之後。最終指令的語言與格式依最後附上的模型寫法；沒有附上時用繁體中文。\n\n最終指令要做到：\n圖生影片：16:9 橫式寫實觀光短片的一格。提供的精緻圖是第一個畫面（有末格時也是最後一個畫面），只補上動作，不改變角色與廟宇的外觀。\n\n動作寫法（起點 → 變化 → 終點）：\n1. 從起點開始，用一條有先後的節拍鏈寫完這幾秒：首先〈起手狀態〉；接著〈動作、方向與停在哪裡〉；隨後〈這個動作造成的結果〉；最終〈終點的可見狀態〉。需要時用「與此同時」加一條並行的動作，但同一隻手、同一道視線不能同時做兩件事。\n2. 動作停在哪裡用接觸點或畫面裡的地標寫（「指尖碰到香爐邊緣後停住」），不寫公分或角度。\n3. 一格只有一個主要變化；用日常影像中常見、整體的動作；看不見的內心狀態改寫成看得見的表情、停頓或身體動作。\n4. 終點必須等於分鏡卡片的終點，不自行加一個「更自然」的結尾。\n\n攝影機：固定機位就寫明固定與構圖；要移動就只走一條路徑，寫出觸發時機、方向、速度與停下時的景別。\n\n聲音：\n5. 有台詞時，說話角色用中文逐字說出台詞，口型同步；不改字、不增刪、不加語氣詞或外語開場。旁白標明為畫外旁白，畫面中的人不開口。\n6. 把這一格的聲音寫成完整時間線：環境底聲 → 台詞（從第一個字到最後一個字）→ 回到環境底聲；不要背景音樂（成品的配樂在合成時另外加入）。\n7. 全程不生成字幕與對白文字疊加（字幕在合成時另外燒錄）。\n\n一致性：角色與寺廟的連續性鎖英文片語逐字寫進正文，不能因為有參考圖就刪掉。\n內容與宗教規則：只使用下方提供的寺廟資料與使用者輸入，不可自行補寫歷史年代、人物或傳說；不得對神明不敬，不得出現不敬的動作、台詞或畫面；畫面中不可出現可辨識的真實民眾。",
+  "template": "分鏡 {{shot.seq}}，長度 {{shot.durationSec}} 秒，16:9\n畫面內容：{{shot.description}}\n起點：{{shot.actionStart}}\n終點：{{shot.actionEnd}}\n景別與運鏡：{{shot.shotSize}}，{{shot.cameraMove}}（{{shot.cameraSpeed}}），{{shot.cameraAngle}}\n中間關鍵畫格時間軸：{{shot.keyframeTimeline}}\n出場角色：{{shot.characters}}\n角色連續性鎖（逐字帶入）：{{character.locks}}\n寺廟外觀規範（逐字帶入）：{{temple.appearanceLocks}}\n光線：{{shot.lighting}}\n台詞（{{shot.speaker}}）：{{shot.dialogue}}\n環境聲：{{shot.ambience}}\n參考素材與用途：{{references}}\n下一格的起點（只用來確認銜接）：{{nextShot.actionStart}}\n系列視覺風格：{{series.style}}\n使用者調整指令：{{instruction}}",
+  "variables": [
+    {
+      "name": "shot.seq",
+      "label": "分鏡序號",
+      "required": true,
+      "example": "3"
+    },
+    {
+      "name": "shot.durationSec",
+      "label": "這一格秒數",
+      "required": true,
+      "example": "4"
+    },
+    {
+      "name": "shot.description",
+      "label": "畫面內容與構圖",
+      "required": true,
+      "example": "廟埕中景，導覽員站在香爐右側，三川殿在背景"
+    },
+    {
+      "name": "shot.actionStart",
+      "label": "動作起點",
+      "required": true,
+      "example": "導覽員面向香爐站著，右手拿著相機垂在身側"
+    },
+    {
+      "name": "shot.actionEnd",
+      "label": "動作終點",
+      "required": false,
+      "example": "導覽員轉身面向鏡頭，相機舉到胸前"
+    },
+    {
+      "name": "shot.shotSize",
+      "label": "景別",
+      "required": false,
+      "example": "中景"
+    },
+    {
+      "name": "shot.cameraMove",
+      "label": "運鏡",
+      "required": false,
+      "example": "緩慢推近"
+    },
+    {
+      "name": "shot.cameraSpeed",
+      "label": "運鏡速度",
+      "required": false,
+      "example": "慢"
+    },
+    {
+      "name": "shot.cameraAngle",
+      "label": "鏡頭角度",
+      "required": false,
+      "example": "平視"
+    },
+    {
+      "name": "shot.keyframeTimeline",
+      "label": "中間關鍵畫格時間軸（系統依時間點組成）",
+      "required": false,
+      "example": "0～2 秒：轉身到側面，畫面接近參考圖 1；2～4 秒：舉起相機面向鏡頭，停在末格"
+    },
+    {
+      "name": "shot.characters",
+      "label": "出場角色與造型",
+      "required": false,
+      "example": "導覽員阿亮（定裝 v1）"
+    },
+    {
+      "name": "character.locks",
+      "label": "角色連續性鎖（逐字帶入）",
+      "required": false,
+      "example": "white linen shirt with rolled sleeves; tan canvas camera strap"
+    },
+    {
+      "name": "temple.appearanceLocks",
+      "label": "寺廟外觀規範（連續性鎖，逐字帶入）",
+      "required": false,
+      "example": "red swallowtail roof ridge with cut-porcelain dragons; grey granite dragon columns"
+    },
+    {
+      "name": "shot.lighting",
+      "label": "這一格的光線（留白則用寺廟預設）",
+      "required": false,
+      "example": ""
+    },
+    {
+      "name": "shot.speaker",
+      "label": "說話角色（旁白填「旁白」）",
+      "required": false,
+      "example": "阿亮"
+    },
+    {
+      "name": "shot.dialogue",
+      "label": "台詞或旁白（逐字）",
+      "required": false,
+      "example": "這座廟，藏著老一輩才知道的故事。"
+    },
+    {
+      "name": "shot.ambience",
+      "label": "環境聲",
+      "required": false,
+      "example": "廟埕遠處的鐘聲與微風"
+    },
+    {
+      "name": "references",
+      "label": "參考素材與用途",
+      "required": false,
+      "example": "圖 1（起始幀）：第 3 格首格；圖 2（結束幀）：第 3 格末格；圖 3（身份）：阿亮三視圖"
+    },
+    {
+      "name": "nextShot.actionStart",
+      "label": "下一格的起點",
+      "required": false,
+      "example": ""
+    },
+    {
+      "name": "series.style",
+      "label": "系列視覺風格",
+      "required": false,
+      "example": "溫暖寫實、黃昏暖色調"
+    },
+    {
+      "name": "instruction",
+      "label": "使用者調整指令",
+      "required": false,
+      "example": ""
+    }
+  ],
+  "output": {
+    "format": "json",
+    "schema": {
+      "type": "object",
+      "required": [
+        "prompt"
+      ],
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "直接送給生成模型的最終指令"
+        },
+        "notes": {
+          "type": "string",
+          "description": "給使用者看的說明：取捨、風險或需要回到上游修改的地方"
+        }
+      }
+    }
+  },
+  "modelRules": {
+    "gemini-omni-1.1-flash": "Gemini Omni 1.1 Flash 寫法（依 drama-skills 目標模型能力檔案自訂，部分能力待實測）：\n- 最終指令用英文；第一句寫長度與比例：「A {{shot.durationSec}}-second, 16:9 clip.」。範本沒有長度欄位，長度只能寫在指令裡（3～10 秒）；解析度由呼叫參數決定，不寫進指令。\n- 聲音與畫面同時生成：照上面的規則寫完整聲音時間線；台詞保留中文逐字，寫成 He says in Mandarin Chinese: “逐字台詞”（依角色調整主詞），並明寫 no background music、no subtitles。\n- 中間關鍵畫格是軟性控制：首格與末格鎖定兩端，中間關鍵畫格當參考圖送入，正文依時間軸逐段描述，例如「0～2 秒：…，畫面接近參考圖 1」。中間的動作不保證完全照參考圖發生。\n- 首格＋末格＋參考圖能否同時使用、參考圖上限、中文對口型品質與語速：待實測（見 07 實測紀錄）。",
+    "seedance-2.0": "Seedance 2.0 寫法：\n- 最終指令用中文，依「主體＋動作細節＋場景＋光色＋運鏡＋視覺形態＋約束」組織；單鏡直接照動作先後寫，不寫逐秒時間碼（模型不照時間戳執行）。\n- 台詞寫成 {角色用中文說：「逐字台詞」}；音效寫成 <聲音>；不寫 【】字幕指令，並明寫「全程保持無字幕，不生成對白文字疊加」。\n- 首幀、首尾幀、全模態參考三種模式互斥：只有首格用首幀；有末格用首尾幀；同時要掛角色或場景參考時整組走全模態參考，正文寫「@圖片1 作為首幀」，每次提到素材都重複綁定（例如「人物 @圖片2」）。中間關鍵畫格屬於軟性控制，走全模態參考並依動作順序描述。\n- 生成長度 4～15 秒；正文建議 500 字以內，超過時先刪不會入畫的環境描述，鎖面與逐字台詞不刪。\n- 前後關係依機位寫（誰在前景、誰背對鏡頭、中間隔著什麼）；視線寫看著誰。",
+    "wan-2.2": "Wan 2.2 寫法（drama-skills 收錄的是 Wan 3.0，以下取其原則並依 2.2 調整）：\n- 最終指令用中文自然句；素材寫成「圖1」「圖2」，每次提到都說明這張圖負責什麼。\n- 中間關鍵畫格是精準控制：首格、中間關鍵畫格與末格依時間點放入多關鍵畫格工作流程；正文用時間段寫每一段，例如「(0:00 - 0:02) …按圖2構圖；(0:02 - 0:04) …」，段與段首尾相接，最後一段終點等於這一格的秒數。\n- 沒有原生語音：正文不寫台詞，寫「人物不說話，嘴唇自然閉合」或依合成策略處理；有台詞的格子需另外處理對口型（待決定）。\n- 若平台會自動改寫提示詞，生成後要核對動作與段數是否照正文。"
+  },
+  "basis": [
+    "docs/drama-skills/04_第5b與6步_影片提示詞/motion-recipe.md",
+    "docs/drama-skills/04_第5b與6步_影片提示詞/camera-audio-continuity.md",
+    "docs/drama-skills/04_第5b與6步_影片提示詞/performance-action-timing.md",
+    "docs/drama-skills/04_第5b與6步_影片提示詞/generability.md",
+    "docs/drama-skills/04_第5b與6步_影片提示詞/production-prompt-grammar.md",
+    "docs/drama-skills/04_第5b與6步_影片提示詞/target-model-profile.md",
+    "docs/drama-skills/04_第5b與6步_影片提示詞/seedance-2.0.md",
+    "docs/drama-skills/04_第5b與6步_影片提示詞/seedance-prompt-writing.md",
+    "docs/drama-skills/04_第5b與6步_影片提示詞/wan-3.0.md",
+    "docs/drama-skills/02_第4步_角色與一致性/continuity-lock.md"
+  ]
+}

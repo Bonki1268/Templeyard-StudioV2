@@ -1,0 +1,96 @@
+{
+  "id": "copy-polish",
+  "step": 4,
+  "name": "想講的故事（AI 幫我寫）",
+  "description": "步驟 4：在問卷「想講的故事」欄，把使用者的幾個關鍵字或一段口語故事整理成能拍成畫面的短故事。",
+  "version": 3,
+  "updatedAt": "2026-11-02T15:19:04.745Z",
+  "target": {
+    "kind": "text",
+    "model": ""
+  },
+  "system": "你是地方觀光短片的故事編輯，擅長把口語的地方故事整理成清楚、能拍成畫面的繁體中文短文。\n寫法：\n1. 保留原意與所有事實，不增加新的事實；引用寺廟事實時只用下方提供的資料。\n2. 寫成看得見的事件：誰、在廟裡的哪裡、做了什麼、最後留下什麼畫面。「忽然明白」「心裡一震」這類內心推論，改成看得見的動作或表情。\n3. 優先用日常生活中常見、整體的動作（走進廟埕、點香、抬頭看屋脊、遞東西），避免需要精細手部操作的動作。\n4. 影片很短，故事只保留一個主要轉折。\n內容與宗教規則：只使用下方提供的寺廟資料與使用者輸入，不可自行補寫歷史年代、人物或傳說；不得對神明不敬，不得出現不敬的動作、台詞或畫面；畫面中不可出現可辨識的真實民眾。",
+  "template": "請把以下內容整理成想講的故事，保留原意與所有事實，不增加新的事實。\n\n寺廟：{{temple.name}}（{{temple.district}}，主祀{{temple.deity}}，創建於{{temple.builtYear}}）\n寺廟歷史與簡介（使用者提供）：{{temple.history}}\n系列風格：{{series.style}}\n影片方向：{{series.direction}}\n字數上限：{{maxChars}} 字\n使用者調整指令：{{instruction}}\n\n使用者輸入：\n{{story}}",
+  "variables": [
+    {
+      "name": "temple.name",
+      "label": "廟名",
+      "required": true,
+      "example": "鄞山寺"
+    },
+    {
+      "name": "temple.district",
+      "label": "行政區",
+      "required": false,
+      "example": "淡水區"
+    },
+    {
+      "name": "temple.deity",
+      "label": "主祀神明",
+      "required": false,
+      "example": "定光古佛"
+    },
+    {
+      "name": "temple.builtYear",
+      "label": "創建年（西元）",
+      "required": false,
+      "example": "1824"
+    },
+    {
+      "name": "series.style",
+      "label": "系列視覺風格",
+      "required": true,
+      "example": "溫暖寫實、黃昏暖色調"
+    },
+    {
+      "name": "series.direction",
+      "label": "影片方向",
+      "required": false,
+      "example": "在地歷史故事"
+    },
+    {
+      "name": "maxChars",
+      "label": "字數上限",
+      "required": false,
+      "example": "200"
+    },
+    {
+      "name": "story",
+      "label": "使用者輸入（關鍵字或故事）",
+      "required": true,
+      "example": "老一輩說，當年移民渡海來台，帶著定光古佛的香火在淡水落腳。"
+    },
+    {
+      "name": "temple.history",
+      "label": "寺廟歷史與簡介（使用者提供）",
+      "required": false,
+      "example": "清道光年間由汀州移民興建。"
+    },
+    {
+      "name": "instruction",
+      "label": "使用者調整指令",
+      "required": false,
+      "example": ""
+    }
+  ],
+  "output": {
+    "format": "json",
+    "schema": {
+      "type": "object",
+      "required": [
+        "polished"
+      ],
+      "properties": {
+        "polished": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "basis": [
+    "docs/drama-skills/04_第5b與6步_影片提示詞/generability.md"
+  ]
+}

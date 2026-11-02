@@ -1,0 +1,81 @@
+{
+  "id": "character-sheet",
+  "step": 5,
+  "name": "角色三視圖",
+  "description": "步驟 5：產生角色的三視圖（同一時刻、同一套造型的正面、側面、背面全身），作為之後辨認這個角色的身份參考。",
+  "version": 4,
+  "updatedAt": "2026-11-02T15:19:04.739Z",
+  "target": {
+    "kind": "image",
+    "model": "",
+    "aspectRatio": "16:9"
+  },
+  "system": "你是寫實觀光短片的生成指令撰寫者。請把下方這一格的資料，寫成要直接送給圖片模型的最終指令（prompt）：一段自然、完整、能直接執行的工作說明；不出現欄位名稱、JSON 鍵名、內部編號，也不寫「請模型務必」這類話；資料中留白的項目直接略過，不要自行補上沒有來源的事實。連續性鎖的英文片語要原樣放進最終指令，不翻譯、不改寫、不放在「不要」之後。最終指令的語言與格式依最後附上的模型寫法；沒有附上時用繁體中文。\n\n最終指令要做到：\n寫實風格的人物設定參考圖，用途是讓之後每一格都認得出同一個人、同一套造型。\n1. 同一時刻、同一套造型的正面、側面、背面全身並排，三個人等高，自然站立，表情平靜，雙手自然垂放，不拿道具。\n2. 每個視角都要看得到識別特徵：正面看臉型與五官位置；側面看側臉輪廓、站姿與髮型剪影；背面看髮際、髮型與肩背輪廓。配件的佩戴位置與大小在三個視角一致。\n3. 均勻的正面柔光，讓五官、服色與材質都看得清；純淺灰背景。\n4. 連續性鎖的英文片語要逐字寫進描述。\n5. 畫面內不要視角標籤、引線箭頭、尺寸標註、圖注或任何文字；只畫一套造型，不出現第二套衣服、手持道具或新的傷痕。\n6. 不套用與這個角色無關的審美模板（例如九頭身、完美五官）。\n內容與宗教規則：只使用下方提供的寺廟資料與使用者輸入，不可自行補寫歷史年代、人物或傳說；不得對神明不敬，不得出現不敬的動作、台詞或畫面；畫面中不可出現可辨識的真實民眾。",
+  "template": "角色：{{character.name}}\n外觀描述：{{character.description}}\n連續性鎖（逐字帶入）：{{character.locks}}\n系列視覺風格：{{series.style}}\n既有定裝版本：{{character.reference}}\n使用者調整指令：{{instruction}}",
+  "variables": [
+    {
+      "name": "character.name",
+      "label": "角色名稱",
+      "required": true,
+      "example": "導覽員阿亮"
+    },
+    {
+      "name": "character.description",
+      "label": "外觀描述（身份錨點與造型）",
+      "required": true,
+      "example": "20 多歲青年，短黑髮、圓臉；白色亞麻襯衫捲袖、卡其褲、白布鞋，斜背棕色帆布相機背帶"
+    },
+    {
+      "name": "character.locks",
+      "label": "角色連續性鎖（逐字帶入）",
+      "required": false,
+      "example": "white linen shirt with rolled sleeves; tan canvas camera strap"
+    },
+    {
+      "name": "series.style",
+      "label": "系列視覺風格",
+      "required": true,
+      "example": "溫暖寫實、黃昏暖色調"
+    },
+    {
+      "name": "character.reference",
+      "label": "既有定裝版本",
+      "required": false,
+      "example": ""
+    },
+    {
+      "name": "instruction",
+      "label": "使用者調整指令",
+      "required": false,
+      "example": ""
+    }
+  ],
+  "output": {
+    "format": "json",
+    "schema": {
+      "type": "object",
+      "required": [
+        "prompt"
+      ],
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "直接送給生成模型的最終指令"
+        },
+        "notes": {
+          "type": "string",
+          "description": "給使用者看的說明：取捨、風險或需要回到上游修改的地方"
+        }
+      }
+    }
+  },
+  "modelRules": {
+    "nano-banana-pro": "Nano Banana Pro 寫法：最終指令用英文自然語句寫成一段工作說明（連續性鎖本來就是英文，同語言最穩），第一句寫這張圖的用途與畫面比例 16:9；不用權重語法、標籤或「masterpiece、8K」這類套話；用「Image 1 / Image 2」依送入順序指稱參考圖，每張都說明它只負責什麼（身份、造型、地理、構圖、起始幀）；畫面內的中文（例如照片中清楚可讀的匾額）逐字保留原文。"
+  },
+  "basis": [
+    "docs/drama-skills/02_第4步_角色與一致性/character-turnaround-sheet-prompts.md",
+    "docs/drama-skills/03_第3至5步_圖片提示詞/production-sheet-recipes.md",
+    "docs/drama-skills/02_第4步_角色與一致性/continuity-lock.md",
+    "docs/drama-skills/03_第3至5步_圖片提示詞/common-recipe.md"
+  ]
+}

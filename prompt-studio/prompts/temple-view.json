@@ -1,0 +1,124 @@
+{
+  "id": "temple-view",
+  "step": 2,
+  "name": "寺廟定裝版：視角圖",
+  "description": "步驟 2、5：依去識別後的照片與外觀規範，為寺廟定裝版產生一個視角的空景圖；補充視角也用這個節點。之後每一格以它作為場景參考。",
+  "version": 2,
+  "updatedAt": "2026-11-02T15:19:04.774Z",
+  "target": {
+    "kind": "image",
+    "model": "",
+    "aspectRatio": "16:9"
+  },
+  "system": "你是寫實觀光短片的生成指令撰寫者。請把下方這一格的資料，寫成要直接送給圖片模型的最終指令（prompt）：一段自然、完整、能直接執行的工作說明；不出現欄位名稱、JSON 鍵名、內部編號，也不寫「請模型務必」這類話；資料中留白的項目直接略過，不要自行補上沒有來源的事實。連續性鎖的英文片語要原樣放進最終指令，不翻譯、不改寫、不放在「不要」之後。最終指令的語言與格式依最後附上的模型寫法；沒有附上時用繁體中文。\n\n最終指令要做到：\n寺廟定裝版的視角圖：同一間真實寺廟、指定的一個觀察視角，寫實空景，16:9 橫幅。這張圖之後會當作每一格的場景參考，地理正確優先於好看。\n\n1. 先寫視角：從哪裡、朝哪個方向看，畫面裡能看到哪些區塊。\n2. 用相對位置寫固定錨點：入口、屋脊、龍柱、香爐、廟埕彼此在哪一側（例如「從廟埕朝三川殿看，香爐在中軸線上、正對中門」），不要只列物件清單；保留一到三個最強的錨點，次要裝飾概括帶過。\n3. 建築外觀依照片：屋頂形式、主色、建材與裝飾照片怎樣就怎樣；不新增建築、不搬動門窗、不改變比例。外觀規範裡的英文片語要逐字寫進描述。\n4. 光線：寫明主光來源、方向與時段；同一間廟的各個視角使用同一套主光、冷暖關係與暗區方向。\n5. 空場：不出現任何人、車輛或劇情動作；固定設施保留。\n6. 文字：匾額與對聯只在照片拍得清楚時照照片呈現；照片沒拍到或看不清時保持不可讀，不編造文字。畫面不加疊字、標籤或浮水印。\n7. 神像外觀以照片為準；照片沒拍到時不畫出神像正面細節。\n8. 這個視角若是「AI 推測」，只能從其他視角已確認的建築外觀合理延伸，不新增照片中沒有的建築或裝飾。\n內容與宗教規則：只使用下方提供的寺廟資料與使用者輸入，不可自行補寫歷史年代、人物或傳說；不得對神明不敬，不得出現不敬的動作、台詞或畫面；畫面中不可出現可辨識的真實民眾。",
+  "template": "寺廟：{{temple.name}}（{{temple.district}}，主祀{{temple.deity}}）\n視角：{{view.name}}（{{view.key}}）\n視角說明：{{view.description}}\n這個視角的來源：{{view.source}}\n參考照片與用途：{{photos}}\n外觀規範（逐字帶入）：{{temple.appearanceLocks}}\n光線與時段：{{temple.lighting}}\n系列視覺風格：{{series.style}}\n既有版本：{{reference}}\n使用者調整指令：{{instruction}}",
+  "variables": [
+    {
+      "name": "temple.name",
+      "label": "廟名",
+      "required": true,
+      "example": "鄞山寺"
+    },
+    {
+      "name": "temple.district",
+      "label": "行政區",
+      "required": false,
+      "example": "淡水區"
+    },
+    {
+      "name": "temple.deity",
+      "label": "主祀神明",
+      "required": false,
+      "example": "定光古佛"
+    },
+    {
+      "name": "view.name",
+      "label": "視角名稱",
+      "required": true,
+      "example": "廟前全景"
+    },
+    {
+      "name": "view.key",
+      "label": "視角代號",
+      "required": false,
+      "example": "front_overview"
+    },
+    {
+      "name": "view.description",
+      "label": "視角說明",
+      "required": false,
+      "example": "站在廟埕前緣朝三川殿看，看得到整個屋頂與兩側龍柱"
+    },
+    {
+      "name": "view.source",
+      "label": "來源（依照片／AI 推測）",
+      "required": true,
+      "example": "依照片"
+    },
+    {
+      "name": "photos",
+      "label": "參考照片與用途",
+      "required": true,
+      "example": "照片 1（地理、建築外觀）：廟前全景；照片 2（建築外觀）：屋脊剪黏"
+    },
+    {
+      "name": "temple.appearanceLocks",
+      "label": "寺廟外觀規範（連續性鎖，逐字帶入）",
+      "required": false,
+      "example": "red swallowtail roof ridge with cut-porcelain dragons; grey granite dragon columns"
+    },
+    {
+      "name": "temple.lighting",
+      "label": "光線與時段",
+      "required": false,
+      "example": "晴天午後，陽光從廟埕右側斜照"
+    },
+    {
+      "name": "series.style",
+      "label": "系列視覺風格",
+      "required": true,
+      "example": "溫暖寫實、黃昏暖色調"
+    },
+    {
+      "name": "reference",
+      "label": "既有版本",
+      "required": false,
+      "example": ""
+    },
+    {
+      "name": "instruction",
+      "label": "使用者調整指令",
+      "required": false,
+      "example": ""
+    }
+  ],
+  "output": {
+    "format": "json",
+    "schema": {
+      "type": "object",
+      "required": [
+        "prompt"
+      ],
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "直接送給生成模型的最終指令"
+        },
+        "notes": {
+          "type": "string",
+          "description": "給使用者看的說明：取捨、風險或需要回到上游修改的地方"
+        }
+      }
+    }
+  },
+  "modelRules": {
+    "nano-banana-pro": "Nano Banana Pro 寫法：最終指令用英文自然語句寫成一段工作說明（連續性鎖本來就是英文，同語言最穩），第一句寫這張圖的用途與畫面比例 16:9；不用權重語法、標籤或「masterpiece、8K」這類套話；用「Image 1 / Image 2」依送入順序指稱參考圖，每張都說明它只負責什麼（身份、造型、地理、構圖、起始幀）；畫面內的中文（例如照片中清楚可讀的匾額）逐字保留原文。"
+  },
+  "basis": [
+    "docs/drama-skills/02_第4步_角色與一致性/location-and-view.md",
+    "docs/drama-skills/03_第3至5步_圖片提示詞/location-plate.md",
+    "docs/drama-skills/03_第3至5步_圖片提示詞/實拍.md",
+    "docs/drama-skills/01_第3步_腳本與分鏡/lighting-craft.md",
+    "docs/drama-skills/03_第3至5步_圖片提示詞/common-recipe.md"
+  ]
+}
