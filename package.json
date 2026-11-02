@@ -1,0 +1,33 @@
+{
+  "name": "templeyard-studio",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently --names server,web --prefix-colors red,blue \"pnpm --filter @templeyard/server dev\" \"pnpm --filter @templeyard/web dev\"",
+    "test": "vitest run",
+    "test:e2e": "bddgen && playwright test",
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "typecheck": "pnpm -r --if-present typecheck && tsc --noEmit -p tsconfig.json",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@playwright/test": "1.64.1",
+    "@types/node": "22",
+    "@vitejs/plugin-react": "4.7.0",
+    "concurrently": "9.2.5",
+    "eslint": "9.39.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.14.0",
+    "jsdom": "26.1.0",
+    "playwright-bdd": "9.2.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "6.4.5",
+    "vitest": "3.2.7"
+  }
+}

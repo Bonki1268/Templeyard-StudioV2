@@ -1,0 +1,39 @@
+/* 設計 token：依 docs/04-UI-UX-Design-Brief.md，樣式只用這些變數 */
+:root {
+  --color-bg: #f7f5f0;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f2eee6;
+  --color-text: #1f1a17;
+  --color-text-secondary: #3d3631;
+  --color-text-muted: #5e5650;
+  --color-border: #e3ddd3;
+  --color-border-input: #cfc7ba;
+  --color-primary: #b3261e;
+  --color-ai: #8a6a1f;
+  --color-ai-text: #6e5418;
+  --color-ai-surface: #fbf6ea;
+  --color-warning-surface: #fbf0d6;
+  --color-success: #245a40;
+  --color-success-surface: #e6f0ea;
+  --color-error: #9e1f18;
+  --color-error-surface: #f6e3df;
+  --color-info: #1f4e79;
+  --color-info-surface: #e8eef6;
+
+  --font-serif: 'Noto Serif TC', 'Songti TC', serif;
+  --font-sans: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+}
