@@ -29,3 +29,6 @@ playwright-report/
 
 # 待刪除的暫存檔
 _to_delete/
+
+# 情境測試的資料庫
+.e2e-data/

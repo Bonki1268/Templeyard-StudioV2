@@ -12,7 +12,8 @@
     "test:e2e": "bddgen && playwright test",
     "test:live": "vitest run --config vitest.live.config.ts",
     "typecheck": "pnpm -r --if-present typecheck && tsc --noEmit -p tsconfig.json",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "db:import": "pnpm --filter @templeyard/server db:import"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

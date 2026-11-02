@@ -24,7 +24,8 @@ export default defineConfig({
     {
       command: 'pnpm --filter @templeyard/server start',
       port: API_PORT,
-      env: { API_PORT: String(API_PORT) },
+      // 情境測試用獨立的資料庫，啟動時自動匯入 data/temples.csv
+      env: { API_PORT: String(API_PORT), DATA_DIR: '.e2e-data' },
       reuseExistingServer: false,
     },
     {
