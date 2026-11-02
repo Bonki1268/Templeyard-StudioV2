@@ -102,4 +102,26 @@
 
 ## 6. 稽核結果
 
-（由稽核者填寫）
+稽核者：沒參與實作的稽核子代理（2026-11-03）。結果：**通過**。
+
+1. 測試沒被動過：✔ `verify-tests-untouched.mjs 3f9b1b9` 通過。`93b01d4..3f9b1b9` 只改了 `tests/e2e/steps/create-video.steps.ts` 與 `photo-deid.steps.ts` 兩個檔案。從原本的測試提交 637e623 到 HEAD，受保護的路徑也只有這兩個檔案有變動，`.feature`、fixtures、假服務、單元測試都沒改。
+2. 全部通過：✔ `pnpm test` 314 個通過；`pnpm test:e2e` 86 個通過；`pnpm typecheck`、`pnpm lint` 都通過。
+3. 範圍完整：✔ 06 的兩條完成條件，以及 F3（鎖定延到第 5 階段）、F4 的驗收條件都有對應的測試。輕微缺口：03 路由的進入條件「系列存在」，頁面上的提示沒有情境。
+4. 測試不空洞：✔ 沒有 `.skip`、`.only`，沒有空斷言或恆真斷言，測試名稱都是中文。2 個 step 的修正沒有放寬檢查：資料卡仍以完整文字比對 dt 後面的 dd；遮蔽檢查等不到框就逾時失敗，不會誤判通過。紅燈時就通過的 3 個測試（型別、資料庫 CHECK、補既有行為）都合理。「先 commit 實作再回紅燈」經使用者同意，紀錄透明，可以接受；但 93b01d4 提交時 e2e 不是全綠，之後建議修正完再 commit feat。
+5. 不花錢、不洩漏：✔ 沒有金鑰，不讀 `.env`，程式裡沒有 `api.anthropic.com` 與 `cloud.comfy.org`，沒有對外連線。人臉偵測模型從本機載入，假的偵測器只在開發模式生效。
+6. 原圖不上雲：✔ 有四層：
+   - 型別：`CloudOkAsset` 品牌型別，加上 `@ts-expect-error` 由 typecheck 驗證。
+   - 執行期：`requireCloudOk` 以種類為準；送檔入口在讀檔前就擋下。
+   - 資料存取：`insertAsset` 的 cloud_ok 由種類決定，`getCloudOkAsset` 拒絕原圖。
+   - 資料庫：CHECK 限制有單元測試。
+   這些合起來證明了 06 的完成條件。
+7. 沒有越界：✔ comfy-client 只有送檔入口與介面；「產生寺廟定裝版」不能按。名稱與 03、04、05 一致，自己取的名稱已列出。ESLint 排除 prompt-studio/、videos 與 photos 不對 temples 設外鍵（重新匯入會整批重建，id 固定），兩個決定都合理。
+
+建議（不影響通過）：
+
+- 補「系列不存在」的頁面情境。
+- 「不儲存，關閉」場景加上對話框已關閉、重新打開後狀態沒變的斷言。
+- `[aria-current]`、xpath、`option:checked` 選擇器，以及 BottomActionBar 測試的 `querySelector`，改用以角色為主的查詢。
+- 第 4 階段擴充 Prompt Studio 時，決定要不要另外為它加 lint。
+
+以上要在之後的測試階段處理，綠燈後不改測試。
