@@ -1,5 +1,6 @@
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import type { TempleFlag, TempleStatus } from '@templeyard/shared';
+import { sql } from 'drizzle-orm';
+import { check, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import type { AssetKind, DeidBox, TempleFlag, TempleStatus, VideoStage } from '@templeyard/shared';
 
 // 資料表依 docs/05-Backend-Schema.md
 
@@ -49,3 +50,78 @@ export const series = sqliteTable('series', {
 });
 
 export type SeriesRow = typeof series.$inferSelect;
+
+/** videos：影片；模型在產生寺廟定裝版時鎖定（models_locked_at） */
+export const videos = sqliteTable(
+  'videos',
+  {
+    id: text('id').primaryKey(),
+    seriesId: text('series_id')
+      .notNull()
+      .references(() => series.id),
+    // 不設外鍵：pnpm db:import 會整批重建 temples（id 是原始資料的固定 UUID）
+    templeId: text('temple_id').notNull(),
+    stage: text('stage').$type<VideoStage>().notNull(),
+    imageModel: text('image_model').notNull(),
+    videoModel: text('video_model').notNull(),
+    modelsLockedAt: text('models_locked_at'),
+    // 第 5 階段建立 temple_board_versions 後才有值
+    templeBoardVersionId: text('temple_board_version_id'),
+    onePass: integer('one_pass').notNull().default(0),
+    userTempleNotes: text('user_temple_notes').notNull().default(''),
+    creativeInput: text('creative_input'),
+    costLimit: integer('cost_limit'),
+    copiedFromVideoId: text('copied_from_video_id'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [index('videos_series_idx').on(table.seriesId)],
+);
+
+export type VideoRow = typeof videos.$inferSelect;
+
+/** assets：檔案；資料庫只存 data/assets/ 下的相對路徑 */
+export const assets = sqliteTable(
+  'assets',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind').$type<AssetKind>().notNull(),
+    path: text('path').notNull(),
+    mime: text('mime').notNull(),
+    width: integer('width'),
+    height: integer('height'),
+    durationSec: integer('duration_sec'),
+    sha256: text('sha256').notNull(),
+    cloudOk: integer('cloud_ok', { mode: 'boolean' }).notNull(),
+  },
+  // 原圖永遠不能送往雲端：資料庫層再擋一次
+  (table) => [check('assets_original_never_cloud', sql`${table.kind} <> 'original_photo' OR ${table.cloudOk} = 0`)],
+);
+
+export type AssetRow = typeof assets.$inferSelect;
+
+/** photos：寺廟照片（系列中的一間廟）與第 3 步的補充照片（video_id 有值） */
+export const photos = sqliteTable(
+  'photos',
+  {
+    id: text('id').primaryKey(),
+    seriesId: text('series_id')
+      .notNull()
+      .references(() => series.id),
+    // 不設外鍵：pnpm db:import 會整批重建 temples（id 是原始資料的固定 UUID）
+    templeId: text('temple_id').notNull(),
+    videoId: text('video_id').references(() => videos.id),
+    originalAssetId: text('original_asset_id')
+      .notNull()
+      .references(() => assets.id),
+    deidentifiedAssetId: text('deidentified_asset_id')
+      .notNull()
+      .references(() => assets.id),
+    viewKey: text('view_key'),
+    deidBoxes: text('deid_boxes', { mode: 'json' }).$type<DeidBox[]>().notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('photos_series_temple_idx').on(table.seriesId, table.templeId)],
+);
+
+export type PhotoRow = typeof photos.$inferSelect;

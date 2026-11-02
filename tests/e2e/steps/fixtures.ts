@@ -10,6 +10,10 @@ type ScenarioState = {
   /** 這個場景建立的系列（名稱每次不同，避免和其他場景衝突） */
   seriesName?: string;
   seriesId?: string;
+  /** 這個場景透過 API 建立的影片，依建立順序；最後一支是「這支影片」 */
+  videoIds?: string[];
+  /** 最後一次上傳的照片檔名（e2e/fixtures/photos/ 底下） */
+  uploadedFiles?: string[];
 };
 
 export const test = base.extend<{ state: ScenarioState }>({

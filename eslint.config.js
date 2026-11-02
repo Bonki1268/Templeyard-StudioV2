@@ -5,7 +5,17 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '.features-gen/**', 'test-results/**', 'playwright-report/**', 'docs/**', '_to_delete/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '.features-gen/**',
+      'test-results/**',
+      'playwright-report/**',
+      'docs/**',
+      '_to_delete/**',
+      // 既有的 Prompt Studio：CommonJS、Node 18、無套件，有自己的 node --test，不套用這裡的 TypeScript 規則
+      'prompt-studio/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

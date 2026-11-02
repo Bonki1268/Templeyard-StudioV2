@@ -140,6 +140,12 @@ importers:
         specifier: 3.2.7
         version: 3.2.7(@types/node@22.20.5)(jsdom@26.1.0)(tsx@4.23.15)
 
+  packages/comfy-client:
+    dependencies:
+      '@templeyard/shared':
+        specifier: workspace:^
+        version: link:../shared
+
   packages/shared:
     dependencies:
       zod:

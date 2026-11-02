@@ -10,6 +10,8 @@ export type AppDeps = {
   db: AppDatabase;
   /** 測試可注入固定的時間與 ID */
   clock?: Clock;
+  /** 檔案資料夾（data/assets/）；測試可指定暫存資料夾 */
+  assetsDir?: string;
 };
 
 const systemClock: Clock = { now: () => new Date(), newId: () => randomUUID() };

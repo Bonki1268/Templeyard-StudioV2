@@ -23,4 +23,14 @@ describe('底部操作列', () => {
     );
     expect(screen.getByRole('button', { name: '建立系列' })).toBeInTheDocument();
   });
+
+  it('沒有說明時不顯示說明區', () => {
+    const { container } = render(
+      <BottomActionBar>
+        <button type="button">建立系列</button>
+      </BottomActionBar>,
+    );
+    expect(container.querySelector('p')).toBeNull();
+    expect(screen.getByRole('button', { name: '建立系列' })).not.toHaveAccessibleDescription();
+  });
 });
