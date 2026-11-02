@@ -154,8 +154,8 @@ async function samplePixels(page: Page, url: string, points: Point[]): Promise<n
   );
 }
 
-/** 依介面的命名規則（臉孔 N、遮蔽框 N、車牌 N）找出 API 裡的框 */
-function boxByLabel(boxes: readonly DeidBox[], label: string): DeidBox {
+/** 依介面的命名規則（臉孔 N、遮蔽框 N、車牌 N）找出 API 裡的框；還沒有這個框時回傳 undefined */
+function findBoxByLabel(boxes: readonly DeidBox[], label: string): DeidBox | undefined {
   const name = label.replace(/（.+）$/, '');
   const match = /^(臉孔|遮蔽框|車牌) (\d+)$/.exec(name);
   if (!match) throw new Error(`看不懂這個框的名稱：${label}`);
@@ -166,7 +166,11 @@ function boxByLabel(boxes: readonly DeidBox[], label: string): DeidBox {
         ? box.kind === 'face' && box.source === 'manual'
         : box.kind === 'plate',
   );
-  const box = group[Number(match[2]) - 1];
+  return group[Number(match[2]) - 1];
+}
+
+function boxByLabel(boxes: readonly DeidBox[], label: string): DeidBox {
+  const box = findBoxByLabel(boxes, label);
   if (!box) throw new Error(`這張照片沒有「${label}」`);
   return box;
 }
@@ -175,12 +179,22 @@ function center(box: DeidBox): Point {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-/** 同一點在去識別圖與原圖的差異：差很多代表被遮蔽（JPEG 有些許誤差） */
-async function maskedAt(page: Page, request: APIRequestContext, videoId: string, points: (boxes: DeidBox[]) => Point[]) {
+/**
+ * 同一點在去識別圖與原圖的差異：差很多代表被遮蔽（JPEG 有些許誤差）。
+ * 還沒有照片、或還找不到要檢查的框（例如「儲存遮蔽」還沒存完）時回傳 null，
+ * 讓 expect.poll 繼續等；在 poll 裡丟錯會直接失敗、不會重試。
+ */
+async function maskedAt(
+  page: Page,
+  request: APIRequestContext,
+  videoId: string,
+  points: (boxes: DeidBox[]) => Point[] | null,
+): Promise<boolean[] | null> {
   const { photos } = await fetchVideoDetail(request, videoId);
   const photo = photos[0];
-  if (!photo) throw new Error('還沒有照片');
+  if (!photo) return null;
   const at = points(photo.deidBoxes);
+  if (!at) return null;
   const deid = await samplePixels(page, `/api/assets/${photo.deidentifiedAssetId}`, at);
   const original = await samplePixels(page, `/api/assets/${photo.originalAssetId}`, at);
   return deid.map((pixel, i) => Math.max(...pixel.map((value, c) => Math.abs(value - (original[i]?.[c] ?? 0)))) > 40);
@@ -190,7 +204,12 @@ Then(/^去識別後的照片在((?:「[^」]+」)+)的位置(被遮蔽|沒有被
   const labels = parseNames(list);
   const expected = labels.map(() => result === '被遮蔽');
   await expect
-    .poll(() => maskedAt(page, request, requireVideoId(state), (boxes) => labels.map((l) => center(boxByLabel(boxes, l)))))
+    .poll(() =>
+      maskedAt(page, request, requireVideoId(state), (boxes) => {
+        const found = labels.map((label) => findBoxByLabel(boxes, label));
+        return found.every((box) => box !== undefined) ? found.map(center) : null;
+      }),
+    )
     .toEqual(expected);
 });
 

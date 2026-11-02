@@ -85,7 +85,10 @@ When(/^我在搜尋結果選擇「(.+)」$/, async ({ page }, temple: string) =>
 });
 
 Then(/^寺廟資料卡的「(.+)」是「(.+)」$/, async ({ page }, label: string, value: string) => {
-  await expect(templeCard(page).getByRole('definition', { name: label })).toHaveText(value);
+  // Playwright 依 ARIA 規則不讓 definition（dd）有名稱，所以先找 dt，再取緊接在後面的 dd
+  const term = templeCard(page).getByRole('term').filter({ has: page.getByText(label, { exact: true }) });
+  await expect(term).toHaveCount(1);
+  await expect(term.locator('xpath=following-sibling::dd[1]')).toHaveText(value);
 });
 
 Then('網址帶有這支影片的編號', async ({ page }) => {
