@@ -1,6 +1,6 @@
 import type { TempleSearchQuery, TempleSummary } from '@templeyard/shared';
 import type { TempleRow } from '../db/schema.js';
-import { normalizeTempleName } from './name.js';
+import { canonicalize, normalizeTempleName } from './name.js';
 
 // 排序分數：廟名完全相同 > 廟名開頭 > 廟名包含 > 只有行政區或主祀神明符合
 const SCORE = { exact: 0, prefix: 1, contains: 2, otherField: 3 } as const;
@@ -13,16 +13,12 @@ function toTerms(q: string): string[] {
     .filter((term) => term.length > 0);
 }
 
-function normalizeField(text: string): string {
-  return text.normalize('NFKC').replace(/臺/gu, '台');
-}
-
 /** 回傳排序分數；任何一個關鍵字都不符合時回傳 null */
 function scoreRow(row: TempleRow, terms: readonly string[], fullQuery: string): number | null {
   let nameMatchedAll = true;
   for (const term of terms) {
     const inName = row.nameNormalized.includes(term);
-    const inOther = normalizeField(row.district).includes(term) || normalizeField(row.deity).includes(term);
+    const inOther = canonicalize(row.district).includes(term) || canonicalize(row.deity).includes(term);
     if (!inName && !inOther) return null;
     if (!inName) nameMatchedAll = false;
   }

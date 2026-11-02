@@ -6,8 +6,8 @@ const FOUNDATION_PREFIX = '財團法人';
 // 「財團法人」之後的地區前綴（「臺」已轉「台」）
 const FOUNDATION_REGION_PREFIX = /^財團法人(?:新北市|台灣省台北縣)?/u;
 
-/** 全形轉半形、「臺」轉「台」、去掉前後空白 */
-function canonicalize(text: string): string {
+/** 全形轉半形、「臺」轉「台」、去掉前後空白；搜尋時廟名以外的欄位也用它 */
+export function canonicalize(text: string): string {
   return text.normalize('NFKC').replace(/臺/gu, '台').trim();
 }
 
