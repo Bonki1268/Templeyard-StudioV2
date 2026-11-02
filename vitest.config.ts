@@ -1,5 +1,8 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+
+// 會花錢的實測（*.live.test.ts）只由 pnpm test:live 執行，pnpm test 一律排除
+const exclude = [...configDefaults.exclude, '**/*.live.test.ts'];
 
 // 單元與整合測試：測試檔放在被測檔案旁（*.test.ts／*.test.tsx）。
 // 每個專案以自己的資料夾為根目錄，才解析得到各自的依賴。
@@ -12,6 +15,7 @@ export default defineConfig({
           name: 'server',
           include: ['src/**/*.test.ts'],
           environment: 'node',
+          exclude,
         },
       },
       {
@@ -19,6 +23,7 @@ export default defineConfig({
           name: 'packages',
           include: ['packages/*/src/**/*.test.ts'],
           environment: 'node',
+          exclude,
         },
       },
       {
@@ -28,6 +33,7 @@ export default defineConfig({
           name: 'web',
           include: ['src/**/*.test.{ts,tsx}'],
           environment: 'jsdom',
+          exclude,
           setupFiles: ['./src/test-setup.ts'],
         },
       },
