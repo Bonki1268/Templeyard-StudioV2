@@ -13,7 +13,7 @@
 | 06：`packages/prompts` 讀 prompt JSON、模型寫法、連續性鎖、單格自訂指令優先、呼叫綁定 | 完成 |
 | 06：Prompt Studio 擴充（呼叫綁定、新節點、16:9） | 完成 |
 | 06 完成條件：假 MCP 伺服器測試涵蓋成功、失敗、逾時、session 過期、雲端要求確認、重啟後取回 | 完成（`client.test.ts`、`service.test.ts`） |
-| 06 完成條件：指令組裝的快照測試 | 完成（`compose.test.ts` 對 `__fixtures__/temple-view.nano-banana-pro.json` 固定輸出；這是組裝結果，不是 AI 文字） |
+| 06 完成條件：指令組裝的快照測試 | 完成（`render.test.ts` 對 `__fixtures__/temple-view.nano-banana-pro.json` 固定輸出，`compose.test.ts` 與 Prompt Studio 預覽比對；這是組裝結果，不是 AI 文字） |
 | 06 完成條件：費用超過上限時 API 回傳「需要同意」 | 完成（`routes/costs.test.ts`、`cost-control.feature`） |
 | 第 3 階段稽核建議（4 項中的 3 項） | 完成，見第 2 節；Prompt Studio 要不要加 lint 仍等你決定 |
 
@@ -123,4 +123,41 @@
 
 ## 6. 稽核結果
 
-（由稽核者填寫）
+稽核者：沒參與實作的稽核子代理（2026-11-03）。結果：**通過**。
+
+1. 測試沒被動過：✔
+   - `verify-tests-untouched.mjs 3fdb7c5` 通過。
+   - 7a01a71 → 3fdb7c5 這段只改了測試、情境與 step，沒有改到實作。
+   - feat 1e1cf03 沒有碰任何受保護的測試路徑。
+2. 全部通過：✔
+   - `pnpm test` 452 個通過；`pnpm test:e2e` 118 個通過。
+   - `pnpm typecheck`、`pnpm lint` 通過；Prompt Studio 14 個測試通過。
+   - 跑完後工作區仍然是乾淨的：e2e 用的是 `.e2e-prompts` 複本，沒有改到 `prompt-studio/prompts/`。
+3. 範圍完整：✔ 06 的三條完成條件都有對應測試。
+   - 假 MCP 伺服器測試涵蓋：成功、失敗、取消、逾時、session 過期、雲端要求確認、重啟後取回。
+   - 快照：`render.test.ts` 對紅燈時就存在的 fixture 比對固定輸出。
+   - 費用超過上限時回「需要同意」：有路由測試與情境。
+   - F19、F20、F21 相關的驗收條件都有測試。
+   - 輕微缺少：沒有測一般的 HTTP 5xx 與網路中斷。
+4. 測試不空洞：✔
+   - 沒有 `.skip`／`.only`，`forbidOnly` 已開啟。
+   - 沒有吞掉錯誤，也沒有恆真斷言。
+   - 假 MCP 伺服器的測試驗證的是用戶端的行為，不是 mock 本身。
+5. 不花錢、不洩漏：✔
+   - 沒有金鑰、沒有讀 `.env`，也沒有對外連線。
+   - `cloud.comfy.org` 只出現在 `results.test.ts` 的網址解析測試資料裡，不會發出連線。
+6. 原圖不上雲：✔
+   - 唯一入口 `createCloudAssetSender` 在型別與執行期都只收 `cloud_ok` 的資產。
+   - MCP 呼叫沒有圖片參數。
+   - 資料庫有 CHECK 約束。
+7. 沒有越界：✔
+   - 沒有提前做後面的階段。
+   - 欄位與 05 一致；05 沒列的端點已在報告說明。
+   - 改到第 3 階段的情境，是第 3 階段稽核要求補上的，可以接受。
+
+需要修正（輕微，不影響通過）：
+
+- 報告把快照測試寫成在 `compose.test.ts`，實際在 `render.test.ts`。已更正。
+- `generations.model` 存的是系統內的模型代號（`gemini-omni-1.1-flash`）。05 的例子是供應商的模型代號或範本名稱（`api_google_gemini_omni_flash_1_1_t2v`）。
+- comfy-client 沒有測一般的 HTTP 5xx 與網路中斷，下次紅燈時補上。
+- `results.test.ts` 的測試資料用了 `cloud.comfy.org` 網址，可以改成假的網域。
