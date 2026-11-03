@@ -102,6 +102,13 @@ export function createChatService(deps: {
     return Boolean(deps.clips?.()?.get(videoId).final);
   }
 
+  /** 有成品時才提供「安排重生」 */
+  function regenerationTools(videoId: string) {
+    const clips = deps.clips?.();
+    if (!clips || !deps.plans || !clips.get(videoId).final) return [];
+    return [scheduleRegenerationTool(clips, deps.plans, deps.workflows, videoId)];
+  }
+
   return {
     list(videoId, shotKey) {
       requireVideo(videoId);
@@ -147,7 +154,7 @@ export function createChatService(deps: {
           : [
               ...createAgentTools({ db, videoId, questionnaires: deps.questionnaires, workflows: deps.workflows, ...(deps.plans ? { plans: deps.plans } : {}) }),
               // 有成品時：用對話安排重生（不花錢，使用者確認費用後才重生）
-              ...(deps.plans && hasFinal(videoId) ? [scheduleRegenerationTool(deps.clips?.() as ClipService, deps.plans, deps.workflows, videoId)] : []),
+              ...regenerationTools(videoId),
             ];
       // 付費工具要有這一輪的同意憑證；第 6 階段的對話不帶憑證，所以付費工具一律不執行
       const registry = createToolRegistry(tools, { verifyConsent: () => false });

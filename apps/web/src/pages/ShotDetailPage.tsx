@@ -462,7 +462,15 @@ function Editor({ videoId, from, detail, plan, chat, consent }: EditorProps) {
           <Button variant="primary" disabled={!dirty || Boolean(keyframeError) || save.isPending} onClick={() => save.mutate()}>
             儲存這一格
           </Button>
-          <Button disabled={consent.busy} onClick={() => paid(shot.candidateCount ?? 1, '同意並重生', (token) => regenerateFrame(videoId, shot.shotKey, token))}>
+          <Button
+            disabled={consent.busy || save.isPending}
+            onClick={() =>
+              // 剛儲存的生成設定可能還沒重新讀進來：先讀最新的這一格，照最新的候選圖張數詢問同意
+              void fetchShotDetail(videoId, shot.shotKey).then((fresh) =>
+                paid(fresh.shot.candidateCount ?? 1, '同意並重生', (token) => regenerateFrame(videoId, shot.shotKey, token)),
+              )
+            }
+          >
             重生這一格
           </Button>
           <Button onClick={() => navigate(`/videos/${videoId}/studio?panel=${from}`)}>完成這一格</Button>

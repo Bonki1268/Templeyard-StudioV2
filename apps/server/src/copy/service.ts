@@ -40,11 +40,11 @@ export function createCopyService(deps: { db: AppDatabase; clock: Clock; plans: 
           .where(eq(videos.id, created.id))
           .run();
 
-        // 問卷：答案照抄、維持已送出
+        // 問卷：答案照抄，保留原影片的送出時間（2026-11-03 使用者決定）
         const questionnaire = findQuestionnaire(db, source.id);
         if (questionnaire) {
           const copied = insertQuestionnaire(db, { id: clock.newId(), videoId: created.id, answers: questionnaire.answers });
-          if (questionnaire.submittedAt) updateQuestionnaire(db, copied.id, { answers: copied.answers, submittedAt: now });
+          if (questionnaire.submittedAt) updateQuestionnaire(db, copied.id, { answers: copied.answers, submittedAt: questionnaire.submittedAt });
         }
 
         // 分鏡方案：現行版本成為第 1 版；角色另建這支影片自己的（沒有定裝圖、還沒確認），對應照片清空

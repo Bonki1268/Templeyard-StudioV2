@@ -110,6 +110,9 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       })
     : null;
   const prompts = deps.prompts ?? loadPromptFiles(promptsDir);
+  // 精緻圖與影片服務比定裝版、角色服務晚建立：先宣告，變動通知在呼叫時才讀取
+  let frameService: FrameService | null = null;
+  let clipService: ClipService | null = null;
   const boards = createTempleBoardService({
     db: deps.db,
     clock,
@@ -132,6 +135,8 @@ export function buildApp(deps: AppDeps): FastifyInstance {
           }
         : null,
     ...(deps.generationUnavailableMessage ? { unavailableMessage: deps.generationUnavailableMessage } : {}),
+    // 定裝版確認新版本：用到換過的視角的精緻圖、關鍵畫格、影片要重新確認（03 第 160 行）
+    onVersionConfirmed: (videoId, viewKeys) => frameService?.invalidate(videoId, { type: 'templeBoard', viewKeys }),
   });
   handlers[TEMPLE_VIEW_NODE] = boards.handleGenerated;
 
@@ -149,8 +154,6 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   const questionnaires = createQuestionnaireService({ db: deps.db, clock });
   // 角色定裝版：生成用 Comfy Cloud（與定裝版相同的生成服務），沒有設定時回 503
   // 精緻圖服務在方案與角色之後建立；這兩者改版時透過它標示需重新確認
-  let frameService: FrameService | null = null;
-  let clipService: ClipService | null = null;
   const characters = createCharacterService({
     db: deps.db,
     clock,

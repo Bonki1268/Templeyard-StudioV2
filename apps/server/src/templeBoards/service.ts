@@ -30,7 +30,7 @@ import {
   type WorkflowConfig,
   type WorkflowModel,
 } from '@templeyard/shared';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { getCloudOkAsset } from '../assets/repository.js';
 import type { AssetStore } from '../assets/store.js';
 import type { AppDatabase } from '../db/client.js';
@@ -151,6 +151,20 @@ export function createTempleBoardService(deps: TempleBoardServiceDeps): TempleBo
     const video = findVideo(db, videoId);
     if (!video) throw new TempleBoardError(404, '找不到這支影片');
     return video;
+  }
+
+  /** 和同一份定裝版的前一版比對：視角圖換過、或前一版沒有的視角；外觀規範改了就是所有視角 */
+  function changedViewKeys(version: TempleBoardVersionRow): string[] {
+    const previous = db
+      .select()
+      .from(templeBoardVersions)
+      .where(and(eq(templeBoardVersions.boardId, version.boardId), eq(templeBoardVersions.version, version.version - 1)))
+      .get();
+    if (!previous) return [];
+    const views = listViews(db, version.id);
+    if (JSON.stringify(previous.appearanceLocks) !== JSON.stringify(version.appearanceLocks)) return views.map((view) => view.viewKey);
+    const before = new Map(listViews(db, previous.id).map((view) => [view.viewKey, view.assetId]));
+    return views.filter((view) => before.get(view.viewKey) !== view.assetId).map((view) => view.viewKey);
   }
 
   function requireGeneration(): TempleBoardGeneration {
@@ -501,6 +515,8 @@ export function createTempleBoardService(deps: TempleBoardServiceDeps): TempleBo
         if (pending[0]) throw new TempleBoardError(409, pending[0]);
       }
       const confirmedAt = nowIso();
+      // 新版本第一次確認時，和前一版比對出換過的視角（03 第 160 行）
+      const changedViews = version.confirmedAt ? [] : changedViewKeys(version);
       db.transaction((tx) => {
         if (!version.confirmedAt) {
           updateVersion(tx, version.id, { confirmedAt });
@@ -514,6 +530,7 @@ export function createTempleBoardService(deps: TempleBoardServiceDeps): TempleBo
         }
       });
       const updated = requireVideo(video.id);
+      if (changedViews.length > 0) deps.onVersionConfirmed?.(video.id, changedViews);
       return { board: toBoard(updated, findVersion(db, version.id) ?? version), video: updated };
     },
 

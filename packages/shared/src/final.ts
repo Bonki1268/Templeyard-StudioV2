@@ -15,10 +15,14 @@ export function thumbnailStrip(shots: readonly { seq: number; shotKey: string; d
   });
 }
 
-/** 下載的檔名：「寺廟名稱-YYYY-MM-DD.mp4」；檔名不能用的字元換成「-」 */
+/** 台灣時間（UTC+8，沒有日光節約） */
+const TAIWAN_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+/** 下載的檔名：「寺廟名稱-YYYY-MM-DD.mp4」，日期用台灣時間；檔名不能用的字元換成「-」 */
 export function downloadFileName(templeName: string, createdAt: string): string {
   const safe = templeName.replace(/[\\/:*?"<>|]+/g, '-').trim() || '廟埕影室';
-  return `${safe}-${createdAt.slice(0, 10)}.mp4`;
+  const date = new Date(Date.parse(createdAt) + TAIWAN_OFFSET_MS).toISOString().slice(0, 10);
+  return `${safe}-${date}.mp4`;
 }
 
 /** 成品不能確認的原因 */
