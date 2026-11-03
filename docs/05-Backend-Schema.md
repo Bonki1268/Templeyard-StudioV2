@@ -244,6 +244,7 @@ erDiagram
 | --- | --- |
 | `GET /api/health` | 健康檢查 |
 | `GET/POST /api/series`、`PATCH /api/series/:id` | 系列 |
+| `GET /api/series/:id/videos` | 系列設定：這個系列的影片（寺廟、階段、更新時間、縮圖）與共同角色 |
 | `GET/PATCH /api/settings` | 系統設定（單筆同意門檻） |
 | `GET /api/temples?q=` | 寺廟搜尋 |
 | `POST /api/videos`、`GET/PATCH /api/videos/:id` | 建立影片、影片詳細資料、選模型 |
