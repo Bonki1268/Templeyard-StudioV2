@@ -125,12 +125,15 @@ Then(/^單格時間軸顯示「(.+)」$/, async ({ page }, text: string) => {
 });
 
 Then(/^細修頁的設定依序是「(.+)」$/, async ({ page }, names: string) => {
-  // 設定的折疊區塊都是 group；區塊裡面的欄位群組（出場角色、圈選範圍）不在清單裡，只比對清單裡的順序
-  const expected = names.split('、');
+  // 設定的折疊區塊都是用 aria-label 命名的 group；區塊裡面的欄位群組（出場角色、圈選範圍）用 legend 命名，
+  // 沒有 aria-label，不算進來。多出或少了區塊、順序不同都會失敗
   const groups = await page.getByRole('region', { name: '設定', exact: true }).getByRole('group').all();
   const titles: string[] = [];
-  for (const group of groups) titles.push((await group.getAttribute('aria-label')) ?? '');
-  expect(titles.filter((title) => expected.includes(title))).toEqual(expected);
+  for (const group of groups) {
+    const label = await group.getAttribute('aria-label');
+    if (label) titles.push(label);
+  }
+  expect(titles).toEqual(names.split('、'));
 });
 
 Then(/^細修頁顯示「(.+)」$/, async ({ page }, text: string) => {
@@ -289,4 +292,18 @@ Then(/^對話裡沒有我說的「(.+)」$/, async ({ page }, text: string) => {
 Then(/^生成中以狀態訊息宣告，內容是「(.+)」與「(.+)」$/, async ({ page }, a: string, b: string) => {
   const status = page.getByRole('status').filter({ hasText: a }).filter({ hasText: b });
   await expect(status).toBeVisible();
+});
+
+// ── 第 11 階段稽核補充：關鍵畫格的失效（秒數、參考素材） ──
+
+When(/^我透過 API 把第 (\d+) 格的秒數改成 (\d+)$/, async ({ request, state }, seq: string, sec: string) => {
+  const videoId = requireVideoId(state);
+  const response = await request.patch(`/api/videos/${videoId}/shots/${await shotKeyOf(request, videoId, seq)}`, { data: { durationSec: Number(sec) } });
+  expect(response.status()).toBe(200);
+});
+
+When(/^我透過 API 把第 (\d+) 格的出場角色清空$/, async ({ request, state }, seq: string) => {
+  const videoId = requireVideoId(state);
+  const response = await request.patch(`/api/videos/${videoId}/shots/${await shotKeyOf(request, videoId, seq)}`, { data: { characters: [] } });
+  expect(response.status()).toBe(200);
 });

@@ -22,6 +22,13 @@ type ScenarioState = {
   assistLogId?: string;
   /** 確認精緻圖時記下每格首格的檔案編號（依序號） */
   frameAssets?: Record<number, string | null>;
+  /** 產生成品時記下的成品與各格影片（第 12 階段） */
+  finalId?: string | null;
+  clipIds?: (string | null)[];
+  /** 複製出來的新影片（第 12 階段） */
+  copiedVideoId?: string;
+  /** 「確認並下載」下載到的檔案（第 12 階段） */
+  downloaded?: { filename: string; bytes: Buffer };
 };
 
 export const test = base.extend<{ state: ScenarioState }>({

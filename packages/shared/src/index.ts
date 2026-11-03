@@ -5,6 +5,7 @@ export * from './characters.js';
 export * from './clips.js';
 export * from './chat.js';
 export * from './costs.js';
+export * from './final.js';
 export * from './frames.js';
 export * from './generations.js';
 export * from './health.js';

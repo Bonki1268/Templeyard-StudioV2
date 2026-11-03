@@ -20,6 +20,9 @@ type State = {
   lastResponse?: APIResponse;
   /** 確認時記下每格首格的檔案編號（依序號） */
   frameAssets?: Record<number, string | null>;
+  /** 產生成品時記下的成品與各格影片（第 12 階段） */
+  finalId?: string | null;
+  clipIds?: (string | null)[];
 };
 
 const FAKE_COMFY_URL = 'http://127.0.0.1:3401';
@@ -167,7 +170,11 @@ Given(/^我已經透過 API 為一支「(.+)」的影片產生成品$/, async ({
   await confirmAllFrames(request, state, videoId);
   await submitClips(request, videoId);
   await waitClipsDone(request, videoId);
-  expect((await fetchClips(request, videoId)).final).not.toBeNull();
+  const done = await fetchClips(request, videoId);
+  expect(done.final).not.toBeNull();
+  // 第 12 階段：記下這一版成品與各格影片，之後比對有沒有換
+  state.finalId = done.final?.id ?? null;
+  state.clipIds = done.shots.map((shot) => shot.clip?.id ?? null);
 });
 
 When('我透過 API 生成影片並等它完成', async ({ request, state }) => {

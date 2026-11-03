@@ -19,6 +19,7 @@ function toVideo(row: VideoRow): Video {
     userTempleNotes: row.userTempleNotes,
     creativeInput: row.creativeInput,
     costLimit: row.costLimit,
+    copiedFromVideoId: row.copiedFromVideoId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

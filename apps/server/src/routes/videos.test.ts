@@ -95,6 +95,7 @@ describe('建立影片 POST /api/videos', () => {
       userTempleNotes: '',
       creativeInput: null,
       costLimit: null,
+      copiedFromVideoId: null,
       createdAt: expect.any(String),
       updatedAt: expect.any(String),
     });

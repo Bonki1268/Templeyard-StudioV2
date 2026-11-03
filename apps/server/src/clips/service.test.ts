@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { findAsset } from '../assets/repository.js';
 import { createFfmpeg } from '../compose/ffmpeg.js';
@@ -290,5 +291,78 @@ describe('確認失效', () => {
     const after = t.clips.get('v1');
     expect(after.final?.id).not.toBe(before);
     expect(after.final?.needsReconfirm).toBe(false);
+  });
+});
+
+// ── 第 11 階段稽核補充 ──
+
+describe('秒數變動時的失效', () => {
+  it('改了一格的秒數：那一格的影片與成品標示需重新確認', async () => {
+    await generateAndCompose();
+    t.plans.updateShot('v1', 'k1', { durationSec: 5 });
+    const { shots, final } = t.clips.get('v1');
+    expect(shots.find((s) => s.shotKey === 'k1')?.clip?.needsReconfirm).toBe(true);
+    expect(final?.needsReconfirm).toBe(true);
+  });
+});
+
+// ── 第 12 階段：對話修改成品、確認與下載 ──
+
+describe('對話修改成品（安排重生）', () => {
+  it('把這幾格的影片標示需重新確認，記下調整指令；不花錢、不送出', async () => {
+    await generateAndCompose();
+    const before = generationsOf(SHOT_VIDEO_NODE).length;
+    const response = t.clips.scheduleRevision('v1', [2], '動作放慢一點');
+    const k2 = response.shots.find((s) => s.shotKey === 'k2')?.clip;
+    expect(k2).toMatchObject({ needsReconfirm: true, revision: '動作放慢一點' });
+    expect(response.shots.find((s) => s.shotKey === 'k1')?.clip).toMatchObject({ needsReconfirm: false, revision: null });
+    expect(response.final?.needsReconfirm).toBe(true);
+    expect(generationsOf(SHOT_VIDEO_NODE)).toHaveLength(before);
+  });
+
+  it('重生時把調整指令寫進影片指令，只重做那一格；重生後調整指令清掉', async () => {
+    await generateAndCompose();
+    t.clips.scheduleRevision('v1', [2], '動作放慢一點');
+    const before = generationsOf(SHOT_VIDEO_NODE).length;
+    await generateAndCompose(null);
+    expect(generationsOf(SHOT_VIDEO_NODE).slice(before).map((row) => row.target.shotKey)).toEqual(['k2']);
+    const written = t.world.writer.calls.filter((c) => c.system.includes('圖生影片') && c.content.includes('分鏡 2，')).at(-1);
+    expect(written?.content).toContain('動作放慢一點');
+    const { shots, final } = t.clips.get('v1');
+    expect(shots.find((s) => s.shotKey === 'k2')?.clip).toMatchObject({ needsReconfirm: false, revision: null });
+    expect(final?.needsReconfirm).toBe(false);
+  });
+
+  it('還沒有成品：409；方案沒有這一格：404', async () => {
+    await expectStudioError(() => t.clips.scheduleRevision('v1', [2], '慢一點'), 409, '還沒有成品');
+    await generateAndCompose();
+    await expectStudioError(() => t.clips.scheduleRevision('v1', [9], '慢一點'), 404, '方案沒有第 9 格');
+  });
+});
+
+describe('確認成品與下載', () => {
+  it('確認後影片階段變為 done', async () => {
+    await generateAndCompose();
+    t.clips.confirmFinal('v1');
+    expect(stage()).toBe('done');
+  });
+
+  it('還沒有成品：409；成品需重新確認：409，階段不變', async () => {
+    await expectStudioError(() => t.clips.confirmFinal('v1'), 409, '還沒有成品');
+    await generateAndCompose();
+    t.clips.scheduleRevision('v1', [1], '亮一點');
+    await expectStudioError(() => t.clips.confirmFinal('v1'), 409, '成品需重新確認，請重新生成影片');
+    expect(stage()).toBe('final');
+  });
+
+  it('下載的是成品檔案，檔名是寺廟名稱加日期', async () => {
+    await generateAndCompose();
+    const file = t.clips.finalFile('v1');
+    expect(file.filename).toMatch(/^.+-\d{4}-\d{2}-\d{2}\.mp4$/);
+    expect(readFileSync(file.path).subarray(4, 8).toString('latin1')).toBe('ftyp');
+  });
+
+  it('還沒有成品時不能下載：404', async () => {
+    await expectStudioError(() => t.clips.finalFile('v1'), 404, '還沒有成品');
   });
 });

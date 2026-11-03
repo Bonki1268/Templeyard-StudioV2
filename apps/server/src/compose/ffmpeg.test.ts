@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -73,6 +73,28 @@ describe('合成成品', () => {
     const info = await ffmpeg.probe(output);
     expect(info.hasAudio).toBe(true);
     expect(Math.abs(info.durationSec - 5)).toBeLessThan(0.15);
+  });
+
+  it('統一響度：成品的整合響度在 -16 LUFS 附近（loudnorm），音量很小的片段也會被拉上來', async () => {
+    const quiet = path.join(dir, 'quiet.mp4');
+    execFileSync('ffmpeg', [
+      '-hide_banner', '-loglevel', 'error', '-y',
+      '-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30:duration=6',
+      '-f', 'lavfi', '-i', 'sine=frequency=440:duration=6',
+      '-af', 'volume=0.02',
+      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'ultrafast', '-c:a', 'aac',
+      quiet,
+    ]);
+    const subtitlesPath = path.join(dir, 'subs-loud.ass');
+    writeFileSync(subtitlesPath, buildAss([]));
+    const output = path.join(dir, 'final-loud.mp4');
+    await ffmpeg.compose({ clips: [{ path: quiet, durationSec: 6 }], music: null, subtitlesPath, output });
+
+    // ebur128 的摘要印在 stderr：「I: -16.0 LUFS」
+    const result = spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', output, '-af', 'ebur128', '-f', 'null', '-'], { encoding: 'utf8' });
+    const integrated = Number(/I:\s+(-?[\d.]+) LUFS/.exec(result.stderr.split('Summary:').at(-1) ?? '')?.[1]);
+    expect(integrated).toBeGreaterThan(-18);
+    expect(integrated).toBeLessThan(-14);
   });
 
   it('字幕燒錄在畫面上：有字幕的時段，畫面下方和沒有字幕時不同', async () => {

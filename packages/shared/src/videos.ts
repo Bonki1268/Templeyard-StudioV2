@@ -63,6 +63,8 @@ export const videoSchema = z.object({
   creativeInput: z.string().nullable().default(null),
   /** 本支影片的費用上限（點數）；null 表示不設上限 */
   costLimit: z.number().int().nullable(),
+  /** 複製來源（第 12 階段）；不是複製的影片為 null */
+  copiedFromVideoId: z.string().nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

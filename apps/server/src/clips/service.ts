@@ -77,6 +77,15 @@ export type ClipService = {
   clipOf(videoId: string, shotKey: string): Clip | null;
   /** 等目前的合成結束（測試與重新啟動後使用） */
   whenComposed(videoId: string): Promise<void>;
+  /**
+   * 對話修改成品（第 12 階段）：把這幾格的影片標示需重新確認，記下調整指令；之後按「重生並重新合成」才花錢。
+   * 還沒有成品：StudioError 409「還沒有成品」；方案沒有這一格：404「方案沒有第 N 格」
+   */
+  scheduleRevision(videoId: string, seqs: readonly number[], instruction: string): ClipsResponse;
+  /** 確認成品，影片階段變為 done；沒有成品 409「還沒有成品」；需重新確認 409「成品需重新確認，請重新生成影片」 */
+  confirmFinal(videoId: string): ClipsResponse;
+  /** 下載用：成品檔案的絕對路徑與檔名；沒有成品 StudioError 404「還沒有成品」 */
+  finalFile(videoId: string): { path: string; filename: string };
   handleGenerated: SucceededHandler;
 };
 
@@ -560,6 +569,18 @@ export function createClipService(deps: {
     clipOf(videoId, shotKey) {
       const row = currentRow(listClips(db, videoId), shotKey);
       return row ? toClip(row) : null;
+    },
+
+    scheduleRevision() {
+      throw new Error('尚未實作');
+    },
+
+    confirmFinal() {
+      throw new Error('尚未實作');
+    },
+
+    finalFile() {
+      throw new Error('尚未實作');
     },
 
     async whenComposed(videoId) {

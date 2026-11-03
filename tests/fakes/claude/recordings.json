@@ -183,6 +183,39 @@
       ]
     },
     {
+      "match": "使用者對成品提出修改",
+      "matchUser": "第 2 格的動作太快",
+      "afterToolResult": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "好，我安排重生第 2 格，動作放慢一點。"
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_regen_{{n}}",
+          "name": "schedule_regeneration",
+          "input": {
+            "shots": [
+              2
+            ],
+            "instruction": "動作放慢一點"
+          }
+        }
+      ]
+    },
+    {
+      "match": "使用者對成品提出修改",
+      "matchUser": "第 2 格的動作太快",
+      "afterToolResult": true,
+      "content": [
+        {
+          "type": "text",
+          "text": "已安排好，請在右邊確認費用後按「重生並重新合成」。"
+        }
+      ]
+    },
+    {
       "match": "廟埕影室的創作 Agent",
       "matchUser": "第 1 格改成特寫",
       "afterToolResult": false,

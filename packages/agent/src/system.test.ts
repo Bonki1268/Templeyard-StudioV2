@@ -104,3 +104,17 @@ describe('細修頁的對話', () => {
   });
 });
 
+
+describe('有成品時（第 12 階段）', () => {
+  it('說明使用者對成品提出修改時呼叫 schedule_regeneration，列出要重生的格子與調整指令，不會直接重生', () => {
+    const system = buildAgentSystem({ ...context, hasFinal: true });
+    expect(system).toContain('## 成品');
+    expect(system).toContain('使用者對成品提出修改');
+    expect(system).toContain('schedule_regeneration');
+    expect(system).toContain('看到費用並確認後才會重生');
+  });
+
+  it('還沒有成品時不提', () => {
+    expect(buildAgentSystem(context)).not.toContain('schedule_regeneration');
+  });
+});

@@ -1,5 +1,5 @@
 import { defineTool, type AgentTool } from '@templeyard/agent';
-import { SHOT_SIZES, costItemSchema, generateQuestionnaireInputSchema, revisePlanInputSchema, templeSearchQuerySchema, type WorkflowConfig } from '@templeyard/shared';
+import { SHOT_SIZES, costItemSchema, scheduleRegenerationInputSchema, generateQuestionnaireInputSchema, revisePlanInputSchema, templeSearchQuerySchema, type WorkflowConfig } from '@templeyard/shared';
 import { z } from 'zod';
 import { UnknownModelError, estimateCost } from '../costs/estimate.js';
 import type { AppDatabase } from '../db/client.js';
@@ -8,6 +8,7 @@ import { listTemples } from '../temples/repository.js';
 import { searchTemples } from '../temples/search.js';
 import { findVideo } from '../videos/repository.js';
 import { StudioError } from './errors.js';
+import type { ClipService } from '../clips/service.js';
 import type { PlanService } from '../plans/service.js';
 import type { QuestionnaireService } from './questionnaire.js';
 
@@ -178,6 +179,27 @@ export function reviseShotTool(plans: PlanService, videoId: string, shotKey: str
         if (error instanceof StudioError) return { ok: false, content: error.message, summary: error.message };
         throw error;
       }
+    },
+  });
+}
+
+/** 對話修改成品（第 12 階段）：安排重生哪幾格；不花錢，使用者看到費用並確認後才重生 */
+export const SCHEDULE_REGENERATION_TOOL = 'schedule_regeneration';
+
+export function scheduleRegenerationTool(clips: ClipService, plans: PlanService, workflows: WorkflowConfig, videoId: string): AgentTool<unknown> {
+  void clips;
+  void plans;
+  void workflows;
+  void videoId;
+  return defineTool({
+    name: SCHEDULE_REGENERATION_TOOL,
+    label: '安排重生',
+    subject: '成品的修改',
+    description: '使用者對成品提出修改時，列出要重生的格子序號（shots）與調整指令（instruction）。不會直接重生：使用者看到費用並確認後才重生並重新合成。',
+    inputSchema: scheduleRegenerationInputSchema,
+    paid: false,
+    run: async () => {
+      throw new Error('尚未實作');
     },
   });
 }

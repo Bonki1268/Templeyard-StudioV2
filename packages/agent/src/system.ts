@@ -12,6 +12,8 @@ export type AgentContext = {
   models: { image: string; video: string };
   /** 問卷是否已送出（送出後不能重新產生） */
   questionnaireSubmitted: boolean;
+  /** 已經有成品（第 12 階段）：使用者可以用對話修改成品 */
+  hasFinal?: boolean;
   /** 細修頁的對話只針對這一格（第 10 階段） */
   focusShot?: { seq: number } | null;
   /** 目前的分鏡方案（建立後才有）：每格一行摘要 */

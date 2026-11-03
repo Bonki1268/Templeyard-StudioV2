@@ -16,6 +16,8 @@ export const clipSchema = z.object({
   selected: z.boolean(),
   needsReconfirm: z.boolean(),
   similarity: z.array(keyframeSimilaritySchema),
+  /** 對話修改成品時排定的調整指令（第 12 階段）；重生後清掉 */
+  revision: z.string().nullable().optional(),
   createdAt: z.string(),
 });
 export type Clip = z.infer<typeof clipSchema>;
