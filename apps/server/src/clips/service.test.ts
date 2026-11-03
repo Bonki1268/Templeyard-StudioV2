@@ -39,7 +39,7 @@ function uploadedFile(ref: unknown): string | undefined {
 }
 
 /** 送出、等生成完成、等合成結束 */
-async function generateAndCompose(consent = t.clipConsent()) {
+async function generateAndCompose(consent: string | null = t.clipConsent()) {
   expect((await t.clips.generate('v1', consent)).status).toBe('accepted');
   await t.settleAll();
   await t.clips.whenComposed('v1');
@@ -242,10 +242,18 @@ describe('失敗與重新生成', () => {
 
     t.plans.updateShot('v1', 'k3', { description: '香爐' });
     t.confirmAll();
+    // 只重做 3 秒（93 點），在測試世界的單筆同意門檻 1000 點內，不用同意
+    const videosBefore = generationsOf(SHOT_VIDEO_NODE).length;
     const retry = await t.clips.generate('v1', null);
-    expect(retry.status).toBe('consent_required');
-    if (retry.status !== 'consent_required') return;
-    expect(retry.check.estimate.lines.map((line) => [line.model, line.units])).toEqual([['gemini-omni-1.1-flash', 3]]);
+    expect(retry.status).toBe('accepted');
+    const added = generationsOf(SHOT_VIDEO_NODE).slice(videosBefore);
+    expect(added).toHaveLength(1);
+    expect(added[0]?.target).toMatchObject({ shotKey: 'k3' });
+    expect(added[0]?.estimatedCost).toBe(93);
+    expect(generationsOf(MUSIC_NODE)).toHaveLength(1);
+    await t.settleAll();
+    await t.clips.whenComposed('v1');
+    expect(t.clips.get('v1').final).not.toBeNull();
   });
 });
 
@@ -262,7 +270,8 @@ describe('確認失效', () => {
 
   it('角色改了：這個角色出現的格子的影片標示需重新確認', async () => {
     await generateAndCompose();
-    t.clips.invalidate('v1', { type: 'character', characterName: t.grandmaId });
+    // 失效規則比對方案裡的角色名稱
+    t.clips.invalidate('v1', { type: 'character', characterName: '阿嬤' });
     const { shots } = t.clips.get('v1');
     expect(shots.filter((s) => s.clip?.needsReconfirm).map((s) => s.shotKey)).toEqual(['k2', 'k4']);
   });
@@ -271,10 +280,13 @@ describe('確認失效', () => {
     await generateAndCompose();
     const before = t.clips.get('v1').final?.id;
     t.clips.invalidate('v1', { type: 'shot', shotKey: 'k1', durationChanged: false });
-    const retry = await t.clips.generate('v1', null);
-    if (retry.status !== 'consent_required') throw new Error('應該要先同意');
-    expect(retry.check.estimate.lines.map((line) => [line.model, line.units])).toEqual([['gemini-omni-1.1-flash', 6]]);
-    await generateAndCompose(t.world.consents.issue('v1', [{ model: 'gemini-omni-1.1-flash', units: 6 }]).token);
+    // 只重做第 1 格 6 秒（186 點），在單筆同意門檻 1000 點內，不用同意；背景音樂不重做
+    const videosBefore = generationsOf(SHOT_VIDEO_NODE).length;
+    await generateAndCompose(null);
+    const added = generationsOf(SHOT_VIDEO_NODE).slice(videosBefore);
+    expect(added.map((row) => row.target.shotKey)).toEqual(['k1']);
+    expect(added[0]?.estimatedCost).toBe(186);
+    expect(generationsOf(MUSIC_NODE)).toHaveLength(1);
     const after = t.clips.get('v1');
     expect(after.final?.id).not.toBe(before);
     expect(after.final?.needsReconfirm).toBe(false);

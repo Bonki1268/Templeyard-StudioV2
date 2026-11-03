@@ -16,7 +16,7 @@ import path from 'node:path';
 // - fake_upload_file：假的上傳工具（真的上傳方式待實測，07「下一輪測試」第 1 項），回 { file_ref }，記下收到的檔案 sha256
 // - GET /__calls：情境測試查詢收到的呼叫與上傳（只有假伺服器有）
 // - 產出依任務種類：影片（partner_generate 的 type 是 video，或範本名稱有 t2v／i2v）回 12 秒 1280×720、30 fps、有聲音的 MP4；
-//   音訊（範本名稱有 audio）回 40 秒的 WAV；其他回 1×1 PNG。影片與音訊用本機 FFmpeg 產生一次（不花錢）
+//   音訊（範本名稱有 audio）回 40 秒的 WAV；其他回 1×1 PNG。影片與音訊在啟動時用本機 FFmpeg 產生一次（不花錢）
 
 export const FAKE_API_KEY = 'fake-comfy-key';
 export const FAKE_PNG = Buffer.from(
@@ -84,6 +84,9 @@ async function readBody(req: IncomingMessage): Promise<string> {
 }
 
 export async function startFakeComfyMcp(options: { port?: number } = {}): Promise<FakeComfyMcp> {
+  // 啟動時先產生假的影片與音訊，下載時不會卡住（第一次產生要 1～2 秒）
+  fakeMedia('video');
+  fakeMedia('audio');
   const sessions = new Set<string>();
   const jobs = new Map<string, Job>();
   const calls: RecordedCall[] = [];
