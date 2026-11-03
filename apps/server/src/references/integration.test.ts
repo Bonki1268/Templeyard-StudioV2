@@ -53,7 +53,8 @@ describe('精緻圖的參考圖拼成一張', () => {
     const sheetId = uploadedFile(frames, refs[0])?.split('.')[0] ?? '';
     const look = frames.characters.listForVideo('v1')[0]?.version.lookAssetId;
     expect(sheetId).not.toBe(look);
-    expect(findAsset(frames.world.db, sheetId)).toMatchObject({ cloudOk: true, width: 1280, height: 720 });
+    // 2 張拼成 2 欄 1 列（sheetLayout）
+    expect(findAsset(frames.world.db, sheetId)).toMatchObject({ cloudOk: true, width: 1280, height: 360 });
     const written = frames.world.writer.calls.find((c) => c.content.includes('分鏡 2，首格'));
     expect(written?.content).toContain('參考圖拼成一張（由左到右、由上到下）：第 1 格是角色「阿嬤」定裝圖');
   });
