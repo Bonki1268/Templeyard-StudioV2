@@ -1,4 +1,8 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import type { ReferenceSlot } from '@templeyard/shared';
+import { findAsset, getCloudOkAsset, insertAsset } from '../assets/repository.js';
 import type { AssetStore } from '../assets/store.js';
 import type { Ffmpeg } from '../compose/ffmpeg.js';
 import type { AppDatabase } from '../db/client.js';
@@ -18,14 +22,15 @@ export type ReferenceSheets = {
 
 /** 拼接的版面：1 張 1×1、2 張 2×1、3～4 張 2×2、5～6 張 3×2、7～9 張 3×3；每格 640×360（16:9） */
 export function sheetLayout(count: number): { cols: number; rows: number; cellWidth: number; cellHeight: number } {
-  void count;
-  throw new Error('尚未實作');
+  const cols = count <= 1 ? 1 : count <= 4 ? 2 : 3;
+  const rows = Math.max(1, Math.ceil(count / cols));
+  return { cols, rows, cellWidth: 640, cellHeight: 360 };
 }
 
-/** 拼接圖的說明：「參考圖拼成一張（由左到右、由上到下）：第 1 格 …；第 2 格 …」 */
+/** 拼接圖的說明：「參考圖拼成一張（由左到右、由上到下）：第 1 格是 …；第 2 格是 …」 */
 export function sheetLabel(labels: readonly string[]): string {
-  void labels;
-  throw new Error('尚未實作');
+  const cells = labels.map((label, index) => `第 ${index + 1} 格是${label}`).join('；');
+  return `參考圖拼成一張（由左到右、由上到下）：${cells}。畫成一個場景，不要照拼接的樣子畫`;
 }
 
 /**
@@ -35,17 +40,43 @@ export function sheetLabel(labels: readonly string[]): string {
  * - 超過 max、沒有 sheet：只送前 max 張
  */
 export async function fitReferences(refs: readonly ReferenceInput[], slot: ReferenceSlot, sheets: ReferenceSheets | null): Promise<ReferenceInput[]> {
-  void refs;
-  void slot;
-  void sheets;
-  throw new Error('尚未實作');
+  if (refs.length <= slot.max) return [...refs];
+  if (!slot.sheet) return refs.slice(0, slot.max);
+  if (!sheets) throw new Error('參考圖要拼成一張，但沒有設定 FFmpeg');
+  return [await sheets.compose(refs.slice(0, slot.sheet.max))];
 }
 
 export function createReferenceSheets(deps: { db: AppDatabase; clock: Clock; store: AssetStore; ffmpeg: Ffmpeg }): ReferenceSheets {
-  void deps;
   return {
-    compose: async () => {
-      throw new Error('尚未實作');
+    async compose(refs) {
+      // 只拼可以上雲的圖：原圖在這裡就會被擋下
+      const files = refs.map((ref) => {
+        const asset = getCloudOkAsset(deps.db, ref.assetId);
+        const found = findAsset(deps.db, asset.id);
+        if (!found) throw new Error(`找不到參考圖：${ref.assetId}`);
+        return deps.store.pathOf(found.path);
+      });
+      const layout = sheetLayout(files.length);
+      const dir = mkdtempSync(path.join(tmpdir(), 'templeyard-sheet-'));
+      try {
+        const output = path.join(dir, 'sheet.png');
+        await deps.ffmpeg.sheet({ files, ...layout, output });
+        const id = deps.clock.newId();
+        const bytes = readFileSync(output);
+        const saved = deps.store.save({ id, kind: 'frame', mime: 'image/png', bytes });
+        insertAsset(deps.db, {
+          id,
+          kind: 'frame',
+          mime: 'image/png',
+          path: saved.path,
+          sha256: saved.sha256,
+          width: layout.cols * layout.cellWidth,
+          height: layout.rows * layout.cellHeight,
+        });
+        return { label: sheetLabel(refs.map((ref) => ref.label)), assetId: id };
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
     },
   };
 }

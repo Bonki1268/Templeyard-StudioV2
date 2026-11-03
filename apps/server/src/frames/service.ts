@@ -31,7 +31,7 @@ import { eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import { getCloudOkAsset } from '../assets/repository.js';
 import type { AssetStore } from '../assets/store.js';
-import type { ReferenceSheets } from '../references/sheet.js';
+import { fitReferences, type ReferenceSheets } from '../references/sheet.js';
 import { insertAsset } from '../assets/repository.js';
 import type { CharacterService } from '../characters/service.js';
 import type { AppDatabase } from '../db/client.js';
@@ -236,12 +236,16 @@ export function createFrameService(deps: {
     const photo = shot.photoId ? findPhoto(db, shot.photoId) : null;
 
     // 參考圖：限定範圍修改先放要修改的原圖；接著角色定裝圖 → 定裝版視角圖 → 對應照片的去識別圖
-    const references: { label: string; assetId: string }[] = [
+    const candidates: { label: string; assetId: string }[] = [
       ...(job.node === REGION_EDIT_NODE && job.source.assetId ? [{ label: '要修改的原圖', assetId: job.source.assetId }] : []),
       ...cast.flatMap((c) => (c.version.lookAssetId ? [{ label: `角色「${c.name}」定裝圖`, assetId: c.version.lookAssetId }] : [])),
       ...(view?.assetId ? [{ label: `定裝版視角圖「${view.viewName}」`, assetId: view.assetId }] : []),
       ...(photo ? [{ label: '對應照片（去識別）', assetId: photo.deidentifiedAssetId }] : []),
-    ].slice(0, model.references.max);
+    ];
+    // 超過模型一次收的張數時拼成一張（07 實測：Nano Banana Pro 一次只收一張參考圖）
+    const references = await fitReferences(candidates, model.references, deps.sheets ?? null).catch((error: unknown) => {
+      throw new StudioError(503, error instanceof Error ? error.message : '參考圖拼接失敗');
+    });
 
     const series = findSeries(db, video.seriesId);
     const characters = cast.map((c) => ({ name: c.name, continuityLocks: c.version.continuityLocks }));

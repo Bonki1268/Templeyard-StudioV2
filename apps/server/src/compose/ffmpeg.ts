@@ -31,6 +31,8 @@ export type Ffmpeg = {
    * atSec 是影片的時間點；圖片檔傳 null。
    */
   grayFrame(file: string, atSec: number | null, size: { width: number; height: number }): Promise<Uint8Array>;
+  /** 把幾張圖依版面拼成一張 PNG（每格等比縮放、補邊），參考圖拼接用 */
+  sheet(input: { files: readonly string[]; cols: number; rows: number; cellWidth: number; cellHeight: number; output: string }): Promise<void>;
 };
 
 export class FfmpegError extends Error {
@@ -148,5 +150,35 @@ export function createFfmpeg(options: { ffmpegPath?: string | undefined; ffprobe
     return new Uint8Array(bytes);
   }
 
-  return { compose, probe, grayFrame };
+  async function sheet(input: { files: readonly string[]; cols: number; rows: number; cellWidth: number; cellHeight: number; output: string }): Promise<void> {
+    const { files, cols, rows, cellWidth: w, cellHeight: h } = input;
+    const scaled = files.map(
+      (_, index) => `[${index}:v]scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=white,setsar=1[c${index}]`,
+    );
+    const filters = [...scaled];
+    let output: string;
+    if (files.length === 1) {
+      output = 'c0';
+    } else {
+      // 空的格子補白
+      const cells = files.map((_, index) => `[c${index}]`);
+      for (let index = files.length; index < cols * rows; index += 1) {
+        filters.push(`color=c=white:s=${w}x${h}:d=1[e${index}]`);
+        cells.push(`[e${index}]`);
+      }
+      const layout = Array.from({ length: cols * rows }, (_, index) => `${(index % cols) * w}_${Math.floor(index / cols) * h}`).join('|');
+      filters.push(`${cells.join('')}xstack=inputs=${cols * rows}:layout=${layout}[out]`);
+      output = 'out';
+    }
+    await ffmpeg([
+      '-hide_banner', '-loglevel', 'error', '-y',
+      ...files.flatMap((file) => ['-i', file]),
+      '-filter_complex', filters.join(';'),
+      '-map', `[${output}]`,
+      '-frames:v', '1',
+      input.output,
+    ]);
+  }
+
+  return { compose, probe, grayFrame, sheet };
 }

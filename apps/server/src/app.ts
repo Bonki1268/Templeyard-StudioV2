@@ -23,6 +23,7 @@ import { registerFrameRoutes } from './routes/frames.js';
 import { registerClipRoutes } from './routes/clips.js';
 import { CLIP_NODES, createClipService, type ClipService } from './clips/service.js';
 import { createFfmpeg } from './compose/ffmpeg.js';
+import { createReferenceSheets } from './references/sheet.js';
 import { createCopyService } from './copy/service.js';
 import { registerShotDetailRoutes } from './routes/shotDetail.js';
 import { registerCharacterRoutes } from './routes/characters.js';
@@ -196,10 +197,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
           }),
         }
       : null;
+  // 本機 FFmpeg：參考圖拼接與成品合成共用
+  const ffmpeg = createFfmpeg({ ffmpegPath: process.env.FFMPEG_PATH, ffprobePath: process.env.FFPROBE_PATH });
+  const sheets = createReferenceSheets({ db: deps.db, clock, store, ffmpeg });
   frameService = createFrameService({
     db: deps.db,
     clock,
     store,
+    sheets,
     // 精緻圖的失效與首格更換轉給影片服務（影片與成品）
     onChange: (videoId, change) => clipService?.invalidate(videoId, change),
     clipOf: (videoId, shotKey) => clipService?.clipOf(videoId, shotKey) ?? null,
@@ -221,7 +226,8 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     frames: frameService,
     generation: frameGeneration,
     store,
-    ffmpeg: createFfmpeg({ ffmpegPath: process.env.FFMPEG_PATH, ffprobePath: process.env.FFPROBE_PATH }),
+    ffmpeg,
+    sheets,
     ...(deps.generationUnavailableMessage ? { unavailableMessage: deps.generationUnavailableMessage } : {}),
   });
   for (const node of CLIP_NODES) handlers[node] = clipService.handleGenerated;

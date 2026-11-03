@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { requireCloudOk, type CloudOkAsset, type UploadConfig } from '@templeyard/shared';
 import { ComfyError } from './errors.js';
 import type { McpSession } from './rpc.js';
@@ -47,7 +50,7 @@ export function createMcpUploadTransport(session: McpSession, upload: UploadConf
   return {
     async send({ asset, bytes }) {
       if (!upload) throw new UploadNotConfiguredError();
-      if (upload.mode === 'signed_put') throw new Error('尚未實作');
+      if (upload.mode === 'signed_put') return signedPut(session, upload, asset, bytes);
       const args = structuredClone(upload.args);
       setAt(args, upload.dataPath, Buffer.from(bytes).toString('base64'));
       if (upload.mimePath) setAt(args, upload.mimePath, asset.mime);
@@ -59,6 +62,50 @@ export function createMcpUploadTransport(session: McpSession, upload: UploadConf
       return { remoteRef: ref };
     },
   };
+}
+
+/**
+ * 一次性網址上傳（07 實測，2026-11-03）：
+ * 1. 檔案寫到本機暫存資料夾，upload_file 傳它的路徑與作業系統，回一行 PUT 指令（一次性網址就是授權）
+ * 2. 照指令把位元組 PUT 上去（只帶指令裡的 header，不加任何金鑰），回 { name, subfolder, type }
+ * 3. 雲端參照是 name；subfolder 不是空的時候是「subfolder/name」
+ */
+async function signedPut(
+  session: McpSession,
+  upload: Extract<UploadConfig, { mode: 'signed_put' }>,
+  asset: CloudOkAsset,
+  bytes: Uint8Array,
+): Promise<CloudAssetRef> {
+  const dir = mkdtempSync(path.join(tmpdir(), 'templeyard-upload-'));
+  try {
+    const file = path.join(dir, `${asset.id}.${extensionOf(asset.mime)}`);
+    writeFileSync(file, bytes);
+    const result = await session.callTool(upload.tool, { file_path: file, client_os: upload.clientOs });
+    if (result.isError) throw new ComfyError(`上傳圖片失敗：${result.text.slice(0, 300) || 'Comfy Cloud 沒有說明原因'}`);
+    const url = /https?:\/\/[^\s'"]+/.exec(result.text)?.[0];
+    if (!url) throw new ComfyError('上傳圖片失敗：Comfy Cloud 沒有回傳上傳網址');
+    const headers: Record<string, string> = { 'Content-Type': asset.mime };
+    for (const match of result.text.matchAll(/-H\s+'([^:']+):\s*([^']+)'/g)) {
+      if (match[1] && match[2] && match[1].toLowerCase() !== 'content-type') headers[match[1]] = match[2];
+    }
+    const response = await fetch(url, { method: 'PUT', headers, body: Buffer.from(bytes) });
+    const body = await response.text();
+    if (!response.ok) {
+      let message = body.slice(0, 300);
+      try {
+        message = (JSON.parse(body) as { message?: string }).message ?? message;
+      } catch {
+        // 不是 JSON，照原文
+      }
+      throw new ComfyError(`上傳圖片失敗：${message || `HTTP ${response.status}`}`);
+    }
+    const parsed = JSON.parse(body) as { name?: unknown; subfolder?: unknown };
+    if (typeof parsed.name !== 'string' || parsed.name === '') throw new ComfyError('上傳後沒有拿到雲端參照');
+    const subfolder = typeof parsed.subfolder === 'string' ? parsed.subfolder : '';
+    return { remoteRef: subfolder ? `${subfolder}/${parsed.name}` : parsed.name };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 const EXTENSIONS: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };

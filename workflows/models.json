@@ -1,7 +1,11 @@
 {
   "version": 1,
-  "note": "各模型的 Comfy Cloud MCP 呼叫設定（docs/02-TRD.md「各模型的呼叫方式」、docs/07-實測紀錄.md）。status：verified 已實測、unverified 有代號但還沒實測、unknown 呼叫方式還沒確認。price.credits 為 null 表示參考單價待實測。slots 的 path 是寫進 MCP 呼叫參數的位置；沒有 path 的 slot 只用在 template。",
-  "upload": null,
+  "note": "各模型的 Comfy Cloud MCP 呼叫設定（docs/02-TRD.md「各模型的呼叫方式」、docs/07-實測紀錄.md）。status：verified 已實測、unverified 有代號但還沒實測、unknown 呼叫方式還沒確認。price.credits 為 null 表示參考單價待實測。slots 的 path 是寫進 MCP 呼叫參數的位置；沒有 path 的 slot 只用在 template。 2026-11-03 實測：上傳用 upload_file 的一次性網址；Nano Banana Pro 的參考圖放在 medias、一次 1 張（多的拼成一張）；Gemini 用圖生影片範本（首格在第 11 號節點），有末格或關鍵畫格時改用參考圖範本；Seedance 2.0 用首尾畫格範本。",
+  "upload": {
+    "mode": "signed_put",
+    "tool": "upload_file",
+    "clientOs": "darwin"
+  },
   "models": {
     "gemini-omni-1.1-flash": {
       "label": "Gemini Omni 1.1 Flash",
@@ -9,72 +13,385 @@
       "status": "verified",
       "tool": "run_template",
       "args": {
-        "name": "api_google_gemini_omni_flash_1_1_t2v",
-        "input_overrides": { "26": { "model.resolution": "720p", "model.task_type": "text_to_video" } }
+        "name": "api_google_gemini_omni_flash_1_1_i2v",
+        "input_overrides": {
+          "7": {
+            "model.resolution": "720p",
+            "model.task_type": "image_to_video"
+          }
+        }
       },
       "slots": {
-        "prompt": { "paths": [["input_overrides", "26", "model.prompt"]], "template": "A {{durationSec}}-second, {{aspectRatio}} clip. {{prompt}}" },
-        "aspectRatio": { "paths": [["input_overrides", "26", "model.aspect_ratio"]], "allowed": ["16:9", "9:16"] },
-        "durationSec": { "paths": [], "min": 3, "max": 10 },
-        "seed": { "paths": [["input_overrides", "26", "model.seed"]] }
+        "prompt": {
+          "paths": [
+            [
+              "input_overrides",
+              "7",
+              "model.prompt"
+            ]
+          ],
+          "template": "A {{durationSec}}-second, {{aspectRatio}} clip. Use @Image1 as the first frame. {{prompt}}"
+        },
+        "aspectRatio": {
+          "paths": [
+            [
+              "input_overrides",
+              "7",
+              "model.aspect_ratio"
+            ]
+          ],
+          "allowed": [
+            "16:9",
+            "9:16"
+          ]
+        },
+        "durationSec": {
+          "paths": [],
+          "min": 3,
+          "max": 10
+        },
+        "seed": {
+          "paths": [
+            [
+              "input_overrides",
+              "7",
+              "model.seed"
+            ]
+          ]
+        }
       },
-      "price": { "unit": "second", "credits": 31, "verified": false }
+      "price": {
+        "unit": "second",
+        "credits": 31,
+        "verified": true
+      },
+      "frameInputs": {
+        "first": {
+          "paths": [
+            [
+              "input_overrides",
+              "11",
+              "image"
+            ]
+          ]
+        }
+      },
+      "referenceVariant": {
+        "args": {
+          "name": "api_google_gemini_omni_flash_1_1_r2v",
+          "input_overrides": {
+            "7": {
+              "model.resolution": "720p",
+              "model.task_type": "reference_to_video"
+            }
+          }
+        },
+        "slots": {
+          "prompt": {
+            "paths": [
+              [
+                "input_overrides",
+                "7",
+                "model.prompt"
+              ]
+            ],
+            "template": "[# References <IMAGE_REF_0>@Image1 <IMAGE_REF_1>@Image2]\nA {{durationSec}}-second, {{aspectRatio}} clip. @Image1 is the first frame; @Image2 is a reference sheet. {{prompt}}"
+          },
+          "aspectRatio": {
+            "paths": [
+              [
+                "input_overrides",
+                "7",
+                "model.aspect_ratio"
+              ]
+            ],
+            "allowed": [
+              "16:9",
+              "9:16"
+            ]
+          },
+          "durationSec": {
+            "paths": [],
+            "min": 3,
+            "max": 10
+          },
+          "seed": {
+            "paths": [
+              [
+                "input_overrides",
+                "7",
+                "model.seed"
+              ]
+            ]
+          }
+        },
+        "frameInputs": {
+          "first": {
+            "paths": [
+              [
+                "input_overrides",
+                "11",
+                "image"
+              ]
+            ]
+          }
+        },
+        "references": {
+          "paths": [
+            [
+              "input_overrides",
+              "15",
+              "image"
+            ]
+          ],
+          "max": 1,
+          "format": "single",
+          "sheet": {
+            "max": 4
+          }
+        }
+      }
     },
     "seedance-2.0": {
       "label": "Seedance 2.0",
       "kind": "video",
       "status": "verified",
-      "tool": "partner_generate",
-      "args": { "type": "video", "model": "byteplus/seedance-2.0-t2v", "client_os": "darwin", "params": { "model": "Seedance 2.0 Mini", "resolution": "720p" } },
-      "slots": {
-        "prompt": { "paths": [["prompt"]] },
-        "aspectRatio": { "paths": [["params", "ratio"]], "allowed": ["16:9", "9:16", "1:1"] },
-        "durationSec": { "paths": [["params", "duration"]], "min": 4, "max": 15 }
+      "tool": "run_template",
+      "args": {
+        "name": "api_seedance2_0_flf2v",
+        "input_overrides": {
+          "1": {
+            "model.resolution": "720p",
+            "model.generate_audio": true
+          }
+        }
       },
-      "price": { "unit": "second", "credits": null, "verified": false }
+      "slots": {
+        "prompt": {
+          "paths": [
+            [
+              "input_overrides",
+              "1",
+              "model.prompt"
+            ]
+          ]
+        },
+        "aspectRatio": {
+          "paths": [
+            [
+              "input_overrides",
+              "1",
+              "model.ratio"
+            ]
+          ],
+          "allowed": [
+            "16:9",
+            "9:16",
+            "1:1"
+          ]
+        },
+        "durationSec": {
+          "paths": [
+            [
+              "input_overrides",
+              "1",
+              "model.duration"
+            ]
+          ],
+          "min": 4,
+          "max": 15
+        },
+        "seed": {
+          "paths": [
+            [
+              "input_overrides",
+              "1",
+              "seed"
+            ]
+          ]
+        }
+      },
+      "price": {
+        "unit": "second",
+        "credits": 46,
+        "verified": true
+      },
+      "frameInputs": {
+        "first": {
+          "paths": [
+            [
+              "input_overrides",
+              "3",
+              "image"
+            ]
+          ]
+        },
+        "last": {
+          "paths": [
+            [
+              "input_overrides",
+              "4",
+              "image"
+            ]
+          ]
+        }
+      }
     },
     "wan-2.2": {
       "label": "Wan 2.2",
       "kind": "video",
       "status": "unknown",
-      "price": { "unit": "second", "credits": null, "verified": false }
+      "price": {
+        "unit": "second",
+        "credits": null,
+        "verified": false
+      }
     },
     "nano-banana-pro": {
       "label": "Nano Banana Pro",
       "kind": "image",
-      "status": "unverified",
+      "status": "verified",
       "tool": "partner_generate",
-      "args": { "type": "image", "model": "vertexai/nano-banana-pro", "client_os": "darwin" },
-      "slots": {
-        "prompt": { "paths": [["prompt"]] },
-        "aspectRatio": { "paths": [["aspect_ratio"]], "allowed": ["16:9", "9:16", "1:1", "4:3", "3:4"] }
+      "args": {
+        "type": "image",
+        "model": "vertexai/nano-banana-pro",
+        "client_os": "darwin"
       },
-      "price": { "unit": "image", "credits": null, "verified": false }
+      "slots": {
+        "prompt": {
+          "paths": [
+            [
+              "prompt"
+            ]
+          ]
+        },
+        "aspectRatio": {
+          "paths": [
+            [
+              "aspect_ratio"
+            ]
+          ],
+          "allowed": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4"
+          ]
+        }
+      },
+      "price": {
+        "unit": "image",
+        "credits": 33,
+        "verified": true
+      },
+      "references": {
+        "paths": [
+          [
+            "medias"
+          ]
+        ],
+        "max": 1,
+        "format": "medias",
+        "role": "reference_image",
+        "sheet": {
+          "max": 4
+        }
+      }
     },
     "nano-banana-2-lite": {
       "label": "Nano Banana 2 Lite",
       "kind": "image",
       "status": "verified",
       "tool": "partner_generate",
-      "args": { "type": "image", "model": "vertexai/nano-banana-2-lite", "client_os": "darwin" },
-      "slots": {
-        "prompt": { "paths": [["prompt"]] },
-        "aspectRatio": { "paths": [["aspect_ratio"]], "allowed": ["16:9", "9:16", "1:1", "4:3", "3:4"] }
+      "args": {
+        "type": "image",
+        "model": "vertexai/nano-banana-2-lite",
+        "client_os": "darwin"
       },
-      "price": { "unit": "image", "credits": null, "verified": false }
+      "slots": {
+        "prompt": {
+          "paths": [
+            [
+              "prompt"
+            ]
+          ]
+        },
+        "aspectRatio": {
+          "paths": [
+            [
+              "aspect_ratio"
+            ]
+          ],
+          "allowed": [
+            "16:9",
+            "9:16",
+            "1:1",
+            "4:3",
+            "3:4"
+          ]
+        }
+      },
+      "price": {
+        "unit": "image",
+        "credits": null,
+        "verified": false
+      }
     },
     "ace-step-1.5": {
       "label": "ACE-Step 1.5 XL Turbo",
       "kind": "audio",
       "status": "verified",
       "tool": "run_template",
-      "args": { "name": "audio_ace_step1_5_xl_turbo", "input_overrides": { "94": { "lyrics": "[Instrumental]" } } },
-      "slots": {
-        "prompt": { "paths": [["input_overrides", "94", "tags"]] },
-        "durationSec": { "paths": [["input_overrides", "94", "duration"], ["input_overrides", "98", "seconds"]], "min": 10, "max": 240 },
-        "seed": { "paths": [["input_overrides", "109", "value"]] }
+      "args": {
+        "name": "audio_ace_step1_5_xl_turbo",
+        "input_overrides": {
+          "94": {
+            "lyrics": "[Instrumental]"
+          }
+        }
       },
-      "price": { "unit": "run", "credits": null, "verified": false }
+      "slots": {
+        "prompt": {
+          "paths": [
+            [
+              "input_overrides",
+              "94",
+              "tags"
+            ]
+          ]
+        },
+        "durationSec": {
+          "paths": [
+            [
+              "input_overrides",
+              "94",
+              "duration"
+            ],
+            [
+              "input_overrides",
+              "98",
+              "seconds"
+            ]
+          ],
+          "min": 10,
+          "max": 240
+        },
+        "seed": {
+          "paths": [
+            [
+              "input_overrides",
+              "109",
+              "value"
+            ]
+          ]
+        }
+      },
+      "price": {
+        "unit": "run",
+        "credits": null,
+        "verified": false
+      }
     }
   }
 }

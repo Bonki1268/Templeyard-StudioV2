@@ -46,6 +46,7 @@ import type { PlanService } from '../plans/service.js';
 import { findSeries, type Clock } from '../series/repository.js';
 import { StudioError, VIDEO_NOT_FOUND } from '../studio/errors.js';
 import { findVersion as findBoardVersion, listViews } from '../templeBoards/repository.js';
+import { fitReferences } from '../references/sheet.js';
 import { findTemple } from '../temples/repository.js';
 import { findVideo } from '../videos/repository.js';
 import { deleteClips, findClip, insertClip, insertFinal, latestFinal, listClips, updateClip } from './repository.js';
@@ -278,7 +279,7 @@ export function createClipService(deps: {
   async function buildClip(
     generation: FrameGeneration,
     video: Video,
-    model: WorkflowModel,
+    baseModel: WorkflowModel,
     plan: Plan,
     shot: Shot,
     uploaded: Map<string, string>,
@@ -289,21 +290,33 @@ export function createClipService(deps: {
     const frames = deps.frames.detail(video.id, shot.shotKey);
     const first = frames.first?.assetId;
     if (!first) throw new StudioError(409, `還不能生成影片：第 ${shot.seq} 格還沒有精緻圖`);
-    const last = shot.keyframesEnabled ? (frames.last?.assetId ?? null) : null;
+    const lastFrame = shot.keyframesEnabled ? (frames.last?.assetId ?? null) : null;
     const keyframes = [...frames.keyframes].filter((k) => k.assetId).sort((a, b) => (a.atSec ?? 0) - (b.atSec ?? 0));
+    // 有末格或關鍵畫格、模型沒有末格輸入但有參考圖範本（Gemini r2v）：改用它，末格與關鍵畫格當參考圖（07 實測，2026-11-03）
+    const variant = (lastFrame || keyframes.length > 0) && !baseModel.frameInputs?.last ? baseModel.referenceVariant : undefined;
+    const model: WorkflowModel = variant ? { ...baseModel, args: variant.args, slots: variant.slots, frameInputs: variant.frameInputs, references: variant.references } : baseModel;
+    // 末格放進參考圖時，不再當首尾畫格送
+    const last = variant ? null : lastFrame;
     if (last && !model.frameInputs?.last) throw new StudioError(503, `${model.label} 的末格輸入方式還沒實測（07「下一輪測試」），不能生成影片`);
     if (keyframes.length > 0 && !model.references) throw new StudioError(503, `${model.label} 的參考圖輸入方式還沒實測（07「下一輪測試」），不能用中間關鍵畫格`);
 
     const cast = deps.characters.listForVideo(video.id).filter((c) => shot.characters.includes(c.name));
     const boardVersion = video.templeBoardVersionId ? findBoardVersion(db, video.templeBoardVersionId) : null;
     const view = boardVersion ? listViews(db, boardVersion.id).find((v) => v.viewKey === shot.viewKey) : undefined;
-    // 參考圖：中間關鍵畫格（依時間）→ 角色定裝圖 → 定裝版視角圖，最多到模型的上限
+    // 參考圖：（改用參考圖範本時的末格）→ 中間關鍵畫格（依時間）→ 角色定裝圖 → 定裝版視角圖；超過模型一次收的張數時拼成一張
     const references = model.references
-      ? [
-          ...keyframes.map((k, index) => ({ label: `關鍵畫格 ${index + 1}（第 ${k.atSec ?? 0} 秒）`, assetId: k.assetId ?? '' })),
-          ...cast.flatMap((c) => (c.version.lookAssetId ? [{ label: `角色「${c.name}」定裝圖`, assetId: c.version.lookAssetId }] : [])),
-          ...(view?.assetId ? [{ label: `定裝版視角圖「${view.viewName}」`, assetId: view.assetId }] : []),
-        ].slice(0, model.references.max)
+      ? await fitReferences(
+          [
+            ...(variant && lastFrame ? [{ label: `第 ${shot.seq} 格的末格（最後一個畫面）`, assetId: lastFrame }] : []),
+            ...keyframes.map((k, index) => ({ label: `關鍵畫格 ${index + 1}（第 ${k.atSec ?? 0} 秒）`, assetId: k.assetId ?? '' })),
+            ...cast.flatMap((c) => (c.version.lookAssetId ? [{ label: `角色「${c.name}」定裝圖`, assetId: c.version.lookAssetId }] : [])),
+            ...(view?.assetId ? [{ label: `定裝版視角圖「${view.viewName}」`, assetId: view.assetId }] : []),
+          ],
+          model.references,
+          deps.sheets ?? null,
+        ).catch((error: unknown) => {
+          throw new StudioError(503, error instanceof Error ? error.message : '參考圖拼接失敗');
+        })
       : [];
 
     const seconds = secondsOf(model, shot);
@@ -374,7 +387,9 @@ export function createClipService(deps: {
     let call: McpCall;
     try {
       const values = { output: { prompt: composed.prompt }, target: { aspectRatio: file.target.aspectRatio ?? '16:9' }, shot: { durationSec: seconds } };
-      call = buildMcpCall({ modelKey: video.videoModel, config: deps.workflows, bindings: file.bindings ?? {}, values, seed: 0 });
+      // 改用參考圖範本時，用它的 args 與 slots 組呼叫
+      const config = variant ? { ...deps.workflows, models: { ...deps.workflows.models, [video.videoModel]: model } } : deps.workflows;
+      call = buildMcpCall({ modelKey: video.videoModel, config, bindings: file.bindings ?? {}, values, seed: 0 });
       const args = structuredClone(call.args);
       for (const keys of model.frameInputs?.first.paths ?? []) setAt(args, keys, firstRef);
       if (lastRef) for (const keys of model.frameInputs?.last?.paths ?? []) setAt(args, keys, lastRef);

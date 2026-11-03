@@ -23,7 +23,23 @@ export function attachReferenceImages(call: McpCall, model: WorkflowModel, refs:
       if (typeof next !== 'object' || next === null || Array.isArray(next)) node[key] = {};
       node = node[key] as Record<string, unknown>;
     }
-    node[path.at(-1) ?? ''] = [...refs];
+    node[path.at(-1) ?? ''] = valueFor(slot, refs);
   }
   return { tool: call.tool, args };
+}
+
+/** 依格式組出寫進參數的值（07 實測，2026-11-03） */
+function valueFor(slot: NonNullable<WorkflowModel['references']>, refs: readonly string[]): unknown {
+  switch (slot.format ?? 'list') {
+    case 'single':
+      return refs[0];
+    case 'medias':
+      // 雲端參照是「subfolder/name」或「name」
+      return refs.map((ref) => {
+        const index = ref.lastIndexOf('/');
+        return { role: slot.role ?? 'reference_image', name: index >= 0 ? ref.slice(index + 1) : ref, subfolder: index >= 0 ? ref.slice(0, index) : '', type: 'input' };
+      });
+    default:
+      return [...refs];
+  }
 }
