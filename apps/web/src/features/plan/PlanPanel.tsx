@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  characterBlockers,
   checkPlan,
   estimateDialogueSec,
+  missingViews,
   planVersionLabel,
   withTimeline,
   type Plan,
@@ -10,7 +12,10 @@ import {
   type ShotInput,
 } from '@templeyard/shared';
 import { useEffect, useId, useRef, useState } from 'react';
-import { ApiRequestError, fetchPlanVersion, postPlanVersion } from '../../api/client';
+import { ApiRequestError, addSupplementalView, confirmSupplementalView, fetchPlanVersion, postPlanVersion } from '../../api/client';
+import { Tag } from '../../components/Tag';
+import { useCostConsent } from '../costs/useCostConsent';
+import { CharacterCard } from './CharacterCard';
 import { Button } from '../../components/Button';
 import { addShot, duplicateShot, generateBlockers, moveShot, removeShot, toInputs, withDurations } from './planEditor';
 import styles from './PlanPanel.module.css';
@@ -25,6 +30,8 @@ type PlanPanelProps = {
   videoId: string;
   data: PlanResponse & { plan: Plan };
   seriesVisualStyle: string;
+  /** 這支影片的圖片模型（補充視角的費用） */
+  imageModel: string;
   /** 最近一次存成的版本（放在上層：存檔後面板會以新版本重新開始） */
   savedVersion: number | null;
   onSaved: (version: number) => void;
@@ -63,7 +70,7 @@ function preview(inputs: readonly ShotInput[], saved: readonly Shot[]): Shot[] {
  * 分鏡方案面板：上方風格、角色、場景三張卡；中間時間軸；下方分鏡卡片；底部列出還不能生成的原因。
  * 上層以現行版本當 key：版本換了（存檔、對話修改、回到舊版）就從新的版本重新開始編輯。
  */
-export function PlanPanel({ videoId, data, seriesVisualStyle, savedVersion, onSaved }: PlanPanelProps) {
+export function PlanPanel({ videoId, data, seriesVisualStyle, imageModel, savedVersion, onSaved }: PlanPanelProps) {
   const titleId = useId();
   const versionSelectId = useId();
   const queryClient = useQueryClient();
@@ -110,8 +117,26 @@ export function PlanPanel({ videoId, data, seriesVisualStyle, savedVersion, onSa
   const viewingOld = selected !== current.version;
   const shots = viewingOld ? (old.data?.shots ?? []) : preview(drafts, current.shots);
   const check = checkPlan(shots, data.rules);
-  const blockers = generateBlockers(checkPlan(preview(drafts, current.shots), data.rules));
-  const characters = [...new Set(shots.flatMap((shot) => shot.characters))];
+  const blockers = generateBlockers(checkPlan(preview(drafts, current.shots), data.rules), characterBlockers(data.characters));
+  const missing = missingViews(shots);
+  const sceneConsent = useCostConsent(videoId);
+  const confirmView = useMutation({ mutationFn: (viewKey: string) => confirmSupplementalView(videoId, viewKey), onSettled: refresh });
+  const sceneBusy = sceneConsent.busy || confirmView.isPending;
+
+  async function refresh() {
+    await queryClient.invalidateQueries({ queryKey: planKey(videoId) });
+  }
+
+  function supplement(name: string) {
+    void sceneConsent.ask({
+      items: [{ model: imageModel, units: 1 }],
+      confirmLabel: '同意並產生',
+      run: async (consentToken) => {
+        await addSupplementalView(videoId, name, consentToken);
+        await refresh();
+      },
+    });
+  }
   const busy = save.isPending;
 
   return (
@@ -152,28 +177,50 @@ export function PlanPanel({ videoId, data, seriesVisualStyle, savedVersion, onSa
           <p>{seriesVisualStyle}</p>
           <p className={styles.meta}>{current.styleNote}</p>
         </section>
-        <section className={styles.overviewCard} aria-label="角色">
-          <h3 className={styles.overviewTitle}>角色</h3>
-          {characters.length === 0 ? (
-            <p className={styles.meta}>這版方案沒有角色</p>
-          ) : (
-            <ul className={styles.plainList}>
-              {characters.map((name) => (
-                <li key={name}>{name}</li>
-              ))}
-            </ul>
-          )}
-          <p className={styles.meta}>角色定裝版將在之後的版本開放</p>
-        </section>
         <section className={styles.overviewCard} aria-label="場景">
           <h3 className={styles.overviewTitle}>場景</h3>
           <ul className={styles.plainList}>
             {data.views.map((view) => (
-              <li key={view.viewKey}>{view.viewName}</li>
+              <li key={view.viewKey} className={styles.viewItem}>
+                <span>{view.viewName}</span>
+                {view.state === 'generating' && <Tag tone="info">生成中</Tag>}
+                {view.state === 'failed' && <Tag tone="error">生成失敗</Tag>}
+                {view.state === 'ready' && view.source === 'ai_inferred' && (
+                  <Tag tone={view.confirmed ? 'success' : 'warning'}>{view.confirmed ? 'AI 推測・已確認' : 'AI 推測・待確認'}</Tag>
+                )}
+                {view.viewKey.startsWith('custom:') && view.state === 'ready' && !view.confirmed && (
+                  <Button disabled={sceneBusy} onClick={() => confirmView.mutate(view.viewKey)}>
+                    {`確認視角：${view.viewName}`}
+                  </Button>
+                )}
+              </li>
+            ))}
+            {missing.map((name) => (
+              <li key={`missing-${name}`} className={styles.viewItem}>
+                <span>{`缺少視角：${name}`}</span>
+                <Button disabled={sceneBusy || viewingOld} onClick={() => supplement(name)}>
+                  {`補充視角：${name}`}
+                </Button>
+              </li>
             ))}
           </ul>
+          {(sceneConsent.error || confirmView.isError) && (
+            <p className={styles.error} role="alert">
+              {sceneConsent.error ?? (confirmView.error instanceof ApiRequestError ? confirmView.error.message : '請再試一次')}
+            </p>
+          )}
+          {sceneConsent.dialog}
         </section>
       </div>
+
+      <section className={styles.characters} aria-label="角色">
+        <h3 className={styles.overviewTitle}>角色</h3>
+        {data.characters.length === 0 ? (
+          <p className={styles.meta}>這版方案沒有角色</p>
+        ) : (
+          data.characters.map((character) => <CharacterCard key={`${character.id}-${character.version.id}`} videoId={videoId} character={character} onChanged={refresh} />)
+        )}
+      </section>
 
       <Timeline shots={shots} totalSec={check.totalSec} targetSec={check.targetSec} onChange={changeDurations} disabled={viewingOld || busy} />
 

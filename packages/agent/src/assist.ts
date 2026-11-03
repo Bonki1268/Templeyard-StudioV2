@@ -1,4 +1,4 @@
-import { assistOutputSchema, copyPolishOutputSchema, type AssistField } from '@templeyard/shared';
+import { assistOutputSchema, characterDesignOutputSchema, copyPolishOutputSchema, type AssistField } from '@templeyard/shared';
 
 // AI 輔助撰寫（規格書「AI 輔助撰寫」）：先建議、後採用；內容只用提供的資料，不新增沒有來源的寺廟事實。
 
@@ -77,8 +77,13 @@ export function copyPolishVariables(context: AssistContext): Record<string, unkn
 }
 
 /** character-design 節點（角色的外觀描述與連續性鎖）的變數：使用者的輸入當作角色構想 */
-export function characterDesignVariables(_context: AssistContext): Record<string, unknown> {
-  throw new Error('尚未實作');
+export function characterDesignVariables(context: AssistContext): Record<string, unknown> {
+  return {
+    character: { name: context.characterName ?? '' },
+    idea: context.userInput,
+    series: { name: context.seriesName ?? '', style: context.series?.visualStyle ?? '', direction: context.series?.direction ?? '' },
+    instruction: '',
+  };
 }
 
 export class AssistOutputError extends Error {
@@ -98,6 +103,14 @@ export function parseAssistOutput(text: string, kind: AssistOutputKind): string 
     parsed = JSON.parse(fenced?.[1] ?? trimmed);
   } catch {
     throw new AssistOutputError(FORMAT_ERROR);
+  }
+  if (kind === 'character-description' || kind === 'character-locks') {
+    const result = characterDesignOutputSchema.safeParse(parsed);
+    if (!result.success) throw new AssistOutputError(FORMAT_ERROR);
+    if (kind === 'character-description') return result.data.description;
+    const locks = result.data.continuityLocks.map((lock) => lock.trim()).filter(Boolean);
+    if (locks.length === 0) throw new AssistOutputError(FORMAT_ERROR);
+    return locks.join('\n');
   }
   if (kind === 'copy-polish') {
     const result = copyPolishOutputSchema.safeParse(parsed);

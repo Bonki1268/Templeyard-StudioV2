@@ -40,7 +40,7 @@ export function withDurations(shots: readonly ShotInput[], durations: readonly n
   return shots.map((shot, index) => ({ ...shot, durationSec: durations[index] ?? shot.durationSec }));
 }
 
-/** 「生成」旁列出的原因：秒數檢查沒過的原因，加上精緻圖生成還沒開放 */
-export function generateBlockers(check: PlanCheck): string[] {
-  return [...check.blocking, FRAMES_NOT_OPEN];
+/** 「生成」旁列出的原因：秒數檢查沒過的原因、其他原因（例如角色還沒確認），加上精緻圖生成還沒開放 */
+export function generateBlockers(check: PlanCheck, extra: readonly string[] = []): string[] {
+  return [...check.blocking, ...extra, FRAMES_NOT_OPEN];
 }

@@ -25,6 +25,8 @@ export function useStudioChat(videoId: string) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liveUser, setLiveUser] = useState<ChatMessage | null>(null);
+  // 串流結束時存下來的 Agent 訊息：重新讀取對話之前先顯示它，不會和串流中的回覆同時出現
+  const [liveAgent, setLiveAgent] = useState<ChatMessage | null>(null);
   const [live, setLive] = useState<LiveReply | null>(null);
 
   /** 送出一句話；回傳這一輪 Agent 執行的操作（失敗時為 null） */
@@ -38,7 +40,11 @@ export function useStudioChat(videoId: string) {
         if (event.type === 'user') setLiveUser(event.message);
         else if (event.type === 'text') setLive((old) => ({ text: [...(old?.text ?? []), event.text], toolCalls: old?.toolCalls ?? [] }));
         else if (event.type === 'tool') setLive((old) => ({ text: old?.text ?? [], toolCalls: [...(old?.toolCalls ?? []), event.call] }));
-        else if (event.type === 'done') result = event.message.toolCalls;
+        else if (event.type === 'done') {
+          result = event.message.toolCalls;
+          setLive(null);
+          setLiveAgent(event.message);
+        }
         else setError(event.message);
       });
     } catch (caught: unknown) {
@@ -53,12 +59,14 @@ export function useStudioChat(videoId: string) {
       ]);
       setLive(null);
       setLiveUser(null);
+      setLiveAgent(null);
       setSending(false);
     }
     return result;
   }
 
   const saved = chat.data ?? [];
-  const messages = liveUser && !saved.some((m) => m.id === liveUser.id) ? [...saved, liveUser] : saved;
+  const extra = [liveUser, liveAgent].filter((m): m is ChatMessage => m !== null && !saved.some((s) => s.id === m.id));
+  const messages = [...saved, ...extra];
   return { messages, live, sending, error, loadError: chat.error, send };
 }

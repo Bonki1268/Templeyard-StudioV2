@@ -2,6 +2,7 @@ import {
   apiErrorSchema,
   assetResponseSchema,
   assistResponseSchema,
+  characterResponseSchema,
   chatListResponseSchema,
   planResponseSchema,
   planVersionResponseSchema,
@@ -22,6 +23,7 @@ import {
   type Asset,
   type AssistLog,
   type AssistRequest,
+  type Character,
   type ChatEvent,
   type ChatMessage,
   type CreatePlanVersionInput,
@@ -41,6 +43,7 @@ import {
   type Photo,
   type Series,
   type TempleSummary,
+  type UpdateCharacterInput,
   type UpdatePhotoInput,
   type UpdateVideoInput,
   type Video,
@@ -286,4 +289,35 @@ export async function generatePlan(videoId: string): Promise<Plan> {
 
 export async function postPlanVersion(videoId: string, input: CreatePlanVersionInput): Promise<Plan> {
   return planVersionResponseSchema.parse(await request(`/api/videos/${videoId}/plan/versions`, { method: 'POST', body: JSON.stringify(input) })).plan;
+}
+
+// ── 角色定裝版、補充視角（第 8 階段） ──
+
+/** 需要同意費用時後端回 409；呼叫端改走同意流程 */
+async function postGenerate(path: string, body: Record<string, unknown>): Promise<void> {
+  await request(path, { method: 'POST', body: JSON.stringify(body) });
+}
+
+export async function patchCharacter(characterId: string, input: UpdateCharacterInput): Promise<Character> {
+  return characterResponseSchema.parse(await request(`/api/characters/${characterId}`, { method: 'PATCH', body: JSON.stringify(input) })).character;
+}
+
+export async function generateCharacter(characterId: string, videoId: string, consentToken: string | undefined): Promise<void> {
+  await postGenerate(`/api/characters/${characterId}/generate`, { videoId, ...(consentToken ? { consentToken } : {}) });
+}
+
+export async function confirmCharacter(characterId: string): Promise<Character> {
+  return characterResponseSchema.parse(await request(`/api/characters/${characterId}/confirm`, { method: 'POST' })).character;
+}
+
+export async function setSeriesCharacter(characterId: string): Promise<Character> {
+  return characterResponseSchema.parse(await request(`/api/characters/${characterId}/series`, { method: 'POST' })).character;
+}
+
+export async function addSupplementalView(videoId: string, viewName: string, consentToken: string | undefined): Promise<void> {
+  await postGenerate(`/api/videos/${videoId}/temple-board/supplemental-views`, { viewName, ...(consentToken ? { consentToken } : {}) });
+}
+
+export async function confirmSupplementalView(videoId: string, viewKey: string): Promise<void> {
+  await request(`/api/videos/${videoId}/temple-board/supplemental-views/${encodeURIComponent(viewKey)}/confirm`, { method: 'POST' });
 }

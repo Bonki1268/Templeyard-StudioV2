@@ -5,10 +5,12 @@ import {
   DEFAULT_TEMPLE_LIGHTING,
   NO_PHOTO_MESSAGE,
   NO_VIEW_MESSAGE,
+  addSupplementalViewSchema,
   boardPendingItems,
   generateTempleBoardSchema,
   planBoardViews,
   regenerateTempleViewSchema,
+  supplementalViewKey,
   updateTempleBoardSchema,
   viewName,
   type AddSupplementalViewInput,
@@ -472,7 +474,7 @@ export function createTempleBoardService(deps: TempleBoardServiceDeps): TempleBo
     confirmView(videoId, viewKey) {
       const { video, version } = editable(videoId);
       const row = listViews(db, version.id).find((view) => view.viewKey === viewKey);
-      if (!row) throw new TempleBoardError(404, VIEW_NOT_FOUND);
+      if (!row) throw new TempleBoardError(404, '找不到這個視角');
       const view = toView(row);
       if (view.state === 'generating') throw new TempleBoardError(409, `「${row.viewName}」還在生成中`);
       if (view.state === 'failed') throw new TempleBoardError(409, `「${row.viewName}」生成失敗，請重生`);
@@ -542,12 +544,51 @@ export function createTempleBoardService(deps: TempleBoardServiceDeps): TempleBo
       return toBoard(requireVideo(video.id), findVersion(db, versionId) ?? never());
     },
 
-    async addSupplementalView() {
-      throw new Error('尚未實作');
+    async addSupplementalView(videoId, rawInput) {
+      const { video, version } = current(videoId);
+      const input = addSupplementalViewSchema.parse(rawInput);
+      const name = input.viewName;
+      if (listViews(db, version.id).some((view) => view.viewName === name)) throw new TempleBoardError(409, `寺廟定裝版已經有「${name}」`);
+      const generation = requireGeneration();
+      const items = costItemsFor(video, 1);
+      const precheck = generation.service.precheck(video.id, items, input.consentToken);
+      if (!precheck.ok) return { status: 'consent_required', check: precheck.check };
+
+      // 補充的視角沒有自己的照片，以 AI 推測；其他照片只參考建築外觀
+      const viewKey = supplementalViewKey(name);
+      const id = deps.clock.newId();
+      const request = await buildRequest(generation, {
+        video,
+        view: { id, key: viewKey, name, source: 'ai_inferred' },
+        ownPhotoIds: [],
+        photos: listPhotosForVideo(db, video),
+        versionId: version.id,
+        locks: version.appearanceLocks,
+        lighting: version.defaultLighting,
+        instruction: null,
+        autoConfirm: false,
+        uploaded: new Map(),
+      });
+      insertViews(db, [
+        { id, boardVersionId: version.id, viewKey, viewName: name, source: 'ai_inferred', photoId: null, assetId: null, confirmed: false, createdFromVideoId: video.id },
+      ]);
+      const outcome = await generation.service.submitBatch([request], input.consentToken);
+      if (outcome.status === 'consent_required') {
+        db.delete(templeViews).where(eq(templeViews.id, id)).run();
+        return { status: 'consent_required', check: outcome.check };
+      }
+      return { status: 'accepted', board: toBoard(video, version) };
     },
 
-    confirmSupplementalView() {
-      throw new Error('尚未實作');
+    confirmSupplementalView(videoId, viewKey) {
+      const { video, version } = current(videoId);
+      const row = listViews(db, version.id).find((view) => view.viewKey === viewKey && viewKey.startsWith('custom:') && view.createdFromVideoId === video.id);
+      if (!row) throw new TempleBoardError(404, '找不到這個視角');
+      const view = toView(row);
+      if (view.state === 'generating') throw new TempleBoardError(409, `「${row.viewName}」還在生成中`);
+      if (view.state === 'failed') throw new TempleBoardError(409, `「${row.viewName}」生成失敗，請重生`);
+      updateView(db, row.id, { confirmed: true });
+      return toBoard(video, version);
     },
 
     handleGenerated(generation, assetIds) {

@@ -424,6 +424,6 @@ export function supplementalViewKey(name: string): string {
 }
 
 /** 方案用到、定裝版還沒有的視角名稱（不重複，依序號） */
-export function missingViews(_shots: readonly Pick<Shot, 'viewKey'>[]): string[] {
-  throw new Error('尚未實作');
+export function missingViews(shots: readonly Pick<Shot, 'viewKey'>[]): string[] {
+  return [...new Set(shots.map((shot) => missingViewName(shot.viewKey)).filter((name): name is string => name !== null))];
 }

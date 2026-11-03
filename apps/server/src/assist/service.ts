@@ -2,9 +2,11 @@ import {
   AssistOutputError,
   ClaudeCallError,
   buildAssistRequest,
+  characterDesignVariables,
   copyPolishVariables,
   parseAssistOutput,
   type AssistContext,
+  type AssistOutputKind,
   type ClaudeModel,
 } from '@templeyard/agent';
 import { renderPrompt } from '@templeyard/prompts';
@@ -17,6 +19,7 @@ import { findSeries, type Clock } from '../series/repository.js';
 import { StudioError, VIDEO_NOT_FOUND } from '../studio/errors.js';
 import { findTemple } from '../temples/repository.js';
 import { findVideo } from '../videos/repository.js';
+import { findCharacterName } from '../characters/repository.js';
 
 // AI 輔助撰寫（F18）：產生建議並記錄；只有按「採用」才記為已採用。不會送出或觸發任何生成。
 
@@ -85,13 +88,25 @@ export function createAssistService(deps: {
       creativeInput: video?.creativeInput ?? null,
       viewName: viewKey ? viewName(viewKey) : null,
       questionTitle: questionId ? (findQuestion(questionId)?.title ?? null) : null,
+      characterName: input.target.characterId ? (findCharacterName(db, input.target.characterId) ?? null) : null,
+      seriesName: seriesRow?.name ?? null,
     };
     return { context, seriesId, videoId: video?.id ?? null };
   }
 
   /** 有 Prompt Studio 節點的欄位用節點的指令；缺少必填變數時改用通用指令 */
-  function requestFor(context: AssistContext): { system: string; user: string; kind: 'generic' | 'copy-polish' } {
+  function requestFor(context: AssistContext): { system: string; user: string; kind: AssistOutputKind } {
     const node = context.field.node ? deps.prompts.get(context.field.node) : undefined;
+    if (node && context.field.node === 'character-design') {
+      const rendered = renderPrompt(node, characterDesignVariables(context));
+      if (rendered.missing.length === 0) {
+        return {
+          system: rendered.request.system,
+          user: rendered.request.messages.map((m) => m.content).join('\n\n'),
+          kind: context.field.key === 'character.locks' ? 'character-locks' : 'character-description',
+        };
+      }
+    }
     if (node && context.field.node === 'copy-polish') {
       const variables = { ...copyPolishVariables(context), story: context.userInput.trim() || (context.creativeInput ?? '') };
       const rendered = renderPrompt(node, variables);

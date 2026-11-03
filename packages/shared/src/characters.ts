@@ -58,16 +58,16 @@ export type UpdateCharacterInput = z.input<typeof updateCharacterSchema>;
 export const generateCharacterSchema = z.object({ consentToken: z.string().optional() });
 
 /** 角色沒確認時，「生成」旁列出的原因 */
-export function characterBlockers(_characters: readonly Pick<Character, 'name' | 'state'>[]): string[] {
-  throw new Error('尚未實作');
+export function characterBlockers(characters: readonly Pick<Character, 'name' | 'state'>[]): string[] {
+  return characters.filter((c) => c.state !== 'confirmed').map((c) => `角色「${c.name}」還沒確認定裝圖`);
 }
 
 /** 連續性鎖輸入框：一行一條，去掉空白與重複 */
-export function parseLocks(_text: string): string[] {
-  throw new Error('尚未實作');
+export function parseLocks(text: string): string[] {
+  return [...new Set(text.split('\n').map((line) => line.trim()).filter(Boolean))];
 }
 
 /** 角色在畫面上的標籤：狀態，系列角色另外標示「系列角色」 */
-export function characterTags(_character: Pick<Character, 'isSeries' | 'state'>): string[] {
-  throw new Error('尚未實作');
+export function characterTags(character: Pick<Character, 'isSeries' | 'state'>): string[] {
+  return [...(character.isSeries ? ['系列角色'] : []), CHARACTER_STATE_LABELS[character.state]];
 }

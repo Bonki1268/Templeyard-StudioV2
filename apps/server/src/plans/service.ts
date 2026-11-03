@@ -35,7 +35,8 @@ import { listPhotosForVideo } from '../photos/repository.js';
 import { findSeries, type Clock } from '../series/repository.js';
 import { StudioError, VIDEO_NOT_FOUND } from '../studio/errors.js';
 import { findQuestionnaire } from '../studio/repository.js';
-import { listViews } from '../templeBoards/repository.js';
+import { latestViewGeneration, listViews } from '../templeBoards/repository.js';
+import { TEMPLE_VIEW_NODE } from '../templeBoards/service.js';
 import { findTemple } from '../temples/repository.js';
 import { findVideo } from '../videos/repository.js';
 import type { CharacterService } from '../characters/service.js';
@@ -113,7 +114,22 @@ export function createPlanService(deps: {
   }
 
   function viewsFor(video: Video) {
-    return video.templeBoardVersionId ? listViews(db, video.templeBoardVersionId).map((v) => ({ viewKey: v.viewKey, viewName: v.viewName })) : [];
+    if (!video.templeBoardVersionId) return [];
+    return listViews(db, video.templeBoardVersionId).map((v) => {
+      const latest = latestViewGeneration(db, TEMPLE_VIEW_NODE, v.id);
+      const running = latest && ['awaiting_confirm', 'submitted', 'running'].includes(latest.status);
+      const failed = latest && (latest.status === 'failed' || latest.status === 'timeout');
+      // 已確認的視角一定能用；還沒確認、也還沒有圖的視角是生成中
+      const state: 'generating' | 'ready' | 'failed' = running ? 'generating' : failed ? 'failed' : v.assetId || v.confirmed ? 'ready' : 'generating';
+      return { viewKey: v.viewKey, viewName: v.viewName, source: v.source, confirmed: v.confirmed, state };
+    });
+  }
+
+  /** 卡片存角色編號；讀出來時換回名稱（第 7 階段存的名稱原樣保留） */
+  function withNames(plan: Plan | null): Plan | null {
+    if (!plan || !deps.characters) return plan;
+    const characters = deps.characters;
+    return { ...plan, shots: plan.shots.map((shot) => ({ ...shot, characters: characters.namesOf(shot.characters) })) };
   }
 
   /** 卡片排好時間、補上 shotKey 與對白估時；不認得或重複的 shotKey 給新的 */
@@ -129,17 +145,20 @@ export function createPlanService(deps: {
 
   function save(videoId: string, input: { version: number; styleNote: string; source: PlanSource; drafts: readonly ShotDraft[]; previous: readonly Shot[]; revertedFrom?: number }): Plan {
     const rows = placeShots(videoId, input.drafts);
+    // 角色名稱換成角色編號（沒有的建立影片專屬角色）；比對差異仍用名稱
+    const ids = deps.characters?.resolve(videoId, [...new Set(rows.flatMap((row) => row.characters))].map((name) => ({ name })));
+    const stored = ids ? rows.map((row) => ({ ...row, characters: row.characters.map((name) => ids.get(name) ?? name) })) : rows;
     const diff = input.previous.length === 0 ? { changedShotKeys: rows.map((r) => r.shotKey), summary: `Agent 產生第 ${input.version} 版` } : diffShots(input.previous, rows.map(({ id: _id, ...shot }) => shot));
     const now = clock.now().toISOString();
     db.transaction(() => {
       insertPlan(
         db,
         { id: clock.newId(), videoId, version: input.version, styleNote: input.styleNote, source: input.source, diff: { ...diff, ...(input.revertedFrom ? { revertedFrom: input.revertedFrom } : {}) }, createdAt: now },
-        rows,
+        stored,
       );
       if (input.source === 'agent') db.update(videos).set({ stage: 'plan', updatedAt: now }).where(eq(videos.id, videoId)).run();
     });
-    const saved = findPlanVersion(db, videoId, input.version);
+    const saved = withNames(findPlanVersion(db, videoId, input.version));
     if (!saved) throw new Error('方案存檔失敗');
     return saved;
   }
@@ -183,12 +202,15 @@ export function createPlanService(deps: {
   return {
     get(videoId) {
       const video = requireVideo(videoId);
-      return { plan: findCurrentPlan(db, videoId), versions: listPlanVersions(db, videoId), rules: rulesFor(video), views: viewsFor(video) };
+      const plan = withNames(findCurrentPlan(db, videoId));
+      const used = new Set(plan?.shots.flatMap((shot) => shot.characters) ?? []);
+      const characters = deps.characters ? deps.characters.listForVideo(videoId).filter((c) => used.has(c.name)) : [];
+      return { plan, versions: listPlanVersions(db, videoId), rules: rulesFor(video), views: viewsFor(video), characters };
     },
 
     version(videoId, version) {
       requireVideo(videoId);
-      const plan = findPlanVersion(db, videoId, version);
+      const plan = withNames(findPlanVersion(db, videoId, version));
       if (!plan) throw new StudioError(404, VERSION_NOT_FOUND);
       return plan;
     },
@@ -216,16 +238,20 @@ export function createPlanService(deps: {
         if (error instanceof StructuredOutputError || error instanceof ClaudeCallError) throw new StudioError(502, error.message);
         throw error;
       }
+      deps.characters?.resolve(
+        videoId,
+        output.characters.map((c) => ({ name: c.name, ...(c.description ? { description: c.description } : {}), continuityLocks: c.continuityLocks ?? [] })),
+      );
       return save(videoId, { version: 1, styleNote: output.styleNote, source: 'agent', drafts: shotsFromOutput(output), previous: [] });
     },
 
     createVersion(videoId, input) {
       requireVideo(videoId);
-      const current = findCurrentPlan(db, videoId);
+      const current = withNames(findCurrentPlan(db, videoId));
       if (!current) throw new StudioError(409, NO_PLAN);
       if (input.baseVersion !== current.version) throw new StudioError(409, '方案已經有新的版本，請重新整理後再改');
       if (input.revertTo !== undefined) {
-        const target = findPlanVersion(db, videoId, input.revertTo);
+        const target = withNames(findPlanVersion(db, videoId, input.revertTo));
         if (!target) throw new StudioError(404, VERSION_NOT_FOUND);
         return save(videoId, { version: current.version + 1, styleNote: target.styleNote, source: 'revert', drafts: draftsOf(target), previous: current.shots, revertedFrom: target.version });
       }
@@ -240,7 +266,7 @@ export function createPlanService(deps: {
 
     revise(videoId, changes) {
       requireVideo(videoId);
-      const current = findCurrentPlan(db, videoId);
+      const current = withNames(findCurrentPlan(db, videoId));
       if (!current) throw new StudioError(409, NO_PLAN);
       let drafts: ShotDraft[];
       try {
@@ -254,11 +280,14 @@ export function createPlanService(deps: {
     },
 
     current(videoId) {
-      return findCurrentPlan(db, videoId);
+      return withNames(findCurrentPlan(db, videoId));
     },
 
-    replaceViewKey() {
-      throw new Error('尚未實作');
+    replaceViewKey(videoId, from, to) {
+      const current = withNames(findCurrentPlan(db, videoId));
+      if (!current || !current.shots.some((shot) => shot.viewKey === from)) return null;
+      const drafts = draftsOf(current).map((draft) => (draft.viewKey === from ? { ...draft, viewKey: to } : draft));
+      return save(videoId, { version: current.version + 1, styleNote: current.styleNote, source: 'user_edit', drafts, previous: current.shots });
     },
   };
 }

@@ -56,7 +56,16 @@ function Workspace({ detail }: { detail: VideoDetail }) {
   const series = useSeriesList().data?.find((item) => item.id === detail.video.seriesId);
   const budget = useQuery({ queryKey: ['budget', videoId], queryFn: () => fetchVideoBudget(videoId) });
   const questionnaire = useQuery({ queryKey: questionnaireKey(videoId), queryFn: () => fetchQuestionnaire(videoId) });
-  const plan = useQuery({ queryKey: planKey(videoId), queryFn: () => fetchPlan(videoId) });
+  const plan = useQuery({
+    queryKey: planKey(videoId),
+    queryFn: () => fetchPlan(videoId),
+    // 角色定裝圖或補充視角生成中：每 1.5 秒重新讀取，完成後停止
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      const generating = data?.characters.some((c) => c.state === 'generating') || data?.views.some((v) => v.state === 'generating');
+      return generating ? 1500 : false;
+    },
+  });
   const chat = useStudioChat(videoId);
   const [savedVersion, setSavedVersion] = useState<number | null>(null);
 
@@ -143,7 +152,7 @@ function Workspace({ detail }: { detail: VideoDetail }) {
             />
           )}
           {panel === 'plan' && plan.data?.plan && (
-            <PlanPanel key={plan.data.plan.id} savedVersion={savedVersion} onSaved={setSavedVersion} videoId={videoId} data={{ ...plan.data, plan: plan.data.plan }} seriesVisualStyle={series?.visualStyle ?? ''} />
+            <PlanPanel key={plan.data.plan.id} savedVersion={savedVersion} onSaved={setSavedVersion} videoId={videoId} data={{ ...plan.data, plan: plan.data.plan }} seriesVisualStyle={series?.visualStyle ?? ''} imageModel={detail.video.imageModel} />
           )}
         </div>
       </main>
