@@ -90,6 +90,11 @@ export type TempleBoardServiceDeps = {
   /** 沒有設定 Comfy Cloud 或 Claude 時為 null：生成相關的操作回 503，說明 unavailableMessage */
   generation: TempleBoardGeneration | null;
   unavailableMessage?: string;
+  /**
+   * 這支影片換成新確認的版本時（03 第 160 行）：和前一版比對，回報視角圖換過的視角；
+   * 外觀規範改了就是所有視角。第一版、或什麼都沒改時不通知
+   */
+  onVersionConfirmed?: (videoId: string, viewKeys: string[]) => void;
 };
 
 export type GenerateOutcome = { status: 'consent_required'; check: CostCheck } | { status: 'accepted'; board: TempleBoard };

@@ -599,3 +599,53 @@ describe('定裝版的內容', () => {
     expect(world.db.select().from(videos).where(eq(videos.id, 'v1')).get()?.templeBoardVersionId).toBe(board?.version.id);
   });
 });
+
+
+// ── 第 13 階段（實測前補上）：寺廟定裝版新版本的確認失效（03 第 160 行） ──
+
+describe('新版本確認後，用到改過的視角的格子要重新確認', () => {
+  let changed: { videoId: string; viewKeys: string[] }[];
+
+  beforeEach(() => {
+    changed = [];
+    boards = service({ onVersionConfirmed: (videoId, viewKeys) => changed.push({ videoId, viewKeys }) });
+  });
+
+  async function firstVersion() {
+    addPhoto(world, { viewKey: 'front_overview' });
+    await generated('v1', ['courtyard']);
+    // AI 推測的視角要先確認
+    boards.confirmView('v1', 'courtyard');
+    boards.confirm('v1');
+  }
+
+  it('第一版確認時沒有「之前的版本」，不通知', async () => {
+    await firstVersion();
+    expect(changed).toEqual([]);
+  });
+
+  it('新版本重生了一個視角：確認時通知這個視角', async () => {
+    await firstVersion();
+    boards.saveAsNewVersion('v1');
+    expect((await boards.regenerateView('v1', 'front_overview', { instruction: '燈光暗一點', consentToken: consent('v1', 1) })).status).toBe('accepted');
+    await settleAll();
+    boards.confirmView('v1', 'front_overview');
+    boards.confirm('v1');
+    expect(changed).toEqual([{ videoId: 'v1', viewKeys: ['front_overview'] }]);
+  });
+
+  it('新版本改了外觀規範：所有視角都要重新確認', async () => {
+    await firstVersion();
+    boards.saveAsNewVersion('v1');
+    boards.update('v1', { appearanceLocks: ['grey granite dragon columns'] });
+    boards.confirm('v1');
+    expect(changed).toEqual([{ videoId: 'v1', viewKeys: ['front_overview', 'courtyard'] }]);
+  });
+
+  it('新版本什麼都沒改：不通知', async () => {
+    await firstVersion();
+    boards.saveAsNewVersion('v1');
+    boards.confirm('v1');
+    expect(changed).toEqual([]);
+  });
+});

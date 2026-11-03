@@ -28,6 +28,10 @@ describe('下載的檔名', () => {
     expect(downloadFileName('板橋慈惠宮', '2026-11-03T09:00:00.000Z')).toBe('板橋慈惠宮-2026-11-03.mp4');
   });
 
+  it('日期用台灣時間：UTC 前一天晚上 8 點是台灣隔天凌晨', () => {
+    expect(downloadFileName('板橋慈惠宮', '2026-11-02T20:00:00.000Z')).toBe('板橋慈惠宮-2026-11-03.mp4');
+  });
+
   it('檔名不能用的字元換成「-」', () => {
     expect(downloadFileName('a/b:c*d?"e<f>g|h\\i', '2026-01-02T00:00:00.000Z')).toBe('a-b-c-d-e-f-g-h-i-2026-01-02.mp4');
   });

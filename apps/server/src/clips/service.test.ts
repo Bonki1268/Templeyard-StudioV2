@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { findAsset } from '../assets/repository.js';
 import { createFfmpeg } from '../compose/ffmpeg.js';
-import { generations, videos } from '../db/schema.js';
+import { generations, temples, videos } from '../db/schema.js';
 import { StudioError } from '../studio/errors.js';
 import { createClipsWorld, type ClipsWorld } from './__fixtures__/clipsWorld.js';
 import { MUSIC_NODE, SHOT_VIDEO_NODE, createClipService } from './service.js';
@@ -358,7 +358,9 @@ describe('確認成品與下載', () => {
   it('下載的是成品檔案，檔名是寺廟名稱加日期', async () => {
     await generateAndCompose();
     const file = t.clips.finalFile('v1');
-    expect(file.filename).toMatch(/^.+-\d{4}-\d{2}-\d{2}\.mp4$/);
+    // 測試世界的寺廟與時間：檔名是「寺廟名稱-台灣日期.mp4」
+    const temple = t.world.db.select().from(temples).all().find((row) => row.id === t.world.templeId);
+    expect(file.filename).toBe(`${temple?.name}-2026-11-03.mp4`);
     expect(readFileSync(file.path).subarray(4, 8).toString('latin1')).toBe('ftyp');
   });
 

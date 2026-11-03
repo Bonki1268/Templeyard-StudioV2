@@ -42,7 +42,8 @@ describe('複製影片', () => {
     const copy = copies.copy('v1');
     const questionnaire = findQuestionnaire(t.world.db, copy.id);
     expect(questionnaire?.answers).toEqual(findQuestionnaire(t.world.db, 'v1')?.answers);
-    expect(questionnaire?.submittedAt).not.toBeNull();
+    // 保留原影片問卷的送出時間（2026-11-03 使用者決定）
+    expect(questionnaire?.submittedAt).toBe('2026-11-03T09:00:00.000Z');
   });
 
   it('現行方案成為新影片的第 1 版：內容相同，對應照片清空', () => {
