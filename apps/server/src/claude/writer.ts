@@ -26,17 +26,42 @@ const FORMAT_ERROR = 'Claude 回的最終指令格式不正確，請再試一次
 
 export function parseWrittenPrompt(text: string): WrittenPrompt {
   const trimmed = text.trim();
-  const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/.exec(trimmed);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(fenced?.[1] ?? trimmed);
-  } catch {
-    throw new ClaudeOutputError(FORMAT_ERROR);
+  // 依序試：整段、程式碼區塊（前後可以有說明文字）、第一個 { 到最後一個 }
+  const fenced = /```(?:json)?\s*([\s\S]*?)\s*```/.exec(trimmed)?.[1];
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  const braces = start >= 0 && end > start ? trimmed.slice(start, end + 1) : undefined;
+  for (const candidate of [trimmed, fenced, braces]) {
+    if (candidate === undefined) continue;
+    try {
+      return validWrittenPrompt(JSON.parse(candidate));
+    } catch {
+      // 試下一種
+    }
   }
-  const result = writtenPromptSchema.safeParse(parsed);
+  throw new ClaudeOutputError(FORMAT_ERROR);
+}
+
+function validWrittenPrompt(value: unknown): WrittenPrompt {
+  const result = writtenPromptSchema.safeParse(value);
   if (!result.success) throw new ClaudeOutputError(FORMAT_ERROR);
   return result.data;
 }
+
+/** 用工具強制 Claude 回 { prompt, notes }（2026-11-03 實測：真的 Claude 會在 JSON 前後加說明文字） */
+const SUBMIT_TOOL = 'submit_final_prompt';
+const submitTool = {
+  name: SUBMIT_TOOL,
+  description: '交出最終指令：prompt 是直接送給生成模型的最終指令；notes 是給使用者看的說明（取捨、風險或需要回到上游修改的地方）。',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      prompt: { type: 'string', description: '直接送給生成模型的最終指令' },
+      notes: { type: 'string', description: '給使用者看的說明' },
+    },
+    required: ['prompt'],
+  },
+};
 
 /**
  * 送出：system 是節點指令與模型寫法，user 是帶入資料後的內容；重寫時把 retryNote 接在 user 後面。
@@ -55,6 +80,8 @@ export function createClaudePromptWriter(options: ClaudeWriterOptions): PromptWr
           max_tokens: options.maxTokens ?? 16000,
           system: request.system,
           messages: [{ role: 'user', content: user }],
+          tools: [submitTool],
+          tool_choice: { type: 'tool', name: SUBMIT_TOOL },
         });
       } catch (error: unknown) {
         // SDK 的錯誤訊息不含金鑰；只保留狀態碼，避免把回應內容塞進紀錄
@@ -64,6 +91,9 @@ export function createClaudePromptWriter(options: ClaudeWriterOptions): PromptWr
       }
       if (response.stop_reason === 'refusal') throw new ClaudeOutputError('Claude 拒絕撰寫這段指令，請修改內容後再試');
       if (response.stop_reason === 'max_tokens') throw new ClaudeOutputError('Claude 的回應太長被截斷，請再試一次');
+      const used = response.content.find((block) => block.type === 'tool_use' && block.name === SUBMIT_TOOL);
+      if (used && used.type === 'tool_use') return validWrittenPrompt(used.input);
+      // 沒有用工具時（例如舊的錄製回應）照文字解析
       const text = response.content.map((block) => (block.type === 'text' ? block.text : '')).join('');
       return parseWrittenPrompt(text);
     },
