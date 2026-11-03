@@ -27,8 +27,8 @@ const BEFORE_STUDIO: readonly VideoStage[] = ['creating', 'board_pending'];
 // 創作對話（F6）：存下使用者的話，跑一輪 Agent，存下 Agent 的回覆與執行的操作。
 
 export type ChatService = {
-  /** 影片不存在：StudioError 404 */
-  list(videoId: string): ChatMessage[];
+  /** 影片不存在：StudioError 404；有 shotKey 時只列這一格的對話（細修頁），沒有時只列整支影片的對話 */
+  list(videoId: string, shotKey?: string): ChatMessage[];
   /**
    * 開始串流前的檢查（錯誤以一般的 JSON 回應）：
    * - 影片不存在：404「找不到這支影片」
@@ -41,8 +41,9 @@ export type ChatService = {
    * - 這支影片還沒有創作輸入時，把這句話存成 creative_input
    * - 之前的對話（只有文字）一併送給 Claude
    * - Agent 失敗時送出 error，不存 Agent 訊息
+   * - 有 shotKey 時（細修頁）：對話只針對這一格，Agent 只有 revise_shot 可以改這一格；方案沒有這一格時 StudioError 404
    */
-  send(videoId: string, content: string, onEvent: (event: ChatEvent) => void): Promise<void>;
+  send(videoId: string, content: string, onEvent: (event: ChatEvent) => void, shotKey?: string): Promise<void>;
 };
 
 export function createChatService(deps: {

@@ -15,12 +15,16 @@ import {
   type Plan,
   type PromptFile,
   type Shot,
+  type ShotDetail,
   type ShotFrames,
+  type regionEditSchema,
+  type uploadFrameSchema,
   type Video,
   type WorkflowConfig,
   type WorkflowModel,
 } from '@templeyard/shared';
 import { eq } from 'drizzle-orm';
+import type { z } from 'zod';
 import { getCloudOkAsset } from '../assets/repository.js';
 import type { CharacterService } from '../characters/service.js';
 import type { AppDatabase } from '../db/client.js';
@@ -39,6 +43,10 @@ import { deleteFrames, findFrame, findGeneration, insertFrame, latestFrame, list
 // 參考角色定裝圖、定裝版視角圖與對應照片；生成中只顯示「生成中」，完成後逐格確認；修改時依失效規則標示需重新確認
 
 export const REFINED_FRAME_NODE = 'refined-frame';
+export const KEYFRAME_NODE = 'keyframe';
+export const REGION_EDIT_NODE = 'region-edit';
+/** 精緻圖服務接手的生成節點 */
+export const FRAME_NODES = [REFINED_FRAME_NODE, KEYFRAME_NODE, REGION_EDIT_NODE] as const;
 
 export type FrameGeneration = {
   service: GenerationService;
@@ -66,6 +74,16 @@ export type FrameService = {
   confirm(videoId: string, shotKey: string): FramesResponse;
   /** 依失效規則把受影響的精緻圖標示需重新確認 */
   invalidate(videoId: string, change: InvalidationChange): void;
+  /** 細修頁（第 10 階段）：這一格的卡片、目前的首格／末格／關鍵畫格、所有版本、最近一次的生成指令 */
+  detail(videoId: string, shotKey: string): ShotDetail;
+  /** 上傳自己的圖（瀏覽器已去識別）作為首格或末格，成為這一格目前的圖 */
+  upload(videoId: string, shotKey: string, input: z.output<typeof uploadFrameSchema>): ShotDetail;
+  /** 選回這一格的某一張圖；不是這一格的圖：StudioError 404「找不到這張精緻圖」 */
+  select(videoId: string, shotKey: string, frameId: string): ShotDetail;
+  /** 產生中間關鍵畫格（還沒有末格時一併產生）；沒有開啟或時間點不符規則：StudioError 409 */
+  generateKeyframes(videoId: string, shotKey: string, consentToken: string | null | undefined): Promise<FramesOutcome>;
+  /** 限定範圍修改：以這張圖為參考，只改圈選的一處，產生新的一張（記下修改自哪一張） */
+  editRegion(videoId: string, shotKey: string, frameId: string, input: z.output<typeof regionEditSchema>): Promise<FramesOutcome>;
   handleGenerated: SucceededHandler;
 };
 
@@ -350,6 +368,26 @@ export function createFrameService(deps: {
           if (frame) updateFrame(db, frame.id, { needsReconfirm: true });
         }
       }
+    },
+
+    detail() {
+      throw new Error('尚未實作');
+    },
+
+    upload() {
+      throw new Error('尚未實作');
+    },
+
+    select() {
+      throw new Error('尚未實作');
+    },
+
+    async generateKeyframes() {
+      throw new Error('尚未實作');
+    },
+
+    async editRegion() {
+      throw new Error('尚未實作');
     },
 
     handleGenerated(generation, assetIds) {

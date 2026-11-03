@@ -145,6 +145,44 @@
       ]
     },
     {
+      "match": "這次只針對分鏡第",
+      "matchUser": "這一格改成特寫",
+      "afterToolResult": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "好，這一格改成特寫。"
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_shot_{{n}}",
+          "name": "revise_shot",
+          "input": {
+            "shotSize": "特寫"
+          }
+        }
+      ]
+    },
+    {
+      "match": "這次只針對分鏡第",
+      "afterToolResult": true,
+      "content": [
+        {
+          "type": "text",
+          "text": "改好了，請看看右邊的設定。"
+        }
+      ]
+    },
+    {
+      "match": "這次只針對分鏡第",
+      "content": [
+        {
+          "type": "text",
+          "text": "請告訴我這一格要怎麼改。"
+        }
+      ]
+    },
+    {
       "match": "廟埕影室的創作 Agent",
       "matchUser": "第 1 格改成特寫",
       "afterToolResult": false,
@@ -294,6 +332,14 @@
     {
       "match": "寫實 16:9 精緻圖",
       "text": "{\"prompt\": \"Refined frame. {{user}}\", \"notes\": \"錄製的回應：精緻圖\"}"
+    },
+    {
+      "match": "凍結瞬間",
+      "text": "{\"prompt\": \"Keyframe. {{user}}\", \"notes\": \"錄製的回應：中間關鍵畫格\"}"
+    },
+    {
+      "match": "限定範圍修改：只改指定的一處",
+      "text": "{\"prompt\": \"Region edit. {{user}}\", \"notes\": \"錄製的回應：限定範圍修改\"}"
     },
     {
       "match": "廟埕影室的 AI 輔助撰寫",

@@ -263,6 +263,12 @@ describe('確認與重生', () => {
     expect(world.db.select().from(framesTable).all()).toHaveLength(5);
   });
 
+  it('同一格還在生成中：不能再重生（避免重複付費）', async () => {
+    await frames.regenerate('v1', 'k2', 'first', consent(1));
+    await expectStudioError(() => frames.regenerate('v1', 'k2', 'first', consent(1)), 409, '第 2 格的精緻圖還在生成中');
+    await settleAll();
+  });
+
   it('重生沒有同意憑證：需要同意', async () => {
     expect((await frames.regenerate('v1', 'k2', 'first', null)).status).toBe('consent_required');
   });

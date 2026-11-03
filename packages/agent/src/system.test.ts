@@ -91,3 +91,16 @@ describe('有分鏡方案時', () => {
   });
 });
 
+describe('細修頁的對話', () => {
+  it('說明這次只針對這一格，只能用 revise_shot', () => {
+    const system = buildAgentSystem({ ...context, focusShot: { seq: 2 } });
+    expect(system).toContain('這次只針對分鏡第 2 格');
+    expect(system).toContain('revise_shot');
+    expect(system).toContain('不改其他格');
+  });
+
+  it('不是細修頁時不提', () => {
+    expect(buildAgentSystem(context)).not.toContain('這次只針對分鏡');
+  });
+});
+

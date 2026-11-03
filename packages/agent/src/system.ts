@@ -12,6 +12,8 @@ export type AgentContext = {
   models: { image: string; video: string };
   /** 問卷是否已送出（送出後不能重新產生） */
   questionnaireSubmitted: boolean;
+  /** 細修頁的對話只針對這一格（第 10 階段） */
+  focusShot?: { seq: number } | null;
   /** 目前的分鏡方案（建立後才有）：每格一行摘要 */
   plan?: { version: number; shots: readonly { seq: number; durationSec: number; shotSize: string; viewKey: string; description: string; dialogue: string }[] } | null;
 };
@@ -30,6 +32,7 @@ function orNone(value: string | number | null): string {
  * - 問卷已送出時：說明不能重新產生問卷
  * - 有分鏡方案時：列出目前的方案（第幾版、每格的秒數、景別、視角、畫面內容、台詞），
  *   說明要修改時呼叫 revise_plan 依序號修改，修改後列出改了哪幾格
+ * - 細修頁（focusShot）：說明「這次只針對分鏡第 N 格」，只能用 revise_shot 修改這一格，不改其他格
  */
 export function buildAgentSystem(context: AgentContext): string {
   const { temple, series, models } = context;

@@ -1,4 +1,4 @@
-import { FRAMES_NOT_OPEN, type PlanCheck, type Shot, type ShotInput } from '@templeyard/shared';
+import type { Shot, ShotInput } from '@templeyard/shared';
 
 // 方案面板的編輯：卡片的增刪、複製、排序、秒數；每次修改送出整份卡片，後端新增一個版本
 
@@ -38,9 +38,4 @@ export function addShot(shots: readonly ShotInput[]): ShotInput[] {
 /** 換掉每一格的秒數（時間軸拖曳後） */
 export function withDurations(shots: readonly ShotInput[], durations: readonly number[]): ShotInput[] {
   return shots.map((shot, index) => ({ ...shot, durationSec: durations[index] ?? shot.durationSec }));
-}
-
-/** 「生成」旁列出的原因：秒數檢查沒過的原因、其他原因（例如角色還沒確認），加上精緻圖生成還沒開放 */
-export function generateBlockers(check: PlanCheck, extra: readonly string[] = []): string[] {
-  return [...check.blocking, ...extra, FRAMES_NOT_OPEN];
 }

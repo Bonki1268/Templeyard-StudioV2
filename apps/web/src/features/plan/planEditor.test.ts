@@ -1,6 +1,6 @@
-import { FRAMES_NOT_OPEN, type Shot, type ShotInput } from '@templeyard/shared';
+import type { Shot, ShotInput } from '@templeyard/shared';
 import { describe, expect, it } from 'vitest';
-import { addShot, duplicateShot, generateBlockers, moveShot, removeShot, toInputs, withDurations } from './planEditor';
+import { addShot, duplicateShot, moveShot, removeShot, toInputs, withDurations } from './planEditor';
 
 const input = (shotKey: string, durationSec: number): ShotInput => ({ shotKey, durationSec, shotSize: '中景', description: shotKey });
 
@@ -74,16 +74,5 @@ describe('調整卡片', () => {
 
   it('換掉秒數', () => {
     expect(withDurations(shots, [8, 6, 2]).map((s) => s.durationSec)).toEqual([8, 6, 2]);
-  });
-});
-
-describe('「生成」旁的原因', () => {
-  it('檢查沒過的原因加上精緻圖生成還沒開放', () => {
-    const check = { totalSec: 40, targetSec: 30, blocking: ['總長度 40 秒，超過目標長度 30 秒'], shots: {} };
-    expect(generateBlockers(check)).toEqual(['總長度 40 秒，超過目標長度 30 秒', FRAMES_NOT_OPEN]);
-  });
-
-  it('檢查全部通過時只剩精緻圖生成還沒開放', () => {
-    expect(generateBlockers({ totalSec: 26, targetSec: 30, blocking: [], shots: {} })).toEqual([FRAMES_NOT_OPEN]);
   });
 });

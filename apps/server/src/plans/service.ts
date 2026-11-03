@@ -22,6 +22,7 @@ import {
   type PromptFile,
   type RevisePlanInput,
   type Shot,
+  type ShotPatch,
   type ShotDraft,
   type Video,
   type WorkflowConfig,
@@ -74,6 +75,11 @@ export type PlanService = {
   current(videoId: string): Plan | null;
   /** 把用到 from 視角的格子改用 to（補充視角確認後）；有改動時新增一個 user_edit 版本，沒有方案或沒有改動時回傳 null */
   replaceViewKey(videoId: string, from: string, to: string): Plan | null;
+  /**
+   * 細修頁儲存這一格（第 10 階段）：只改這一格，新增一個版本（user_edit，對話修改時 chat_edit）。
+   * 方案沒有這一格：StudioError 404「方案沒有這一格」；開啟中間關鍵畫格但時間點不符規則：StudioError 400
+   */
+  updateShot(videoId: string, shotKey: string, patch: ShotPatch, source?: 'user_edit' | 'chat_edit'): Plan;
 };
 
 const SUBMIT_PLAN_TOOL = {
@@ -284,6 +290,10 @@ export function createPlanService(deps: {
 
     current(videoId) {
       return withNames(findCurrentPlan(db, videoId));
+    },
+
+    updateShot() {
+      throw new Error('尚未實作');
     },
 
     replaceViewKey(videoId, from, to) {

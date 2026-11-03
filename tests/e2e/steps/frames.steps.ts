@@ -224,7 +224,7 @@ async function fakeComfy(request: APIRequestContext): Promise<FakeCalls> {
   return (await response.json()) as FakeCalls;
 }
 
-Then(/^第 (\d+) 格精緻圖的參考圖有「(.+)」的定裝圖與「(.+)」的視角圖$/, async ({ request, state }, _seq: string, name: string, view: string) => {
+Then(/^第 (\d+) 格精緻圖的參考圖有「(.+)」的定裝圖與「(.+)」的視角圖$/, async ({ request, state }, seq: string, name: string, view: string) => {
   const videoId = requireVideoId(state);
   const characters = characterListResponseSchema.parse(await (await request.get(`/api/videos/${videoId}/characters`)).json()).characters;
   const look = characters.find((c) => c.name === name)?.version.lookAssetId;
@@ -233,10 +233,15 @@ Then(/^第 (\d+) 格精緻圖的參考圖有「(.+)」的定裝圖與「(.+)」�
   if (!look || !viewAsset) throw new Error('找不到定裝圖或視角圖');
   const { calls, uploads } = await fakeComfy(request);
   const fileOf = new Map(uploads.map((u) => [u.ref, u.filename]));
+  // 只看這支影片這一格首格的呼叫：最終指令照 refined-frame 的範本寫著「分鏡 N，首格」，
+  // 參考圖有這支影片的定裝版視角圖（假的 MCP 記下整輪情境測試的呼叫，其他影片也有第 N 格）
   const referenceSets = calls
     .filter((c) => c.tool === 'partner_generate' && c.args?.confirm === true && Array.isArray(c.args?.fake_reference_images))
-    .map((c) => (c.args?.fake_reference_images as unknown[]).map((ref) => fileOf.get(String(ref))));
-  expect(referenceSets.some((files) => files.includes(`${look}.png`) && files.includes(`${viewAsset}.png`))).toBe(true);
+    .filter((c) => JSON.stringify(c.args).includes(`分鏡 ${seq}，首格`))
+    .map((c) => (c.args?.fake_reference_images as unknown[]).map((ref) => fileOf.get(String(ref))))
+    .filter((files) => files.includes(`${viewAsset}.png`));
+  expect(referenceSets.length).toBeGreaterThan(0);
+  expect(referenceSets.every((files) => files.includes(`${look}.png`))).toBe(true);
 });
 
 Then('假的雲端沒有收到任何原圖', async ({ request, state }) => {
