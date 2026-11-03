@@ -4,6 +4,7 @@
 // 用法：
 //   pnpm probe:comfy                     第 1 輪（不花錢）：tools/list、範本的參數格式、搜尋可用範本
 //   pnpm probe:comfy -- --requests <檔>  第 2 輪預演：只做不花錢的呼叫（例如上傳），付費的那幾筆只印出會送什麼，不呼叫
+//   pnpm probe:comfy -- --output <prompt_id>  補下載已經送出的任務（不會再送出、不花錢）
 //   pnpm probe:comfy -- --requests <檔> --confirm
 //                                        第 2 輪真的送出：付費的每一筆先不帶 confirm 取得雲端的扣點說明，
 //                                        在終端機問你「要送出嗎？」，輸入 y 才帶 confirm: true 送出，完成後下載產出
@@ -30,6 +31,7 @@ if (!API_KEY || !MCP_URL) {
 
 const args = process.argv.slice(2);
 const requestsFile = args.includes('--requests') ? args[args.indexOf('--requests') + 1] : null;
+const outputId = args.includes('--output') ? args[args.indexOf('--output') + 1] : null;
 const confirm = args.includes('--confirm');
 
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -252,22 +254,47 @@ async function downloadOutputs(label, urls) {
 
 function parsed(result) {
   if (result.structured) return result.structured;
+  const text = result.text ?? '';
   try {
-    return JSON.parse(result.text ?? '');
+    return JSON.parse(text);
   } catch {
-    return { text: result.text };
+    // 有些回應是一段說明後面接 JSON（例如「Job is in progress (pending)...\n{...}」）
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      try {
+        return { ...JSON.parse(text.slice(start, end + 1)), text };
+      } catch {
+        // 不是 JSON
+      }
+    }
+    return { text };
   }
 }
 
 /** 還在跑的狀態；其他狀態（成功、失敗、取消、錯誤…）都算結束 */
 const RUNNING_STATES = ['queued', 'pending', 'running', 'in_progress', 'submitted', 'executing', 'waiting'];
 
+/** --output <prompt_id>：補下載一個已經送出的任務（不會再送出、不花錢） */
+async function fetchOutput(promptId) {
+  console.log(`補下載任務 ${promptId}（不會再送出）`);
+  const entry = { promptId, status: parsed(await waitJob(promptId)) };
+  const output = await tool('get_output', { prompt_id: promptId, client_os: 'darwin', inline_urls: false });
+  entry.output = { ...parsed(output), text: output.text };
+  entry.files = await downloadOutputs(`output-${promptId.slice(0, 8)}`, outputUrls(entry.output));
+  console.log(`  產出：${entry.files.join('、') || '（沒有找到網址）'}`);
+  save('output.json', entry);
+}
+
 async function waitJob(promptId) {
   for (let i = 0; i < 300; i += 1) {
     const status = await tool('get_job_status', { prompt_id: promptId });
     const data = parsed(status);
-    const states = [data?.result?.status, data?.result?.job_status, data?.status, data?.job_status].filter(Boolean).map((v) => String(v).toLowerCase());
-    if (!status.ok || states.length === 0 || !states.some((state) => RUNNING_STATES.includes(state))) {
+    const states = [data?.result?.status, data?.result?.job_status, data?.result?.raw_status, data?.status, data?.job_status, data?.raw_status]
+      .filter(Boolean)
+      .map((v) => String(v).toLowerCase());
+    // 讀不到狀態時繼續等（不當成結束）；明確不在「還在跑」清單裡才算結束
+    if (!status.ok || (states.length > 0 && !states.some((state) => RUNNING_STATES.includes(state)))) {
       const message = data?.result?.error_message ?? data?.error_message ?? status.error ?? status.text ?? '';
       console.log(`    任務結束：${states.join('／') || '（沒有狀態）'}${message ? `；${String(message).slice(0, 300)}` : ''}`);
       return status;
@@ -354,7 +381,8 @@ async function roundTwo(file) {
 }
 
 try {
-  if (requestsFile) await roundTwo(requestsFile);
+  if (outputId) await fetchOutput(outputId);
+  else if (requestsFile) await roundTwo(requestsFile);
   else await roundOne();
 } catch (error) {
   console.error(`探測失敗：${error instanceof Error ? error.message : String(error)}`);

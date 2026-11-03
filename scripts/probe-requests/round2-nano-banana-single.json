@@ -1,0 +1,38 @@
+[
+  {
+    "label": "上傳測試圖（1280×720 合成測試畫面）",
+    "upload": "scripts/probe-requests/test-first-1280x720.png",
+    "saveAs": "front"
+  },
+  {
+    "label": "上傳拼接測試圖（左右兩張合成圖拼成一張）",
+    "upload": "scripts/probe-requests/test-composite-1280x360.png",
+    "saveAs": "composite"
+  },
+  {
+    "label": "A：Nano Banana Pro 用一張參考圖產生 16:9 精緻圖",
+    "tool": "partner_generate",
+    "paid": true,
+    "args": {
+      "type": "image",
+      "model": "vertexai/nano-banana-pro",
+      "aspect_ratio": "16:9",
+      "client_os": "darwin",
+      "prompt": "A photorealistic 16:9 still of a traditional Taiwanese temple courtyard at early morning, empty of people, keeping the layout and colors of the reference image. Soft warm light, no text, no watermark.",
+      "medias": [{ "role": "reference_image", "name": "{{saved.front.name}}", "subfolder": "{{saved.front.subfolder}}", "type": "input" }]
+    }
+  },
+  {
+    "label": "B：Nano Banana Pro 用一張拼接參考圖（左右兩張）產生 16:9 精緻圖",
+    "tool": "partner_generate",
+    "paid": true,
+    "args": {
+      "type": "image",
+      "model": "vertexai/nano-banana-pro",
+      "aspect_ratio": "16:9",
+      "client_os": "darwin",
+      "prompt": "The reference image is a side-by-side sheet: the LEFT half shows the temple front, the RIGHT half shows the entrance hall details. Create one photorealistic 16:9 still of the temple courtyard at early morning that uses the left half for the overall building and the right half for the entrance details. Do not reproduce the side-by-side layout; output a single scene. Empty of people, no text, no watermark.",
+      "medias": [{ "role": "reference_image", "name": "{{saved.composite.name}}", "subfolder": "{{saved.composite.subfolder}}", "type": "input" }]
+    }
+  }
+]
