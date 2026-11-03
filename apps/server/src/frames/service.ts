@@ -31,6 +31,7 @@ import { eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import { getCloudOkAsset } from '../assets/repository.js';
 import type { AssetStore } from '../assets/store.js';
+import type { ReferenceSheets } from '../references/sheet.js';
 import { insertAsset } from '../assets/repository.js';
 import type { CharacterService } from '../characters/service.js';
 import type { AppDatabase } from '../db/client.js';
@@ -135,6 +136,8 @@ export function createFrameService(deps: {
   onChange?: (videoId: string, change: InvalidationChange) => void;
   /** 這一格目前的影片（細修頁的偏差比對；第 11 階段） */
   clipOf?: (videoId: string, shotKey: string) => ShotDetail['clip'];
+  /** 參考圖拼接（07 實測：Nano Banana Pro 一次只收一張參考圖） */
+  sheets?: ReferenceSheets;
   unavailableMessage?: string;
 }): FrameService {
   const { db, clock } = deps;

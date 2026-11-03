@@ -1,4 +1,6 @@
-import { planChangeInvalidations, type InvalidationChange, type PromptFile, type ShotDetail } from '@templeyard/shared';
+import { planChangeInvalidations, type InvalidationChange, type PromptFile, type ShotDetail, type WorkflowConfig } from '@templeyard/shared';
+import { createFfmpeg } from '../../compose/ffmpeg.js';
+import { createReferenceSheets } from '../../references/sheet.js';
 import { eq } from 'drizzle-orm';
 import { CHARACTER_LOOK_NODE, CHARACTER_SHEET_NODE, createCharacterService, type CharacterService } from '../../characters/service.js';
 import { generations, videos } from '../../db/schema.js';
@@ -28,8 +30,8 @@ export type FramesWorld = {
   close(): Promise<void>;
 };
 
-export async function createFramesWorld(): Promise<FramesWorld> {
-  const world = await createWorld();
+export async function createFramesWorld(options: { workflows?: WorkflowConfig } = {}): Promise<FramesWorld> {
+  const world = await createWorld(options.workflows ? { workflows: options.workflows } : {});
   addVideo(world, { id: 'v1' });
   const photo = addPhoto(world, { viewKey: 'front_overview' });
   const consent = (units: number) => world.consents.issue('v1', [{ model: 'nano-banana-pro', units }]).token;
@@ -118,6 +120,8 @@ export async function createFramesWorld(): Promise<FramesWorld> {
       plans,
       characters,
       generation: { service: world.generation, writer: world.writer, sendAsset: world.sendAsset },
+      // 參考圖多於模型一次收的張數時拼成一張（07 實測，2026-11-03）
+      sheets: createReferenceSheets({ db: world.db, clock: world.clock, store: world.store, ffmpeg: createFfmpeg() }),
       onChange: (videoId, change) => {
         for (const listener of onFrameChange) listener(videoId, change);
       },

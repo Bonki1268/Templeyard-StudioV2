@@ -33,6 +33,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import { findAsset, getCloudOkAsset, insertAsset } from '../assets/repository.js';
 import type { AssetStore } from '../assets/store.js';
+import type { ReferenceSheets } from '../references/sheet.js';
 import type { CharacterService } from '../characters/service.js';
 import { FINAL_SPEC, type Ffmpeg } from '../compose/ffmpeg.js';
 import type { AppDatabase } from '../db/client.js';
@@ -104,6 +105,8 @@ export function createClipService(deps: {
   generation: FrameGeneration | null;
   store: AssetStore;
   ffmpeg: Ffmpeg;
+  /** 參考圖拼接（Gemini 參考圖範本的 @Image2 是一張拼接圖） */
+  sheets?: ReferenceSheets;
   unavailableMessage?: string;
 }): ClipService {
   const { db, clock } = deps;

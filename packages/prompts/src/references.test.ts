@@ -36,12 +36,24 @@ describe('把參考圖寫進 MCP 呼叫', () => {
     );
   });
 
-  it('正式設定檔的 Nano Banana Pro 還不知道參考圖放哪裡：有參考圖就拒絕並說明待實測', () => {
+  it('medias 格式：每張寫成 { role, name, subfolder, type: "input" }（07 實測：partner_generate 收上傳後的 name）', () => {
+    const model: WorkflowModel = { ...withReferences, references: { paths: [['medias']], max: 1, format: 'medias', role: 'reference_image' } };
+    expect(attachReferenceImages(call, model, ['abc.png']).args.medias).toEqual([{ role: 'reference_image', name: 'abc.png', subfolder: '', type: 'input' }]);
+  });
+
+  it('medias 格式的參照帶有 subfolder 時拆開寫', () => {
+    const model: WorkflowModel = { ...withReferences, references: { paths: [['medias']], max: 1, format: 'medias', role: 'reference_image' } };
+    expect(attachReferenceImages(call, model, ['sub/abc.png']).args.medias).toEqual([{ role: 'reference_image', name: 'abc.png', subfolder: 'sub', type: 'input' }]);
+  });
+
+  it('single 格式：寫成一個值（範本的 LoadImage.image）', () => {
+    const model: WorkflowModel = { ...withReferences, references: { paths: [['input_overrides', '15', 'image']], max: 1, format: 'single' } };
+    expect(attachReferenceImages(call, model, ['abc.png']).args).toMatchObject({ input_overrides: { '15': { image: 'abc.png' } } });
+  });
+
+  it('正式設定檔的 Nano Banana Pro：一張參考圖放進 medias（07 實測）', () => {
     const model = loadWorkflowConfig(workflowsFile).models['nano-banana-pro'];
     if (!model) throw new Error('設定檔沒有 nano-banana-pro');
-
-    expect(() => attachReferenceImages(call, model, ['ref-1'])).toThrow(
-      new CallBuildError('Nano Banana Pro 的參考圖輸入方式還沒實測（07「下一輪測試」），不能用照片生成'),
-    );
+    expect(attachReferenceImages(call, model, ['sheet.png']).args.medias).toEqual([{ role: 'reference_image', name: 'sheet.png', subfolder: '', type: 'input' }]);
   });
 });

@@ -125,3 +125,55 @@ describe('用 MCP 工具上傳檔案', () => {
     await expect(failing.send({ asset: deid, bytes: new Uint8Array([1]) })).rejects.toThrow('上傳圖片失敗：檔案太大');
   });
 });
+
+describe('一次性網址上傳（07 實測，2026-11-03）', () => {
+  const signedPut = { mode: 'signed_put' as const, tool: 'upload_file', clientOs: 'darwin' as const };
+  const photo = (id: string): CloudOkAsset => ({ ...asset('deid_photo', true), id, mime: 'image/png' }) as CloudOkAsset;
+
+  it('upload_file 傳本機檔案路徑，照回應的 PUT 指令把檔案送上去，回傳雲端的 name', async () => {
+    const fake = await startFakeComfyMcp();
+    try {
+      const transport = createMcpUploadTransport(createMcpSession({ url: fake.url, apiKey: FAKE_API_KEY }), signedPut);
+      const bytes = new Uint8Array([137, 80, 78, 71, 1, 2, 3]);
+      const ref = await transport.send({ asset: photo('photo-1'), bytes });
+
+      const sha256 = createHash('sha256').update(bytes).digest('hex');
+      expect(ref).toEqual({ remoteRef: `${sha256}.png` });
+      expect(fake.uploads).toEqual([{ ref: `${sha256}.png`, sha256, mime: 'image/png', filename: 'photo-1.png' }]);
+      const call = fake.calls.find((c) => c.tool === 'upload_file');
+      expect(call?.args).toMatchObject({ client_os: 'darwin' });
+      expect(String(call?.args?.file_path)).toMatch(/photo-1\.png$/);
+    } finally {
+      await fake.close();
+    }
+  });
+
+  it('每次上傳都重新要一個網址（一次性網址不重用）', async () => {
+    const fake = await startFakeComfyMcp();
+    try {
+      const transport = createMcpUploadTransport(createMcpSession({ url: fake.url, apiKey: FAKE_API_KEY }), signedPut);
+      await transport.send({ asset: photo('a'), bytes: new Uint8Array([1]) });
+      await transport.send({ asset: photo('b'), bytes: new Uint8Array([2]) });
+      expect(fake.calls.filter((c) => c.tool === 'upload_file')).toHaveLength(2);
+      expect(fake.uploads).toHaveLength(2);
+    } finally {
+      await fake.close();
+    }
+  });
+
+  it('PUT 失敗（例如雲端說不是有效的圖片）時丟出錯誤，說明原因', async () => {
+    const fake = await startFakeComfyMcp();
+    try {
+      const transport = createMcpUploadTransport(createMcpSession({ url: fake.url, apiKey: FAKE_API_KEY }), signedPut);
+      await expect(transport.send({ asset: photo('empty'), bytes: new Uint8Array([]) })).rejects.toThrow('上傳圖片失敗：Uploaded input is not a valid image');
+    } finally {
+      await fake.close();
+    }
+  });
+
+  it('回應裡找不到上傳網址時丟出錯誤', async () => {
+    const session = { callTool: async () => ({ isError: false, text: '沒有網址', data: null }) };
+    const transport = createMcpUploadTransport(session, signedPut);
+    await expect(transport.send({ asset: photo('x'), bytes: new Uint8Array([1]) })).rejects.toThrow('上傳圖片失敗：Comfy Cloud 沒有回傳上傳網址');
+  });
+});

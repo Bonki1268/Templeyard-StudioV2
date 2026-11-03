@@ -14,6 +14,8 @@ import path from 'node:path';
 // - get_output 回短連結與 storage 連結，短連結可以下載
 // 任務結果由指令裡的標記決定：[fail] 失敗、[cancel] 取消、[never] 一直在跑、[slow] 第 40 次查詢才完成、其他第 2 次查詢時完成
 // - fake_upload_file：假的上傳工具（真的上傳方式待實測，07「下一輪測試」第 1 項），回 { file_ref }，記下收到的檔案 sha256
+// - upload_file：照 07 實測（2026-11-03），回一行 PUT 指令到假伺服器的一次性網址 /api/uploads/<token>；
+//   PUT 上去回 { name, subfolder: "", type: "input" }，記下收到的檔案 sha256；同一個網址只能用一次（第二次 404）；空檔案回 422
 // - tools/list：列出假伺服器認得的工具（探測腳本的本機驗證用）
 // - GET /__calls：情境測試查詢收到的呼叫與上傳（只有假伺服器有）
 // - 產出依任務種類：影片（partner_generate 的 type 是 video，或範本名稱有 t2v／i2v）回 12 秒 1280×720、30 fps、有聲音的 MP4；
@@ -92,6 +94,7 @@ export async function startFakeComfyMcp(options: { port?: number } = {}): Promis
   const jobs = new Map<string, Job>();
   const calls: RecordedCall[] = [];
   const uploads: RecordedUpload[] = [];
+  const uploadTokens = new Map<string, { filename: string }>();
   let eventStream = false;
   let base = '';
 
@@ -116,6 +119,14 @@ export async function startFakeComfyMcp(options: { port?: number } = {}): Promis
       const id = randomUUID();
       jobs.set(id, { id, tool, prompt: promptOf(args), polls: 0, kind: jobKindOf(args) });
       return text(JSON.stringify({ prompt_id: id, status: 'queued' }));
+    }
+    if (tool === 'upload_file') {
+      if (typeof args.file_path !== 'string' || !['darwin', 'linux', 'windows'].includes(String(args.client_os))) return text('Input validation error: file_path, client_os', true);
+      const token = randomUUID().replace(/-/g, '');
+      uploadTokens.set(token, { filename: path.basename(args.file_path) });
+      return text(
+        `This client cannot run shell commands, so hand this command to the user.\n\ncurl -sS --fail-with-body -X PUT -H 'Content-Type: image/png' --upload-file '${args.file_path}' -- '${base}/api/uploads/${token}'\n\nOn success it prints a JSON body like {"name":"...","subfolder":"","type":"input"}.`,
+      );
     }
     if (tool === 'fake_upload_file') {
       if (typeof args.data_base64 !== 'string' || args.data_base64 === '') return text('沒有檔案內容', true);
@@ -155,6 +166,27 @@ export async function startFakeComfyMcp(options: { port?: number } = {}): Promis
     if (req.method === 'GET' && req.url === '/__calls') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ calls, uploads }));
+      return;
+    }
+    if (req.method === 'PUT' && req.url?.startsWith('/api/uploads/')) {
+      const token = req.url.slice('/api/uploads/'.length);
+      const pending = uploadTokens.get(token);
+      uploadTokens.delete(token);
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(chunk as Buffer);
+      const bytes = Buffer.concat(chunks);
+      if (!pending) {
+        res.writeHead(404).end('{"code":"NOT_FOUND"}');
+        return;
+      }
+      if (bytes.length === 0) {
+        res.writeHead(422, { 'Content-Type': 'application/json' }).end('{"code":"INVALID_IMAGE","message":"Uploaded input is not a valid image"}\n');
+        return;
+      }
+      const sha256 = createHash('sha256').update(bytes).digest('hex');
+      const name = `${sha256}.png`;
+      uploads.push({ ref: name, sha256, mime: String(req.headers['content-type'] ?? ''), filename: pending.filename });
+      res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ name, subfolder: '', type: 'input' }));
       return;
     }
     if (req.method === 'GET' && req.url?.startsWith('/api/s/')) {
@@ -201,7 +233,7 @@ export async function startFakeComfyMcp(options: { port?: number } = {}): Promis
     // 探測腳本（scripts/probe-comfy.mjs）用：列出假伺服器認得的工具；參數格式是假的，真的格式要實測
     if (body.method === 'tools/list') {
       calls.push({ method: 'tools/list', sessionId });
-      const names = ['partner_generate', 'run_template', 'get_job_status', 'get_output', 'fake_upload_file'];
+      const names = ['partner_generate', 'run_template', 'get_job_status', 'get_output', 'upload_file', 'fake_upload_file'];
       reply(res, body.id, { tools: names.map((name) => ({ name, description: `假的 ${name}`, inputSchema: { type: 'object', properties: {} } })) });
       return;
     }

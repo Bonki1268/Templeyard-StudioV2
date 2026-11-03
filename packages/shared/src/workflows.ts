@@ -31,10 +31,21 @@ export type ModelPrice = z.infer<typeof modelPriceSchema>;
  * 07「下一輪測試」第 1、4 項還沒實測，正式設定檔不填；沒有這一項的模型不能用參考圖生成。
  */
 export const referenceSlotSchema = z.object({
-  /** 參考圖清單寫進 args 底下的路徑（值是雲端參照的陣列） */
+  /** 參考圖寫進 args 底下的路徑 */
   paths: z.array(z.array(z.string().min(1)).min(1)).min(1),
-  /** 最多幾張 */
+  /** 模型一次收幾張 */
   max: z.number().int().positive(),
+  /**
+   * 寫入的格式（07 實測，2026-11-03；沒有設定時是 list）：
+   * - list：雲端參照的陣列
+   * - medias：partner_generate 的 medias 陣列，每張是 { role, name, subfolder, type: "input" }
+   * - single：一個雲端參照（範本的 LoadImage.image；只能 1 張）
+   */
+  format: z.enum(['list', 'medias', 'single']).optional(),
+  /** medias 格式的 role（例如 reference_image） */
+  role: z.string().min(1).optional(),
+  /** 參考圖比 max 多時，先拼成一張參考圖（最多拼幾張）；沒有設定時多的參考圖不送 */
+  sheet: z.object({ max: z.number().int().min(2).max(9) }).optional(),
 });
 export type ReferenceSlot = z.infer<typeof referenceSlotSchema>;
 
@@ -42,7 +53,18 @@ export type ReferenceSlot = z.infer<typeof referenceSlotSchema>;
  * 本機圖片上傳到 Comfy Cloud 的 MCP 工具（07「下一輪測試」第 1 項：tools/list 還沒實測）。
  * null 表示還不知道怎麼上傳；這時任何要用參考圖的生成都會在送出前停下來說明原因。
  */
-export const uploadConfigSchema = z.object({
+/**
+ * 一次性網址上傳（07 實測，2026-11-03）：upload_file 收本機檔案路徑，回一行 PUT 指令（一次性網址就是授權），
+ * PUT 上去後回 { name, subfolder, type }；雲端參照是 name（subfolder 不是空的時候是「subfolder/name」）
+ */
+export const signedPutUploadSchema = z.object({
+  mode: z.literal('signed_put'),
+  tool: z.string().min(1),
+  clientOs: z.enum(['darwin', 'linux', 'windows']),
+});
+
+const base64UploadSchema = z.object({
+  mode: z.literal('base64').optional(),
   tool: z.string().min(1),
   /** 固定的參數 */
   args: z.record(z.string(), z.unknown()).default({}),
@@ -55,6 +77,9 @@ export const uploadConfigSchema = z.object({
   /** 回應（structuredContent 或 JSON 文字）裡雲端參照的位置 */
   refPath: z.array(z.string().min(1)).min(1),
 });
+
+/** 用 base64 送進 MCP 工具（情境測試的假上傳工具用這個） */
+export const uploadConfigSchema = z.union([signedPutUploadSchema, base64UploadSchema]);
 export type UploadConfig = z.infer<typeof uploadConfigSchema>;
 
 export const workflowModelSchema = z.object({
@@ -74,6 +99,18 @@ export const workflowModelSchema = z.object({
     .object({
       first: z.object({ paths: z.array(z.array(z.string().min(1)).min(1)).min(1) }),
       last: z.object({ paths: z.array(z.array(z.string().min(1)).min(1)).min(1) }).optional(),
+    })
+    .optional(),
+  /**
+   * 有末格或中間關鍵畫格時改用的呼叫方式（例如 Gemini 的 r2v 範本）：
+   * 換掉 args、slots、frameInputs、references；末格與關鍵畫格當參考圖送入
+   */
+  referenceVariant: z
+    .object({
+      args: z.record(z.string(), z.unknown()),
+      slots: z.partialRecord(slotNameSchema, slotSchema),
+      frameInputs: z.object({ first: z.object({ paths: z.array(z.array(z.string().min(1)).min(1)).min(1) }) }),
+      references: referenceSlotSchema,
     })
     .optional(),
   price: modelPriceSchema,

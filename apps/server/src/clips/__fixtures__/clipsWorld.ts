@@ -1,4 +1,6 @@
+import type { WorkflowConfig } from '@templeyard/shared';
 import { createFfmpeg } from '../../compose/ffmpeg.js';
+import { createReferenceSheets } from '../../references/sheet.js';
 import { createFramesWorld, type FramesWorld } from '../../frames/__fixtures__/framesWorld.js';
 import { CLIP_NODES, createClipService, type ClipService } from '../service.js';
 
@@ -12,8 +14,8 @@ export type ClipsWorld = FramesWorld & {
   clipConsent(): string;
 };
 
-export async function createClipsWorld(options: { confirm?: boolean } = {}): Promise<ClipsWorld> {
-  const base = await createFramesWorld();
+export async function createClipsWorld(options: { confirm?: boolean; workflows?: WorkflowConfig } = {}): Promise<ClipsWorld> {
+  const base = await createFramesWorld(options.workflows ? { workflows: options.workflows } : {});
   const { world } = base;
   await base.frames.generate('v1', base.consent(4));
   await base.settleAll();
@@ -33,6 +35,7 @@ export async function createClipsWorld(options: { confirm?: boolean } = {}): Pro
     generation: { service: world.generation, writer: world.writer, sendAsset: world.sendAsset },
     store: world.store,
     ffmpeg: createFfmpeg(),
+    sheets: createReferenceSheets({ db: world.db, clock: world.clock, store: world.store, ffmpeg: createFfmpeg() }),
   });
   for (const node of CLIP_NODES) world.handlers[node] = clips.handleGenerated;
   base.onFrameChange.push((videoId, change) => clips.invalidate(videoId, change));

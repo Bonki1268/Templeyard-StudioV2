@@ -47,6 +47,7 @@ export function createMcpUploadTransport(session: McpSession, upload: UploadConf
   return {
     async send({ asset, bytes }) {
       if (!upload) throw new UploadNotConfiguredError();
+      if (upload.mode === 'signed_put') throw new Error('尚未實作');
       const args = structuredClone(upload.args);
       setAt(args, upload.dataPath, Buffer.from(bytes).toString('base64'));
       if (upload.mimePath) setAt(args, upload.mimePath, asset.mime);
