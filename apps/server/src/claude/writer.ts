@@ -48,6 +48,12 @@ function validWrittenPrompt(value: unknown): WrittenPrompt {
   return result.data;
 }
 
+/** Claude API 錯誤本文裡的 error.message */
+function apiErrorMessage(error: InstanceType<typeof Anthropic.APIError>): string {
+  const body = error.error as { error?: { message?: unknown } } | undefined;
+  return typeof body?.error?.message === 'string' ? body.error.message : '';
+}
+
 /** 用工具強制 Claude 回 { prompt, notes }（2026-11-03 實測：真的 Claude 會在 JSON 前後加說明文字） */
 const SUBMIT_TOOL = 'submit_final_prompt';
 const submitTool = {
@@ -73,20 +79,23 @@ export function createClaudePromptWriter(options: ClaudeWriterOptions): PromptWr
     async write(request, writeOptions) {
       const content = request.messages.map((message) => message.content).join('\n\n');
       const user = writeOptions?.retryNote ? `${content}\n\n${writeOptions.retryNote}` : content;
+      const base = { model: options.model, max_tokens: options.maxTokens ?? 16000, system: request.system, messages: [{ role: 'user' as const, content: user }] };
       let response: Anthropic.Message;
       try {
-        response = await client.messages.create({
-          model: options.model,
-          max_tokens: options.maxTokens ?? 16000,
-          system: request.system,
-          messages: [{ role: 'user', content: user }],
-          tools: [submitTool],
-          tool_choice: { type: 'tool', name: SUBMIT_TOOL },
-        });
+        try {
+          response = await client.messages.create({ ...base, tools: [submitTool], tool_choice: { type: 'tool', name: SUBMIT_TOOL } });
+        } catch (error: unknown) {
+          // 有的模型不接受強制工具呼叫（2026-11-03 實測 HTTP 400）：改用一般文字再送一次
+          if (!(error instanceof Anthropic.BadRequestError)) throw error;
+          response = await client.messages.create(base);
+        }
       } catch (error: unknown) {
-        // SDK 的錯誤訊息不含金鑰；只保留狀態碼，避免把回應內容塞進紀錄
         if (error instanceof Anthropic.AuthenticationError) throw new Error('Claude API 的金鑰不正確，請檢查 ANTHROPIC_API_KEY');
-        if (error instanceof Anthropic.APIError) throw new Error(`Claude API 回應錯誤（HTTP ${error.status ?? '連線失敗'}）`);
+        if (error instanceof Anthropic.APIError) {
+          // 附上 Claude 說的原因（不含金鑰），方便判斷是模型代號、參數還是額度的問題
+          const reason = apiErrorMessage(error).split(options.apiKey).join('[金鑰]').slice(0, 300);
+          throw new Error(`Claude API 回應錯誤（HTTP ${error.status ?? '連線失敗'}）${reason ? `：${reason}` : ''}`);
+        }
         throw new Error('連不上 Claude API，請確認網路');
       }
       if (response.stop_reason === 'refusal') throw new ClaudeOutputError('Claude 拒絕撰寫這段指令，請修改內容後再試');
