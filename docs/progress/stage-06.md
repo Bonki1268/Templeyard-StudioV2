@@ -107,3 +107,24 @@
   - Claude 模型：`CLAUDE_MODEL_AGENT`、`CLAUDE_MODEL_ASSIST`。01「待決定」排在第 6 階段前；程式沒有寫死，填進 `.env.local` 就能用。
   - 02 寫 Claude 的使用「每次呼叫寫入 generations，記錄 token 用量與費用」，06 沒有排在哪個階段。目前 Agent 與 AI 幫我寫都不寫生成紀錄。要排在哪個階段請你決定。
 - 實測（要花錢，只有你能跑）：用真的 Claude 跑一次創作對話，確認 Agent 會先說明再呼叫 `generate_questionnaire`，問卷的預填合理。
+
+## 6. 稽核結果
+
+稽核者：test-auditor。結果：**通過**
+
+| 項目 | 結果 |
+| --- | --- |
+| 1. 測試沒被動過 | ✔ `verify-tests-untouched.mjs 876ad37` 通過；紅燈改到的舊情境與舊測試逐一看過，都正當（補強的斷言比原本更嚴格） |
+| 2. 全部通過 | ✔ `pnpm test` 766、`pnpm test:e2e` 194 全部通過；typecheck、lint 通過 |
+| 3. 範圍完整 | ✔ 06 第 6 階段每一條、三個完成條件、F6／F7／F18 都有場景或單元測試；「建立分鏡方案」產生方案 v1 延到第 7 階段，合理 |
+| 4. 測試不空洞 | ✔ 沒有 `.skip`／`.only`；假模型的測試驗的是請求內容與工具結果 |
+| 5. 不花錢、不洩漏 | ✔ 沒有真的端點與金鑰；情境與單元測試都指向本機的假 Claude API |
+| 6. 原圖不上雲 | ✔ 這階段送給 Claude 的只有文字 |
+| 7. 沒有越界 | ✔ 資料表、路由與 05、03 一致；05 沒列的端點與名稱都寫在報告第 3 節 |
+
+需要修正（輕微，不影響通過）：
+
+1. `assist/service.test.ts:95` 名稱寫「也不會改動影片」，但沒有斷言。下一階段紅燈時補上比對呼叫前後影片資料的斷言。
+2. 03 的 `/series/:sid/settings`（含修改問卷預設值）沒有實作，06 也沒排階段，請使用者決定。
+3. 實作和 05 有兩處差異：`ai_assist_logs.series_id` 可以是 null；欄位代號用 `questionnaire.custom` 加 `target.questionId`。請使用者確認要不要更新 05。
+4. PROGRESS 階段一覽表第 5、6 階段的報告連結是空的。
