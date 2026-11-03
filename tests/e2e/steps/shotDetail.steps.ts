@@ -125,7 +125,8 @@ Then(/^單格時間軸顯示「(.+)」$/, async ({ page }, text: string) => {
 });
 
 Then(/^細修頁的設定依序是「(.+)」$/, async ({ page }, names: string) => {
-  const groups = await page.getByRole('region', { name: '設定', exact: true }).getByRole('group').all();
+  // 只看設定的折疊區塊（<details>），不算區塊裡面的欄位群組
+  const groups = await page.getByRole('region', { name: '設定', exact: true }).locator('details').all();
   const titles: string[] = [];
   for (const group of groups) titles.push((await group.getAttribute('aria-label')) ?? '');
   expect(titles).toEqual(names.split('、'));
@@ -165,10 +166,11 @@ Then(/^版本的「(.+)」標示「(.+)」$/, async ({ page }, name: string, tag
 
 When(/^我把圈選範圍設成左 (\d+)%、上 (\d+)%、寬 (\d+)%、高 (\d+)%$/, async ({ page }, left: string, top: string, width: string, height: string) => {
   const group = page.getByRole('group', { name: '圈選範圍', exact: true });
-  await group.getByLabel('左（%）', { exact: true }).fill(left);
-  await group.getByLabel('上（%）', { exact: true }).fill(top);
-  await group.getByLabel('寬（%）', { exact: true }).fill(width);
-  await group.getByLabel('高（%）', { exact: true }).fill(height);
+  // (\d+) 會被轉成數字，fill 只收字串
+  await group.getByLabel('左（%）', { exact: true }).fill(String(left));
+  await group.getByLabel('上（%）', { exact: true }).fill(String(top));
+  await group.getByLabel('寬（%）', { exact: true }).fill(String(width));
+  await group.getByLabel('高（%）', { exact: true }).fill(String(height));
 });
 
 Then(/^精緻圖的第 (\d+) 格以警告色外框標示$/, async ({ page }, seq: string) => {

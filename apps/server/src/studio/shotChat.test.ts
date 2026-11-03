@@ -64,7 +64,9 @@ describe('只針對這一格的對話', () => {
 
   it('這一格的對話與整支影片的對話分開', async () => {
     await send('這一格改成特寫', shotKey(2));
-    expect(chat.list('v1')).toEqual([]);
+    // 整支影片的對話只有問卷的答案摘要，沒有這一格的對話
+    expect(chat.list('v1').map((m) => m.content)).not.toContain('這一格改成特寫');
+    expect(chat.list('v1').every((m) => m.role === 'user')).toBe(true);
     expect(chat.list('v1', shotKey(2)).map((m) => m.role)).toEqual(['user', 'agent']);
     expect(chat.list('v1', shotKey(3))).toEqual([]);
   });
