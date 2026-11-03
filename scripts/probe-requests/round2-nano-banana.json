@@ -1,12 +1,12 @@
 [
   {
-    "label": "上傳測試圖 1（廟前全景，合成圖）",
-    "upload": "tests/e2e/fixtures/photos/廟前全景.png",
+    "label": "上傳測試圖 1（1280×720 合成測試畫面）",
+    "upload": "scripts/probe-requests/test-first-1280x720.png",
     "saveAs": "front"
   },
   {
-    "label": "上傳測試圖 2（三川殿，合成圖）",
-    "upload": "tests/e2e/fixtures/photos/三川殿.png",
+    "label": "上傳測試圖 2（1280×720 合成彩條）",
+    "upload": "scripts/probe-requests/test-last-1280x720.png",
     "saveAs": "hall"
   },
   {

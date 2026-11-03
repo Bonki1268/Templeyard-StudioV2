@@ -1,0 +1,34 @@
+[
+  {
+    "label": "上傳測試圖 1（1280×720 合成測試畫面）",
+    "upload": "scripts/probe-requests/test-first-1280x720.png",
+    "saveAs": "front"
+  },
+  {
+    "label": "上傳測試圖 2（1280×720 合成彩條）",
+    "upload": "scripts/probe-requests/test-last-1280x720.png",
+    "saveAs": "hall"
+  },
+  {
+    "label": "Seedance 2.0 首尾畫格生成 4 秒影片（改用 1280×720 測試圖）",
+    "tool": "run_template",
+    "paid": true,
+    "args": {
+      "name": "api_seedance2_0_flf2v",
+      "input_overrides": {
+        "3": {
+          "image": "{{saved.front.loader}}"
+        },
+        "4": {
+          "image": "{{saved.hall.loader}}"
+        },
+        "1": {
+          "model.prompt": "The camera glides from the temple front to the entrance hall in one smooth move, keeping both buildings unchanged. Ambient sound only, no background music, no text on screen.",
+          "model.duration": 4,
+          "model.resolution": "720p",
+          "model.ratio": "16:9"
+        }
+      }
+    }
+  }
+]

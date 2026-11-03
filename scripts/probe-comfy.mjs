@@ -259,12 +259,20 @@ function parsed(result) {
   }
 }
 
+/** 還在跑的狀態；其他狀態（成功、失敗、取消、錯誤…）都算結束 */
+const RUNNING_STATES = ['queued', 'pending', 'running', 'in_progress', 'submitted', 'executing', 'waiting'];
+
 async function waitJob(promptId) {
   for (let i = 0; i < 300; i += 1) {
     const status = await tool('get_job_status', { prompt_id: promptId });
     const data = parsed(status);
-    const state = data?.result?.status ?? data?.status ?? '';
-    if (['succeeded', 'completed', 'failed', 'cancelled', 'error'].includes(String(state))) return status;
+    const states = [data?.result?.status, data?.result?.job_status, data?.status, data?.job_status].filter(Boolean).map((v) => String(v).toLowerCase());
+    if (!status.ok || states.length === 0 || !states.some((state) => RUNNING_STATES.includes(state))) {
+      const message = data?.result?.error_message ?? data?.error_message ?? status.error ?? status.text ?? '';
+      console.log(`    任務結束：${states.join('／') || '（沒有狀態）'}${message ? `；${String(message).slice(0, 300)}` : ''}`);
+      return status;
+    }
+    if (i % 6 === 0) console.log(`    還在生成（${states.join('／')}）…`);
     await new Promise((resolve) => setTimeout(resolve, 5000));
   }
   return { ok: false, error: '等了 25 分鐘還沒完成' };
@@ -338,6 +346,8 @@ async function roundTwo(file) {
       entry.skipped = '使用者略過';
     }
     results.push(entry);
+    // 每做完一筆就存一次：中途按 Ctrl+C 也留得下前面的結果
+    save(confirm ? 'paid-results.json' : 'estimates.json', results);
   }
   save(confirm ? 'paid-results.json' : 'estimates.json', results);
   console.log(confirm ? '\n第 2 輪完成。請到 Comfy Cloud 帳單頁記下實際扣點，連同 data/probe/ 這次的資料夾交給 Claude Code。' : '\n預演完成，付費的呼叫都沒有送出。確認內容後加上 --confirm 再跑一次。');
