@@ -263,7 +263,9 @@ export function createCharacterService(deps: {
         });
         updateCharacter(db, row.id, { currentVersionId: versionId });
       });
-      return load(characterId);
+      const changed = load(characterId);
+      deps.onVersionChanged?.(changed);
+      return changed;
     },
 
     async generate(characterId, videoId, consentToken) {

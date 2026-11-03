@@ -162,6 +162,7 @@ export function createPlanService(deps: {
     });
     const saved = withNames(findPlanVersion(db, videoId, input.version));
     if (!saved) throw new Error('方案存檔失敗');
+    if (input.previous.length > 0) deps.onVersionSaved?.(videoId, input.previous, saved);
     return saved;
   }
 

@@ -15,8 +15,11 @@ import { resolveDataDir } from './paths.js';
 import { createAssistService } from './assist/service.js';
 import { CHARACTER_LOOK_NODE, CHARACTER_SHEET_NODE, createCharacterService } from './characters/service.js';
 import { createPlanService } from './plans/service.js';
+import { REFINED_FRAME_NODE, createFrameService, type FrameService } from './frames/service.js';
+import { planChangeInvalidations } from '@templeyard/shared';
 import { registerAssetRoutes } from './routes/assets.js';
 import { registerAssistRoutes } from './routes/assist.js';
+import { registerFrameRoutes } from './routes/frames.js';
 import { registerCharacterRoutes } from './routes/characters.js';
 import { registerCostRoutes } from './routes/costs.js';
 import { registerPhotoRoutes } from './routes/photos.js';
@@ -140,6 +143,8 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   const unavailable = deps.textUnavailableMessage ? { unavailableMessage: deps.textUnavailableMessage } : {};
   const questionnaires = createQuestionnaireService({ db: deps.db, clock });
   // 角色定裝版：生成用 Comfy Cloud（與定裝版相同的生成服務），沒有設定時回 503
+  // 精緻圖服務在方案與角色之後建立；這兩者改版時透過它標示需重新確認
+  let frameService: FrameService | null = null;
   const characters = createCharacterService({
     db: deps.db,
     clock,
@@ -147,15 +152,57 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     prompts,
     generation: runtime && generation ? { service: generation, writer: runtime.writer } : null,
     ...(deps.generationUnavailableMessage ? { unavailableMessage: deps.generationUnavailableMessage } : {}),
+    // 確認過的角色改了：這個角色出現的格子，精緻圖需重新確認（03 確認失效規則）
+    onVersionChanged: (character) => {
+      if (character.videoId) frameService?.invalidate(character.videoId, { type: 'character', characterName: character.name });
+    },
   });
   handlers[CHARACTER_SHEET_NODE] = characters.handleGenerated;
   handlers[CHARACTER_LOOK_NODE] = characters.handleGenerated;
-  const plans = createPlanService({ db: deps.db, clock, workflows, prompts, model: text?.agent ?? null, characters, ...unavailable });
+  // 方案改版：改到的格子，精緻圖需重新確認（03 確認失效規則）
+  const plans = createPlanService({
+    db: deps.db,
+    clock,
+    workflows,
+    prompts,
+    model: text?.agent ?? null,
+    characters,
+    onVersionSaved: (videoId, previous, next) => {
+      for (const change of planChangeInvalidations(previous, next.shots, next.diff.changedShotKeys)) frameService?.invalidate(videoId, change);
+    },
+    ...unavailable,
+  });
+  frameService = createFrameService({
+    db: deps.db,
+    clock,
+    workflows,
+    prompts,
+    plans,
+    characters,
+    generation:
+      runtime && generation
+        ? {
+            service: generation,
+            writer: runtime.writer,
+            sendAsset: createCloudAssetSender({
+              transport: runtime.transport,
+              readBytes: async (asset) => {
+                const found = findAsset(deps.db, asset.id);
+                if (!found) throw new Error(`找不到檔案：${asset.id}`);
+                return store.read(found.path);
+              },
+            }),
+          }
+        : null,
+    ...(deps.generationUnavailableMessage ? { unavailableMessage: deps.generationUnavailableMessage } : {}),
+  });
+  handlers[REFINED_FRAME_NODE] = frameService.handleGenerated;
   const chat = createChatService({ db: deps.db, clock, workflows, consents, questionnaires, plans, model: text?.agent ?? null, ...unavailable });
   registerStudioRoutes(app, chat, questionnaires);
   registerPlanRoutes(app, plans);
   registerCharacterRoutes(app, characters);
   registerSupplementalViewRoutes(app, boards, plans);
+  registerFrameRoutes(app, frameService);
   registerAssistRoutes(app, createAssistService({ db: deps.db, clock, prompts, model: text?.assist ?? null, ...unavailable }));
 
   // 啟動時以 prompt_id 取回已送出、還沒完成的任務（F21），不重新送出

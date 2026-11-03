@@ -1,8 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { imageModelLabel, videoModelLabel, type VideoDetail } from '@templeyard/shared';
-import { useId, useState } from 'react';
+import { useCallback, useId, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { fetchPlan, fetchQuestionnaire, fetchVideoBudget } from '../api/client';
+import { fetchFrames, fetchPlan, fetchQuestionnaire, fetchVideoBudget } from '../api/client';
+import { FramesPanel, GeneratingPanel, framesKey } from '../features/frames/FramesPanel';
+import { useFrameNotification } from '../features/frames/useFrameNotification';
 import { PlanPanel, planKey } from '../features/plan/PlanPanel';
 import { useSeriesList } from '../features/series/useSeriesList';
 import { ChatColumn } from '../features/studio/ChatColumn';
@@ -67,9 +69,32 @@ function Workspace({ detail }: { detail: VideoDetail }) {
     },
   });
   const chat = useStudioChat(videoId);
+  // 生成中每秒重新讀取；完成後停止
+  const frames = useQuery({
+    queryKey: framesKey(videoId),
+    queryFn: () => fetchFrames(videoId),
+    refetchInterval: (query) => (query.state.data?.generating ? 1000 : false),
+  });
+  const queryClient = useQueryClient();
+  const [expectingFrames, setExpectingFrames] = useState(false);
+  const stopExpecting = useCallback(() => setExpectingFrames(false), []);
+  useFrameNotification(expectingFrames, frames.data?.generating, frames.data?.shots.length ?? 0, stopExpecting);
+
+  async function framesStarted() {
+    setExpectingFrames(true);
+    setSearchParams({ panel: 'frames' });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: framesKey(videoId) }),
+      queryClient.invalidateQueries({ queryKey: planKey(videoId) }),
+    ]);
+  }
   const [savedVersion, setSavedVersion] = useState<number | null>(null);
 
-  const progress = { hasQuestionnaire: Boolean(questionnaire.data), hasPlan: Boolean(plan.data?.plan) };
+  const progress = {
+    hasQuestionnaire: Boolean(questionnaire.data),
+    hasPlan: Boolean(plan.data?.plan),
+    hasFrames: Boolean(frames.data?.generating || frames.data?.shots.some((shot) => shot.first)),
+  };
   const reachable = reachablePanels(progress);
   const panel = resolvePanel(searchParams.get('panel'), progress);
 
@@ -151,8 +176,12 @@ function Workspace({ detail }: { detail: VideoDetail }) {
               onPlanReady={() => setSearchParams({ panel: 'plan' })}
             />
           )}
+          {panel === 'frames' && frames.data?.generating && <GeneratingPanel label={frames.data.generatingLabel} />}
+          {panel === 'frames' && frames.data && !frames.data.generating && (
+            <FramesPanel videoId={videoId} imageModel={detail.video.imageModel} data={frames.data} onRegenerated={() => void framesStarted()} />
+          )}
           {panel === 'plan' && plan.data?.plan && (
-            <PlanPanel key={plan.data.plan.id} savedVersion={savedVersion} onSaved={setSavedVersion} videoId={videoId} data={{ ...plan.data, plan: plan.data.plan }} seriesVisualStyle={series?.visualStyle ?? ''} imageModel={detail.video.imageModel} />
+            <PlanPanel key={plan.data.plan.id} savedVersion={savedVersion} onSaved={setSavedVersion} videoId={videoId} data={{ ...plan.data, plan: plan.data.plan }} seriesVisualStyle={series?.visualStyle ?? ''} imageModel={detail.video.imageModel} onFramesStarted={() => void framesStarted()} />
           )}
         </div>
       </main>

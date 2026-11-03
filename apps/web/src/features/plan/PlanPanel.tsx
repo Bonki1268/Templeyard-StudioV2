@@ -12,12 +12,14 @@ import {
   type ShotInput,
 } from '@templeyard/shared';
 import { useEffect, useId, useRef, useState } from 'react';
-import { ApiRequestError, addSupplementalView, confirmSupplementalView, fetchPlanVersion, postPlanVersion } from '../../api/client';
+import { ApiRequestError, addSupplementalView, confirmSupplementalView, fetchPlanVersion, generateFrames, postPlanVersion } from '../../api/client';
+import { askNotificationPermission } from '../frames/notify';
+import { notificationApi } from '../frames/useFrameNotification';
 import { Tag } from '../../components/Tag';
 import { useCostConsent } from '../costs/useCostConsent';
 import { CharacterCard } from './CharacterCard';
 import { Button } from '../../components/Button';
-import { addShot, duplicateShot, generateBlockers, moveShot, removeShot, toInputs, withDurations } from './planEditor';
+import { addShot, duplicateShot, moveShot, removeShot, toInputs, withDurations } from './planEditor';
 import styles from './PlanPanel.module.css';
 import { ShotCard } from './ShotCard';
 import { Timeline } from './Timeline';
@@ -30,8 +32,10 @@ type PlanPanelProps = {
   videoId: string;
   data: PlanResponse & { plan: Plan };
   seriesVisualStyle: string;
-  /** 這支影片的圖片模型（補充視角的費用） */
+  /** 這支影片的圖片模型（補充視角與精緻圖的費用） */
   imageModel: string;
+  /** 送出精緻圖生成後（切到精緻圖面板） */
+  onFramesStarted: () => void;
   /** 最近一次存成的版本（放在上層：存檔後面板會以新版本重新開始） */
   savedVersion: number | null;
   onSaved: (version: number) => void;
@@ -70,7 +74,7 @@ function preview(inputs: readonly ShotInput[], saved: readonly Shot[]): Shot[] {
  * 分鏡方案面板：上方風格、角色、場景三張卡；中間時間軸；下方分鏡卡片；底部列出還不能生成的原因。
  * 上層以現行版本當 key：版本換了（存檔、對話修改、回到舊版）就從新的版本重新開始編輯。
  */
-export function PlanPanel({ videoId, data, seriesVisualStyle, imageModel, savedVersion, onSaved }: PlanPanelProps) {
+export function PlanPanel({ videoId, data, seriesVisualStyle, imageModel, savedVersion, onSaved, onFramesStarted }: PlanPanelProps) {
   const titleId = useId();
   const versionSelectId = useId();
   const queryClient = useQueryClient();
@@ -117,7 +121,22 @@ export function PlanPanel({ videoId, data, seriesVisualStyle, imageModel, savedV
   const viewingOld = selected !== current.version;
   const shots = viewingOld ? (old.data?.shots ?? []) : preview(drafts, current.shots);
   const check = checkPlan(shots, data.rules);
-  const blockers = generateBlockers(checkPlan(preview(drafts, current.shots), data.rules), characterBlockers(data.characters));
+  // 第 9 階段起「生成」開放：只剩秒數檢查與角色確認的原因
+  const blockers = [...checkPlan(preview(drafts, current.shots), data.rules).blocking, ...characterBlockers(data.characters)];
+  const frameCount = current.shots.reduce((sum, shot) => sum + (shot.keyframesEnabled ? 2 : 1), 0);
+  const generateConsent = useCostConsent(videoId);
+
+  function generate() {
+    void askNotificationPermission(notificationApi());
+    void generateConsent.ask({
+      items: [{ model: imageModel, units: frameCount }],
+      confirmLabel: '同意並生成',
+      run: async (consentToken) => {
+        await generateFrames(videoId, consentToken);
+        onFramesStarted();
+      },
+    });
+  }
   const missing = missingViews(shots);
   const sceneConsent = useCostConsent(videoId);
   const confirmView = useMutation({ mutationFn: (viewKey: string) => confirmSupplementalView(videoId, viewKey), onSettled: refresh });
@@ -260,18 +279,28 @@ export function PlanPanel({ videoId, data, seriesVisualStyle, imageModel, savedV
       )}
 
       <div className={styles.generate}>
-        <div>
-          <p className={styles.meta}>還不能生成的原因：</p>
-          <ul className={styles.blockers} aria-label="還不能生成的原因">
-            {blockers.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-        </div>
-        <Button variant="primary" disabled>
+        {blockers.length > 0 ? (
+          <div>
+            <p className={styles.meta}>還不能生成的原因：</p>
+            <ul className={styles.blockers} aria-label="還不能生成的原因">
+              {blockers.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className={styles.meta}>{`秒數檢查與角色都通過了，按「生成」產生 ${frameCount} 張精緻圖。`}</p>
+        )}
+        <Button variant="primary" disabled={blockers.length > 0 || viewingOld || busy || generateConsent.busy} onClick={generate}>
           生成
         </Button>
       </div>
+      {generateConsent.error && (
+        <p className={styles.error} role="alert">
+          生成失敗：{generateConsent.error}
+        </p>
+      )}
+      {generateConsent.dialog}
     </section>
   );
 }

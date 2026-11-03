@@ -4,6 +4,7 @@ import {
   assistResponseSchema,
   characterResponseSchema,
   chatListResponseSchema,
+  framesResponseSchema,
   planResponseSchema,
   planVersionResponseSchema,
   questionnaireResponseSchema,
@@ -27,6 +28,7 @@ import {
   type ChatEvent,
   type ChatMessage,
   type CreatePlanVersionInput,
+  type FramesResponse,
   type Plan,
   type PlanResponse,
   type Questionnaire,
@@ -320,4 +322,22 @@ export async function addSupplementalView(videoId: string, viewName: string, con
 
 export async function confirmSupplementalView(videoId: string, viewKey: string): Promise<void> {
   await request(`/api/videos/${videoId}/temple-board/supplemental-views/${encodeURIComponent(viewKey)}/confirm`, { method: 'POST' });
+}
+
+// ── 精緻圖（第 9 階段） ──
+
+export async function fetchFrames(videoId: string): Promise<FramesResponse> {
+  return framesResponseSchema.parse(await request(`/api/videos/${videoId}/frames`));
+}
+
+export async function generateFrames(videoId: string, consentToken: string | undefined): Promise<void> {
+  await request(`/api/videos/${videoId}/generate/frames`, { method: 'POST', body: JSON.stringify(consentToken ? { consentToken } : {}) });
+}
+
+export async function regenerateFrame(videoId: string, shotKey: string, consentToken: string | undefined): Promise<void> {
+  await request(`/api/videos/${videoId}/shots/${shotKey}/regenerate`, { method: 'POST', body: JSON.stringify({ kind: 'first', ...(consentToken ? { consentToken } : {}) }) });
+}
+
+export async function confirmFrame(videoId: string, shotKey: string): Promise<FramesResponse> {
+  return framesResponseSchema.parse(await request(`/api/videos/${videoId}/shots/${shotKey}/frames/confirm`, { method: 'POST' }));
 }

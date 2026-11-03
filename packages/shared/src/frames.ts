@@ -69,18 +69,37 @@ export const videoEventSchema = z.object({ type: z.literal('frames'), generating
 export type VideoEvent = z.infer<typeof videoEventSchema>;
 
 /** 一格的狀態：首格（需要時加末格）都確認、沒有需重新確認才算確認 */
-export function frameShotState(_shot: Pick<ShotFrames, 'first' | 'last' | 'needsLast'>): FrameShotState {
-  throw new Error('尚未實作');
+export function frameShotState(shot: Pick<ShotFrames, 'first' | 'last' | 'needsLast'>): FrameShotState {
+  const parts = shot.needsLast ? [shot.first, shot.last] : [shot.first];
+  if (parts.some((frame) => frame === null)) return 'missing';
+  const present = parts.filter((frame): frame is Frame => frame !== null);
+  if (present.some((frame) => frame.state === 'generating')) return 'generating';
+  if (present.some((frame) => frame.state === 'failed')) return 'failed';
+  if (present.some((frame) => frame.needsReconfirm)) return 'needs_reconfirm';
+  if (present.every((frame) => frame.selected)) return 'confirmed';
+  return 'pending_confirm';
 }
 
 /** 「生成影片」旁列出的原因：還沒確認或需重新確認的格子，加上影片生成還沒開放 */
-export function clipBlockers(_shots: readonly Pick<ShotFrames, 'seq' | 'first' | 'last' | 'needsLast'>[]): string[] {
-  throw new Error('尚未實作');
+const CLIP_BLOCKER_TEXT: Partial<Record<FrameShotState, string>> = {
+  missing: '還沒有精緻圖',
+  generating: '精緻圖還在生成中',
+  failed: '精緻圖生成失敗，請重生',
+  pending_confirm: '精緻圖還沒確認',
+  needs_reconfirm: '精緻圖需重新確認',
+};
+
+export function clipBlockers(shots: readonly Pick<ShotFrames, 'seq' | 'first' | 'last' | 'needsLast'>[]): string[] {
+  const reasons = shots.flatMap((shot) => {
+    const text = CLIP_BLOCKER_TEXT[frameShotState(shot)];
+    return text ? [`第 ${shot.seq} 格：${text}`] : [];
+  });
+  return [...reasons, CLIPS_NOT_OPEN];
 }
 
 /** 生成中面板的內容類型：「精緻圖・4 格」 */
-export function generatingLabel(_shotCount: number): string {
-  throw new Error('尚未實作');
+export function generatingLabel(shotCount: number): string {
+  return `精緻圖・${shotCount} 格`;
 }
 
 // ── 確認失效規則（03 App Flow 的對照表） ──
@@ -110,17 +129,35 @@ export type Invalidated = { frames: string[]; keyframes: string[]; clips: string
  * - 任一格影片 → 成品
  */
 export function invalidatedBy(
-  _change: InvalidationChange,
-  _shots: readonly { shotKey: string; viewKey: string; characters: readonly string[] }[],
+  change: InvalidationChange,
+  shots: readonly { shotKey: string; viewKey: string; characters: readonly string[] }[],
 ): Invalidated {
-  throw new Error('尚未實作');
+  const none: Invalidated = { frames: [], keyframes: [], clips: [], final: false };
+  const all = (keys: string[]): Invalidated => ({ frames: keys, keyframes: keys, clips: keys, final: false });
+  switch (change.type) {
+    case 'templeBoard':
+      return all(shots.filter((shot) => change.viewKeys.includes(shot.viewKey)).map((shot) => shot.shotKey));
+    case 'character':
+      return all(shots.filter((shot) => shot.characters.includes(change.characterName)).map((shot) => shot.shotKey));
+    case 'shot':
+      return { ...all([change.shotKey]), final: change.durationChanged };
+    case 'firstFrame':
+      return { ...none, keyframes: [change.shotKey], clips: [change.shotKey] };
+    case 'clip':
+      return { ...none, final: true };
+  }
 }
 
 /** 方案改版時的失效：內容不同或秒數不同的格子（新增的格子沒有精緻圖，不算） */
 export function planChangeInvalidations(
-  _previous: readonly { shotKey: string; durationSec: number }[],
-  _next: readonly { shotKey: string; durationSec: number }[],
-  _changedShotKeys: readonly string[],
+  previous: readonly { shotKey: string; durationSec: number }[],
+  next: readonly { shotKey: string; durationSec: number }[],
+  changedShotKeys: readonly string[],
 ): InvalidationChange[] {
-  throw new Error('尚未實作');
+  const before = new Map(previous.map((shot) => [shot.shotKey, shot.durationSec]));
+  return next.flatMap((shot): InvalidationChange[] => {
+    const old = before.get(shot.shotKey);
+    if (old === undefined || !changedShotKeys.includes(shot.shotKey)) return [];
+    return [{ type: 'shot', shotKey: shot.shotKey, durationChanged: old !== shot.durationSec }];
+  });
 }
