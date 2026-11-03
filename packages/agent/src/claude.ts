@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { ClaudeCallError, type AgentBlock, type AgentMessage, type ClaudeModel, type StopReason } from './types.js';
+import { ClaudeCallError, type AgentBlock, type AgentMessage, type ClaudeModel, type ModelRequest, type StopReason } from './types.js';
 
 // Claude API 的轉接：用官方 SDK 呼叫 Messages API，轉成 types.ts 的型別。
 // 模型代號由呼叫端從環境變數帶入（CLAUDE_MODEL_AGENT、CLAUDE_MODEL_ASSIST），程式不寫死。
@@ -48,8 +48,8 @@ export function createClaudeModel(options: ClaudeModelOptions): ClaudeModel {
   return {
     async create(request) {
       let response: Anthropic.Message;
-      try {
-        response = await client.messages.create({
+      const send = (toolChoice: ModelRequest['toolChoice'] | { type: 'auto' }) =>
+        client.messages.create({
           model: options.model,
           max_tokens: request.maxTokens ?? options.maxTokens ?? 4096,
           system: request.system,
@@ -63,13 +63,27 @@ export function createClaudeModel(options: ClaudeModelOptions): ClaudeModel {
                 })),
               }
             : {}),
-          ...(request.toolChoice ? { tool_choice: request.toolChoice } : {}),
+          ...(toolChoice ? { tool_choice: toolChoice } : {}),
         });
+      try {
+        try {
+          response = await send(request.toolChoice);
+        } catch (error: unknown) {
+          // 有的模型不接受指定工具（2026-11-03 實測 HTTP 400）：改成可以用工具（auto）再送一次；
+          // 呼叫的一方（例如 requestToolInput）沒拿到工具時會再要求一次
+          const forced = request.toolChoice !== undefined;
+          if (!(error instanceof Anthropic.BadRequestError) || !forced) throw error;
+          response = await send({ type: 'auto' });
+        }
       } catch (error: unknown) {
-        // SDK 的錯誤訊息不含金鑰；只保留狀態碼，避免把回應內容塞進紀錄
         if (error instanceof Anthropic.AuthenticationError) throw new ClaudeCallError('Claude API 的金鑰不正確，請檢查 ANTHROPIC_API_KEY');
         if (error instanceof Anthropic.APIConnectionError) throw new ClaudeCallError('連不上 Claude API，請確認網路');
-        if (error instanceof Anthropic.APIError) throw new ClaudeCallError(`Claude API 回應錯誤（HTTP ${error.status ?? '連線失敗'}）`);
+        if (error instanceof Anthropic.APIError) {
+          // 附上 Claude 說的原因（不含金鑰），方便判斷是模型代號、參數還是額度的問題
+          const body = error.error as { error?: { message?: unknown } } | undefined;
+          const reason = typeof body?.error?.message === 'string' ? body.error.message.split(options.apiKey).join('[金鑰]').slice(0, 300) : '';
+          throw new ClaudeCallError(`Claude API 回應錯誤（HTTP ${error.status ?? '連線失敗'}）${reason ? `：${reason}` : ''}`);
+        }
         throw new ClaudeCallError('連不上 Claude API，請確認網路');
       }
       return {
