@@ -235,8 +235,13 @@ describe('產生寺廟定裝版', () => {
     await expectBoardError(unavailable.generate('v1', {}), 503, '還沒設定生成服務：缺少 COMFY_MCP_URL');
   });
 
-  it('正式設定檔還不知道參考圖與上傳方式：同意後送出前停下來說明待實測，不留下定裝版', async () => {
-    const production = await createWorld({ workflows: loadWorkflowConfig(workflowsFile) });
+  it('設定檔還不知道參考圖與上傳方式：同意後送出前停下來說明待實測，不留下定裝版', async () => {
+    // 正式設定檔在 2026-11-03 實測後已填好上傳與參考圖；這裡把兩者清掉，驗證還沒實測時的行為
+    const unmeasured = structuredClone(loadWorkflowConfig(workflowsFile));
+    unmeasured.upload = null;
+    const nano = unmeasured.models['nano-banana-pro'];
+    if (nano) delete nano.references;
+    const production = await createWorld({ workflows: unmeasured });
     try {
       addVideo(production, { id: 'v1' });
       addPhoto(production, { viewKey: 'front_overview' });

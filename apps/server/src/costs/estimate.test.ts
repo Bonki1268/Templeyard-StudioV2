@@ -40,12 +40,12 @@ describe('依參考單價預估費用', () => {
     const estimate = estimateCost(
       [
         { model: 'gemini-omni-1.1-flash', units: 4 },
-        { model: 'nano-banana-pro', units: 1 },
+        { model: 'nano-banana-2-lite', units: 1 },
       ],
       config(),
     );
     expect(estimate.credits).toBeNull();
-    expect(estimate.lines[1]).toEqual({ model: 'nano-banana-pro', units: 1, unitCredits: null, credits: null });
+    expect(estimate.lines[1]).toEqual({ model: 'nano-banana-2-lite', units: 1, unitCredits: null, credits: null });
   });
 
   it('模型不在設定檔時丟出 UnknownModelError，指出是第幾項', () => {
@@ -85,10 +85,11 @@ describe('要不要再次同意', () => {
   });
 
   it('單價待實測時一定要同意，並指出是哪個模型', () => {
-    const result = checkConsent(estimateCost([{ model: 'seedance-2.0', units: 5 }], config()), budget({ threshold: 5000 }), config());
+    // Seedance 2.0 在 2026-11-03 實測過了；改用單價還沒實測的 Nano Banana 2 Lite
+    const result = checkConsent(estimateCost([{ model: 'nano-banana-2-lite', units: 5 }], config()), budget({ threshold: 5000 }), config());
     expect(result).toEqual({
       required: true,
-      reasons: [{ code: 'price_unknown', message: 'Seedance 2.0 的參考單價還沒實測，無法預估' }],
+      reasons: [{ code: 'price_unknown', message: 'Nano Banana 2 Lite 的參考單價還沒實測，無法預估' }],
     });
   });
 

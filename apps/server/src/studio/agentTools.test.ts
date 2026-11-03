@@ -79,7 +79,8 @@ describe('Agent 的工具', () => {
   });
 
   it('預估費用：依參考單價；單價待實測時說明', async () => {
-    const result = await run('estimate_cost', { items: [{ model: 'nano-banana-pro', units: 2 }] });
+    // Nano Banana 2 Lite 的單價還沒實測（Nano Banana Pro 在 2026-11-03 實測過了）
+    const result = await run('estimate_cost', { items: [{ model: 'nano-banana-2-lite', units: 2 }] });
     expect(result.status).toBe('ok');
     expect(result.content).toContain('單價待實測');
   });
