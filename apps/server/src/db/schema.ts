@@ -364,3 +364,40 @@ export const shots = sqliteTable(
 );
 
 export type ShotRow = typeof shots.$inferSelect;
+
+/** characters：角色；系列角色有 series_id，影片專屬角色有 video_id */
+export const characters = sqliteTable(
+  'characters',
+  {
+    id: text('id').primaryKey(),
+    seriesId: text('series_id').references(() => series.id),
+    videoId: text('video_id').references(() => videos.id),
+    name: text('name').notNull(),
+    isSeries: integer('is_series', { mode: 'boolean' }).notNull().default(false),
+    currentVersionId: text('current_version_id'),
+  },
+  (table) => [index('characters_series_idx').on(table.seriesId), index('characters_video_idx').on(table.videoId)],
+);
+
+export type CharacterRow = typeof characters.$inferSelect;
+
+/** character_versions：角色的版本；確認後鎖定，後續生成都使用這個版本 */
+export const characterVersions = sqliteTable(
+  'character_versions',
+  {
+    id: text('id').primaryKey(),
+    characterId: text('character_id')
+      .notNull()
+      .references(() => characters.id),
+    version: integer('version').notNull(),
+    description: text('description').notNull(),
+    continuityLocks: text('continuity_locks', { mode: 'json' }).$type<string[]>().notNull(),
+    sheetAssetId: text('sheet_asset_id').references(() => assets.id),
+    lookAssetId: text('look_asset_id').references(() => assets.id),
+    imageModel: text('image_model').notNull(),
+    confirmedAt: text('confirmed_at'),
+  },
+  (table) => [uniqueIndex('character_versions_character_version_uq').on(table.characterId, table.version)],
+);
+
+export type CharacterVersionRow = typeof characterVersions.$inferSelect;

@@ -147,3 +147,18 @@ describe('採用', () => {
     await expectStudioError(() => assist.find('nope'), 404, '找不到這筆 AI 建議');
   });
 });
+
+describe('角色的外觀描述與連續性鎖', () => {
+  it('用 Prompt Studio 的 character-design 節點；外觀描述取 description，連續性鎖一行一條', async () => {
+    const before = world.fake.requests.length;
+
+    const description = await suggest({ field: 'character.description', videoId: 'v1', userInput: '七十多歲的阿嬤', target: { characterId: 'x' } });
+    const locks = await suggest({ field: 'character.locks', videoId: 'v1', userInput: '七十多歲的阿嬤' });
+
+    expect(world.fake.requests[before]?.system).toContain('角色設計師');
+    expect(world.fake.requests[before]?.user).toContain('七十多歲的阿嬤');
+    expect(description.suggestion).toContain('七十多歲的在地阿嬤');
+    expect(locks.suggestion).toBe('grey cotton cardigan\nsilver hairpin');
+  });
+});
+

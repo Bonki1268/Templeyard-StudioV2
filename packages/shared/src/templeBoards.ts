@@ -164,3 +164,10 @@ export function viewTags(view: Pick<TempleView, 'source' | 'confirmed' | 'state'
   // 生成中或失敗時不提示確認：等產生完成再說
   return view.confirmed || view.state !== 'ready' ? ['依照片'] : ['依照片', '需重新確認'];
 }
+
+/** POST /api/videos/:id/temple-board/supplemental-views：補充方案需要、定裝版還沒有的視角（F11） */
+export const addSupplementalViewSchema = z.object({
+  viewName: z.string({ error: '請填寫要補充的視角名稱' }).trim().min(1, '請填寫要補充的視角名稱').max(20, '視角名稱最多 20 字'),
+  consentToken: z.string().optional(),
+});
+export type AddSupplementalViewInput = z.input<typeof addSupplementalViewSchema>;

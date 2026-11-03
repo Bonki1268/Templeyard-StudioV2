@@ -280,6 +280,18 @@
       "text": "{\"polished\": \"漁民在廟埕點香，抬頭看見屋脊上的媽祖像（錄製的回應第 {{n}} 版）\", \"notes\": \"錄製的回應\"}"
     },
     {
+      "match": "人物設定參考圖",
+      "text": "{\"prompt\": \"Character reference sheet, front side back. {{user}}\", \"notes\": \"錄製的回應：角色三視圖\"}"
+    },
+    {
+      "match": "角色定裝照",
+      "text": "{\"prompt\": \"Character look test in the temple. {{user}}\", \"notes\": \"錄製的回應：角色定裝圖\"}"
+    },
+    {
+      "match": "角色設計師",
+      "text": "{\"name\": \"阿嬤\", \"description\": \"七十多歲的在地阿嬤，灰白短髮，穿灰色開襟毛衣（錄製的回應第 {{n}} 版）\", \"identityAnchors\": [\"short grey hair\"], \"look\": \"grey cotton cardigan\", \"continuityLocks\": [\"grey cotton cardigan\", \"silver hairpin\"]}"
+    },
+    {
       "match": "廟埕影室的 AI 輔助撰寫",
       "matchUser": "測試：AI 建議格式錯誤",
       "text": "這不是 JSON"

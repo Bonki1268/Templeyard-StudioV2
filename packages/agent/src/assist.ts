@@ -2,6 +2,8 @@ import { assistOutputSchema, copyPolishOutputSchema, type AssistField } from '@t
 
 // AI 輔助撰寫（規格書「AI 輔助撰寫」）：先建議、後採用；內容只用提供的資料，不新增沒有來源的寺廟事實。
 
+export type AssistOutputKind = 'generic' | 'copy-polish' | 'character-description' | 'character-locks';
+
 export const ASSIST_ROLE = '你是廟埕影室的 AI 輔助撰寫';
 
 export type AssistContext = {
@@ -15,6 +17,10 @@ export type AssistContext = {
   viewName: string | null;
   /** 問卷題目（questionnaire.custom） */
   questionTitle: string | null;
+  /** 角色名稱（character.*） */
+  characterName?: string | null;
+  /** 系列名稱（character-design 節點） */
+  seriesName?: string | null;
 };
 
 const FORMAT_ERROR = 'AI 建議的格式不正確，請再試一次';
@@ -70,15 +76,21 @@ export function copyPolishVariables(context: AssistContext): Record<string, unkn
   };
 }
 
+/** character-design 節點（角色的外觀描述與連續性鎖）的變數：使用者的輸入當作角色構想 */
+export function characterDesignVariables(_context: AssistContext): Record<string, unknown> {
+  throw new Error('尚未實作');
+}
+
 export class AssistOutputError extends Error {
   override name = 'AssistOutputError';
 }
 
 /**
  * 解析 Claude 回的建議：允許前後空白與 ```json 程式碼區塊；
- * generic 取 suggestion，copy-polish 取 polished；格式不正確丟出 AssistOutputError「AI 建議的格式不正確，請再試一次」
+ * generic 取 suggestion，copy-polish 取 polished；character-description 取 description，
+ * character-locks 取 continuityLocks（一行一條）；格式不正確丟出 AssistOutputError「AI 建議的格式不正確，請再試一次」
  */
-export function parseAssistOutput(text: string, kind: 'generic' | 'copy-polish'): string {
+export function parseAssistOutput(text: string, kind: AssistOutputKind): string {
   const trimmed = text.trim();
   const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/.exec(trimmed);
   let parsed: unknown;

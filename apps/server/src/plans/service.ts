@@ -17,7 +17,7 @@ import {
   withTimeline,
   type Plan,
   type PlanDiff,
-  type PlanResponse,
+  type planResponseSchema,
   type PlanSource,
   type PromptFile,
   type RevisePlanInput,
@@ -38,6 +38,7 @@ import { findQuestionnaire } from '../studio/repository.js';
 import { listViews } from '../templeBoards/repository.js';
 import { findTemple } from '../temples/repository.js';
 import { findVideo } from '../videos/repository.js';
+import type { CharacterService } from '../characters/service.js';
 import { findCurrentPlan, findPlanVersion, insertPlan, knownShotKeys, listPlanVersions } from './repository.js';
 
 // 分鏡方案（F8、F9）：Agent 產生第 1 版；每次修改（手動、對話、回到舊版）新增一個版本，shot_key 跨版本不變。
@@ -48,7 +49,7 @@ export type CreatePlanVersion = z.output<typeof createPlanVersionSchema>;
 
 export type PlanService = {
   /** 現行方案、版本清單、秒數檢查的規則與定裝版的視角；影片不存在：StudioError 404 */
-  get(videoId: string): PlanResponse;
+  get(videoId: string): z.input<typeof planResponseSchema>;
   /** 某一版；找不到：StudioError 404「找不到這個方案版本」 */
   version(videoId: string, version: number): Plan;
   /**
@@ -70,6 +71,8 @@ export type PlanService = {
   revise(videoId: string, changes: RevisePlanInput['changes']): { plan: Plan; diff: PlanDiff };
   /** 現行方案；還沒有時為 null */
   current(videoId: string): Plan | null;
+  /** 把用到 from 視角的格子改用 to（補充視角確認後）；有改動時新增一個 user_edit 版本，沒有方案或沒有改動時回傳 null */
+  replaceViewKey(videoId: string, from: string, to: string): Plan | null;
 };
 
 const SUBMIT_PLAN_TOOL = {
@@ -84,6 +87,8 @@ export function createPlanService(deps: {
   workflows: WorkflowConfig;
   prompts: ReadonlyMap<string, PromptFile>;
   model: ClaudeModel | null;
+  /** 第 8 階段：方案的角色名稱與角色編號互轉 */
+  characters?: CharacterService;
   unavailableMessage?: string;
 }): PlanService {
   const { db, clock, workflows } = deps;
@@ -250,6 +255,10 @@ export function createPlanService(deps: {
 
     current(videoId) {
       return findCurrentPlan(db, videoId);
+    },
+
+    replaceViewKey() {
+      throw new Error('尚未實作');
     },
   };
 }

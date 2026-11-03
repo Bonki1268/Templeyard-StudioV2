@@ -134,7 +134,7 @@ describe('讀取方案', () => {
     expect(response.plan?.version).toBe(1);
     expect(response.versions.map((v) => [v.version, v.source])).toEqual([[1, 'agent']]);
     expect(response.rules).toEqual({ targetSec: 30, minGenerationSec: 3, videoModelLabel: 'Gemini Omni 1.1 Flash' });
-    expect(response.views).toEqual([{ viewKey: 'front_overview', viewName: '廟前全景' }]);
+    expect(response.views).toEqual([{ viewKey: 'front_overview', viewName: '廟前全景', source: 'photo', confirmed: true, state: 'ready' }]);
   });
 
   it('目標長度依問卷的「長度」', async () => {

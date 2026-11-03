@@ -1,6 +1,14 @@
 import { findAssistField, type AssistField } from '@templeyard/shared';
 import { describe, expect, it } from 'vitest';
-import { ASSIST_ROLE, AssistOutputError, buildAssistRequest, copyPolishVariables, parseAssistOutput, type AssistContext } from './assist.js';
+import {
+  ASSIST_ROLE,
+  AssistOutputError,
+  buildAssistRequest,
+  characterDesignVariables,
+  copyPolishVariables,
+  parseAssistOutput,
+  type AssistContext,
+} from './assist.js';
 
 function field(key: string): AssistField {
   const found = findAssistField(key);
@@ -96,5 +104,29 @@ describe('解析 AI 建議', () => {
     ['copy-polish 少了 polished', '{"suggestion": "x"}', 'copy-polish'],
   ] as const)('%s：說明格式不正確', (_label, text, kind) => {
     expect(() => parseAssistOutput(text, kind)).toThrow(new AssistOutputError('AI 建議的格式不正確，請再試一次'));
+  });
+});
+
+describe('角色的外觀描述與連續性鎖（character-design 節點）', () => {
+  it('變數對應 prompt-studio/prompts/character-design.json：使用者的輸入當作角色構想', () => {
+    expect(
+      characterDesignVariables({ ...base, field: field('character.description'), characterName: '阿嬤', seriesName: '新北廟宇巡禮', userInput: '七十多歲的阿嬤' }),
+    ).toEqual({
+      character: { name: '阿嬤' },
+      idea: '七十多歲的阿嬤',
+      series: { name: '新北廟宇巡禮', style: '寫實電影感、清晨暖光', direction: '歷史故事' },
+      instruction: '',
+    });
+  });
+
+  const output = '{"name":"阿嬤","description":"七十多歲的阿嬤，灰白短髮","identityAnchors":[],"look":"","continuityLocks":["grey cotton cardigan","silver hairpin"]}';
+
+  it('外觀描述取 description；連續性鎖取 continuityLocks，一行一條', () => {
+    expect(parseAssistOutput(output, 'character-description')).toBe('七十多歲的阿嬤，灰白短髮');
+    expect(parseAssistOutput(output, 'character-locks')).toBe('grey cotton cardigan\nsilver hairpin');
+  });
+
+  it('沒有連續性鎖時格式不正確', () => {
+    expect(() => parseAssistOutput('{"name":"阿嬤","description":"x","continuityLocks":[]}', 'character-locks')).toThrow(AssistOutputError);
   });
 });

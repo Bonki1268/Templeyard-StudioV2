@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { characterSchema } from './characters.js';
 
 // 分鏡方案與卡片（01 F8、F9；05 plans、shots；規格書「5. 分鏡方案」）
 
@@ -95,8 +96,18 @@ export const planResponseSchema = z.object({
   plan: planSchema.nullable(),
   versions: z.array(planVersionSummarySchema),
   rules: planRulesSchema,
-  /** 寺廟定裝版的視角（場景卡與場景視角選單） */
-  views: z.array(z.object({ viewKey: z.string(), viewName: z.string() })),
+  /** 寺廟定裝版的視角（場景卡與場景視角選單）；補充的視角也在裡面 */
+  views: z.array(
+    z.object({
+      viewKey: z.string(),
+      viewName: z.string(),
+      source: z.enum(['photo', 'ai_inferred']).default('photo'),
+      confirmed: z.boolean().default(true),
+      state: z.enum(['generating', 'ready', 'failed']).default('ready'),
+    }),
+  ),
+  /** 方案用到的角色（第 8 階段） */
+  characters: z.array(characterSchema).default([]),
 });
 export type PlanResponse = z.infer<typeof planResponseSchema>;
 
@@ -405,4 +416,14 @@ export function planVersionLabel(version: Pick<PlanVersionSummary, 'version' | '
   const source =
     version.source === 'revert' && version.diff.revertedFrom !== undefined ? `回到第 ${version.diff.revertedFrom} 版` : SOURCE_LABELS[version.source];
   return `第 ${version.version} 版（${source}）`;
+}
+
+/** 補充視角的 viewKey：「custom:後殿」 */
+export function supplementalViewKey(name: string): string {
+  return `custom:${name.trim()}`;
+}
+
+/** 方案用到、定裝版還沒有的視角名稱（不重複，依序號） */
+export function missingViews(_shots: readonly Pick<Shot, 'viewKey'>[]): string[] {
+  throw new Error('尚未實作');
 }

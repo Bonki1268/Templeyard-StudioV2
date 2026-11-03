@@ -10,6 +10,7 @@ import {
   estimateDialogueSec,
   formatClock,
   missingViewName,
+  missingViews,
   moveBoundary,
   planOutputSchema,
   planTargetSec,
@@ -17,6 +18,7 @@ import {
   shotInputSchema,
   shotTitle,
   shotsFromOutput,
+  supplementalViewKey,
   withTimeline,
   type PlanRules,
   type Shot,
@@ -282,5 +284,16 @@ describe('版本選單的文字', () => {
     [{ version: 4, source: 'revert' as const, diff: { ...diff, revertedFrom: 1 } }, '第 4 版（回到第 1 版）'],
   ])('%o → %s', (version, label) => {
     expect(planVersionLabel(version)).toBe(label);
+  });
+});
+
+describe('補充視角', () => {
+  it('方案用到、定裝版還沒有的視角名稱，不重複，依序號', () => {
+    expect(missingViews([{ viewKey: 'front_overview' }, { viewKey: 'missing:後殿' }, { viewKey: 'missing:老樹' }, { viewKey: 'missing:後殿' }])).toEqual(['後殿', '老樹']);
+    expect(missingViews([{ viewKey: 'front_overview' }])).toEqual([]);
+  });
+
+  it('補充視角的 viewKey', () => {
+    expect(supplementalViewKey(' 後殿 ')).toBe('custom:後殿');
   });
 });

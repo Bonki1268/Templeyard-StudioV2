@@ -1,6 +1,7 @@
 export * from './api.js';
 export * from './assets.js';
 export * from './assist.js';
+export * from './characters.js';
 export * from './chat.js';
 export * from './costs.js';
 export * from './generations.js';

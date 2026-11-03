@@ -50,7 +50,7 @@ describe('POST /api/videos/:id/plan/generate', () => {
     expect(got.plan?.shots).toHaveLength(4);
     expect(got.versions).toHaveLength(1);
     expect(got.rules.minGenerationSec).toBe(3);
-    expect(got.views).toEqual([{ viewKey: 'front_overview', viewName: '廟前全景' }]);
+    expect(got.views).toEqual([{ viewKey: 'front_overview', viewName: '廟前全景', source: 'photo', confirmed: true, state: 'ready' }]);
   });
 
   it('問卷還沒送出：409', async () => {

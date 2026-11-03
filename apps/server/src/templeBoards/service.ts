@@ -11,6 +11,7 @@ import {
   regenerateTempleViewSchema,
   updateTempleBoardSchema,
   viewName,
+  type AddSupplementalViewInput,
   type CloudOkAsset,
   type CostCheck,
   type CostItem,
@@ -112,6 +113,13 @@ export type TempleBoardService = {
   reuse(videoId: string): TempleBoard;
   /** 以這支影片目前（已確認）的版本另存新版本：複製視角圖與外觀規範，新版本尚未確認 */
   saveAsNewVersion(videoId: string): TempleBoard;
+  /**
+   * 補充視角（F11）：在這支影片使用的定裝版加上一個 AI 推測的視角（記下由哪支影片補充），送出生成。
+   * 已經有同名的視角：409「寺廟定裝版已經有「名稱」」；沒有同意憑證：consent_required
+   */
+  addSupplementalView(videoId: string, input: AddSupplementalViewInput): Promise<GenerateOutcome>;
+  /** 確認補充的視角；只能確認這支影片補充、已產生完成的視角；找不到：404「找不到這個視角」 */
+  confirmSupplementalView(videoId: string, viewKey: string): TempleBoard;
   /** 生成服務的 temple-view 完成處理：把視角圖接到視角列 */
   handleGenerated: SucceededHandler;
 };
@@ -532,6 +540,14 @@ export function createTempleBoardService(deps: TempleBoardServiceDeps): TempleBo
         tx.update(videos).set({ templeBoardVersionId: versionId, updatedAt: nowIso() }).where(eq(videos.id, video.id)).run();
       });
       return toBoard(requireVideo(video.id), findVersion(db, versionId) ?? never());
+    },
+
+    async addSupplementalView() {
+      throw new Error('尚未實作');
+    },
+
+    confirmSupplementalView() {
+      throw new Error('尚未實作');
     },
 
     handleGenerated(generation, assetIds) {
