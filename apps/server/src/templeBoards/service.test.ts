@@ -137,7 +137,10 @@ describe('產生寺廟定裝版', () => {
     const other = addPhoto(world, { viewKey: 'main_hall' });
     const own = addPhoto(world, { viewKey: 'front_overview' });
 
-    await generated();
+    // 兩個視角都有照片，所以要同意 2 張
+    const outcome = await boards.generate('v1', { inferredViewKeys: [], consentToken: consent('v1', 2) });
+    expect(outcome.status).toBe('accepted');
+    await settleAll();
 
     const uploaded = world.fake.uploads.map((u) => u.sha256);
     expect(uploaded).toContain(own.deidSha256);
@@ -423,7 +426,8 @@ describe('確認視角與定裝版', () => {
     const result = boards.confirm('v1');
 
     expect(result.video.stage).toBe('chat');
-    expect(result.board.version.confirmedAt).toBe('2026-11-03T09:00:00.000Z');
+    // 假時鐘和輪詢共用，確認時間是確認當下的時間
+    expect(result.board.version.confirmedAt).toBe(world.clock.now().toISOString());
     const stored = world.db.select().from(templeBoards).get();
     expect(stored?.currentVersionId).toBe(board?.version.id);
     const records = world.db.select().from(confirmations).where(eq(confirmations.videoId, 'v1')).all();
@@ -488,8 +492,9 @@ describe('沿用與另存新版本', () => {
       versionId: board.version.id,
       version: 1,
       imageModel: 'nano-banana-pro',
-      confirmedAt: '2026-11-03T09:00:00.000Z',
+      confirmedAt: board.version.confirmedAt,
     });
+    expect(board.version.confirmedAt).not.toBeNull();
     expect(boards.reusableFor('s1', 't2')).toBeNull();
     expect(boards.reusableFor('other-series', 't1')).toBeNull();
   });
