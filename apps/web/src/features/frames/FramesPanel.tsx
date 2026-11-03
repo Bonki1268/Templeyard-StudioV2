@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { FRAME_SHOT_STATE_LABELS, clipBlockers, frameShotState, type FramesResponse, type ShotFrames } from '@templeyard/shared';
-import { useId } from 'react';
+import { FRAME_SHOT_STATE_LABELS, clipBlockers, frameShotState, type ClipsResponse, type FramesResponse, type ShotFrames } from '@templeyard/shared';
+import { useId, useState } from 'react';
 import { Link } from 'react-router';
-import { ApiRequestError, confirmFrame, regenerateFrame } from '../../api/client';
+import { ApiRequestError, confirmFrame, regenerateFrame, startClips } from '../../api/client';
 import { Button } from '../../components/Button';
 import { Tag, type TagTone } from '../../components/Tag';
 import { useCostConsent } from '../costs/useCostConsent';
@@ -21,7 +21,16 @@ const TONES: Record<ReturnType<typeof frameShotState>, TagTone> = {
   missing: 'neutral',
 };
 
-type FramesPanelProps = { videoId: string; imageModel: string; data: FramesResponse; onRegenerated: () => void };
+type FramesPanelProps = {
+  videoId: string;
+  imageModel: string;
+  data: FramesResponse;
+  /** 影片的狀態（第 11 階段）：失敗的格子與合成錯誤顯示在這裡 */
+  clips?: ClipsResponse | undefined;
+  onRegenerated: () => void;
+  /** 影片生成已送出 */
+  onClipsStarted?: () => void;
+};
 
 /** 生成中：只顯示「生成中」與內容類型，不逐格顯示進度（規格書「生成中」） */
 export function GeneratingPanel({ label }: { label: string | null }) {
@@ -96,9 +105,35 @@ function ShotCard({ videoId, imageModel, shot, onRegenerated }: { videoId: strin
 }
 
 /** 精緻圖面板：每格的首格（需要時加末格），逐格確認或重生；所有格都確認後才能生成影片 */
-export function FramesPanel({ videoId, imageModel, data, onRegenerated }: FramesPanelProps) {
+export function FramesPanel({ videoId, imageModel, data, clips, onRegenerated, onClipsStarted }: FramesPanelProps) {
   const titleId = useId();
   const blockers = clipBlockers(data.shots);
+  const consent = useCostConsent(videoId);
+  const [startError, setStartError] = useState<string | null>(null);
+  const failed = (clips?.shots ?? []).filter((shot) => shot.clip?.state === 'failed');
+
+  // 先不帶憑證送出取得預估（影片秒數與背景音樂），需要同意時顯示費用確認
+  async function generateClips() {
+    setStartError(null);
+    try {
+      const first = await startClips(videoId, undefined);
+      if (first.status === 'started') {
+        onClipsStarted?.();
+        return;
+      }
+      await consent.ask({
+        items: first.items,
+        confirmLabel: '同意並生成',
+        run: async (token) => {
+          const outcome = await startClips(videoId, token);
+          if (outcome.status !== 'started') throw new ApiRequestError('費用同意沒有通過，請再試一次', 409);
+          onClipsStarted?.();
+        },
+      });
+    } catch (cause: unknown) {
+      setStartError(cause instanceof ApiRequestError ? cause.message : '送出失敗，請再試一次');
+    }
+  }
   return (
     <section className={styles.panel} aria-labelledby={titleId}>
       <h2 id={titleId} className={styles.title}>
@@ -112,18 +147,40 @@ export function FramesPanel({ videoId, imageModel, data, onRegenerated }: Frames
         ))}
       </ol>
       <div className={styles.footer}>
-        <div>
-          <p className={styles.muted}>還不能生成影片的原因：</p>
-          <ul className={styles.blockers} aria-label="還不能生成影片的原因">
-            {blockers.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-        </div>
-        <Button variant="primary" disabled>
+        {blockers.length > 0 ? (
+          <div>
+            <p className={styles.muted}>還不能生成影片的原因：</p>
+            <ul className={styles.blockers} aria-label="還不能生成影片的原因">
+              {blockers.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className={styles.muted}>所有格都確認了，可以生成影片；完成後會在本機合成成品。</p>
+        )}
+        <Button variant="primary" disabled={blockers.length > 0 || consent.busy} onClick={() => void generateClips()}>
           生成影片
         </Button>
       </div>
+      {failed.length > 0 && (
+        <ul className={styles.blockers} aria-label="影片生成失敗">
+          {failed.map((shot) => (
+            <li key={shot.shotKey}>{`第 ${shot.seq} 格：影片生成失敗${shot.clip?.error ? `（${shot.clip.error}）` : ''}，按「生成影片」只重做失敗的格子`}</li>
+          ))}
+        </ul>
+      )}
+      {clips?.composeError && (
+        <p className={styles.error} role="alert">
+          {`成品合成失敗：${clips.composeError}`}
+        </p>
+      )}
+      {(startError ?? consent.error) && (
+        <p className={styles.error} role="alert">
+          {startError ?? consent.error}
+        </p>
+      )}
+      {consent.dialog}
     </section>
   );
 }

@@ -14,12 +14,13 @@ export const PANEL_NOT_REACHED = '還沒到這一步';
 
 export type StudioProgress = { hasQuestionnaire: boolean; hasPlan?: boolean; hasFrames?: boolean; hasFinal?: boolean };
 
-/** 到達過的面板：創作首頁一定可以；Agent 開啟問卷後可以看問卷；有分鏡方案後可以看方案；送出精緻圖後可以看精緻圖；成品在之後的階段才會到達 */
+/** 到達過的面板：創作首頁一定可以；Agent 開啟問卷後可以看問卷；有分鏡方案後可以看方案；送出精緻圖後可以看精緻圖；送出影片生成或有成品後可以看成品 */
 export function reachablePanels(progress: StudioProgress): StudioPanel[] {
   const panels: StudioPanel[] = ['home'];
   if (progress.hasQuestionnaire) panels.push('questionnaire');
   if (progress.hasPlan) panels.push('plan');
   if (progress.hasFrames) panels.push('frames');
+  if (progress.hasFinal) panels.push('final');
   return panels;
 }
 

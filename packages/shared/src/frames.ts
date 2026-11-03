@@ -7,9 +7,6 @@ export type FrameKind = (typeof FRAME_KINDS)[number];
 
 export const FRAME_STATES = ['generating', 'ready', 'failed'] as const;
 
-/** 「生成影片」在第 11 階段才開放 */
-export const CLIPS_NOT_OPEN = '影片生成將在之後的版本開放';
-
 export const frameSchema = z.object({
   id: z.string(),
   shotKey: z.string(),
@@ -94,7 +91,7 @@ export function clipBlockers(shots: readonly Pick<ShotFrames, 'seq' | 'first' | 
     const text = CLIP_BLOCKER_TEXT[frameShotState(shot)];
     return text ? [`第 ${shot.seq} 格：${text}`] : [];
   });
-  return [...reasons, CLIPS_NOT_OPEN];
+  return reasons;
 }
 
 /** 生成中面板的內容類型：「精緻圖・4 格」 */

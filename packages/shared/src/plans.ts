@@ -142,6 +142,9 @@ export const shotInputSchema = z.object({
   keyframeTimes: z.array(z.number()).max(4).default([]),
   customPrompt: z.string().nullable().default(null),
   factSources: z.array(z.string()).default([]),
+  // 細修頁的生成設定（第 11 階段）；沒有設定過就不帶
+  nativeVoice: z.boolean().optional(),
+  candidateCount: z.number().int().min(1).max(MAX_CANDIDATES).optional(),
 });
 export type ShotInput = z.input<typeof shotInputSchema>;
 export type ShotDraft = z.output<typeof shotInputSchema>;

@@ -30,6 +30,9 @@ function toShot(row: ShotRow): Shot {
     customPrompt: row.customPrompt,
     factSources: row.factSources,
     dialogueEstimateSec: row.dialogueEstimateSec,
+    // 生成設定只有設定過才帶出來
+    ...(row.nativeVoice === null ? {} : { nativeVoice: row.nativeVoice }),
+    ...(row.candidateCount === null ? {} : { candidateCount: row.candidateCount }),
   };
 }
 
@@ -74,7 +77,14 @@ export function insertPlan(
   if (rows.length === 0) return;
   db.insert(shots)
     .values(
-      rows.map(({ id, characters, ...shot }) => ({ id, planId: plan.id, ...shot, characterIds: characters })),
+      rows.map(({ id, characters, nativeVoice, candidateCount, ...shot }) => ({
+        id,
+        planId: plan.id,
+        ...shot,
+        characterIds: characters,
+        nativeVoice: nativeVoice ?? null,
+        candidateCount: candidateCount ?? null,
+      })),
     )
     .run();
 }

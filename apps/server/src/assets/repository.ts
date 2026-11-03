@@ -11,6 +11,7 @@ export type NewAsset = {
   sha256: string;
   width?: number | null;
   height?: number | null;
+  durationSec?: number | null;
 };
 
 /** 找不到資產 */
@@ -46,6 +47,7 @@ export function insertAsset(db: AppDatabase, input: NewAsset): Asset {
       sha256: input.sha256,
       width: input.width ?? null,
       height: input.height ?? null,
+      durationSec: input.durationSec ?? null,
       cloudOk: cloudOkForKind(input.kind),
     })
     .returning()

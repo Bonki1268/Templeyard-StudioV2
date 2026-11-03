@@ -2,7 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { imageModelLabel, videoModelLabel, type VideoDetail } from '@templeyard/shared';
 import { useCallback, useId, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { fetchFrames, fetchPlan, fetchQuestionnaire, fetchVideoBudget } from '../api/client';
+import { fetchClips, fetchFrames, fetchPlan, fetchQuestionnaire, fetchVideoBudget } from '../api/client';
+import { FinalPanel, clipsKey } from '../features/final/FinalPanel';
 import { FramesPanel, GeneratingPanel, framesKey } from '../features/frames/FramesPanel';
 import { useFrameNotification } from '../features/frames/useFrameNotification';
 import { PlanPanel, planKey } from '../features/plan/PlanPanel';
@@ -75,6 +76,12 @@ function Workspace({ detail }: { detail: VideoDetail }) {
     queryFn: () => fetchFrames(videoId),
     refetchInterval: (query) => (query.state.data?.generating ? 1000 : false),
   });
+  // 影片生成與合成中每秒重新讀取；完成後停止（第 11 階段）
+  const clips = useQuery({
+    queryKey: clipsKey(videoId),
+    queryFn: () => fetchClips(videoId),
+    refetchInterval: (query) => (query.state.data?.generating ? 1000 : false),
+  });
   const queryClient = useQueryClient();
   const [expectingFrames, setExpectingFrames] = useState(false);
   const stopExpecting = useCallback(() => setExpectingFrames(false), []);
@@ -90,10 +97,17 @@ function Workspace({ detail }: { detail: VideoDetail }) {
   }
   const [savedVersion, setSavedVersion] = useState<number | null>(null);
 
+  async function clipsStarted() {
+    setSearchParams({ panel: 'final' });
+    await queryClient.invalidateQueries({ queryKey: clipsKey(videoId) });
+  }
+  const clipsGenerating = Boolean(clips.data?.generating);
+
   const progress = {
     hasQuestionnaire: Boolean(questionnaire.data),
     hasPlan: Boolean(plan.data?.plan),
     hasFrames: Boolean(frames.data?.generating || frames.data?.shots.some((shot) => shot.first)),
+    hasFinal: Boolean(clips.data?.generating || clips.data?.final),
   };
   const reachable = reachablePanels(progress);
   const panel = resolvePanel(searchParams.get('panel'), progress);
@@ -177,9 +191,19 @@ function Workspace({ detail }: { detail: VideoDetail }) {
             />
           )}
           {panel === 'frames' && frames.data?.generating && <GeneratingPanel label={frames.data.generatingLabel} />}
-          {panel === 'frames' && frames.data && !frames.data.generating && (
-            <FramesPanel videoId={videoId} imageModel={detail.video.imageModel} data={frames.data} onRegenerated={() => void framesStarted()} />
+          {panel === 'frames' && !frames.data?.generating && clipsGenerating && <GeneratingPanel label={clips.data?.generatingLabel ?? null} />}
+          {panel === 'frames' && frames.data && !frames.data.generating && !clipsGenerating && (
+            <FramesPanel
+              videoId={videoId}
+              imageModel={detail.video.imageModel}
+              data={frames.data}
+              clips={clips.data}
+              onRegenerated={() => void framesStarted()}
+              onClipsStarted={() => void clipsStarted()}
+            />
           )}
+          {panel === 'final' && clipsGenerating && <GeneratingPanel label={clips.data?.generatingLabel ?? null} />}
+          {panel === 'final' && clips.data && !clipsGenerating && <FinalPanel data={clips.data} />}
           {panel === 'plan' && plan.data?.plan && (
             <PlanPanel key={plan.data.plan.id} savedVersion={savedVersion} onSaved={setSavedVersion} videoId={videoId} data={{ ...plan.data, plan: plan.data.plan }} seriesVisualStyle={series?.visualStyle ?? ''} imageModel={detail.video.imageModel} onFramesStarted={() => void framesStarted()} />
           )}

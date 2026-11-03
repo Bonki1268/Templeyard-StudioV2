@@ -20,6 +20,9 @@ import { planChangeInvalidations } from '@templeyard/shared';
 import { registerAssetRoutes } from './routes/assets.js';
 import { registerAssistRoutes } from './routes/assist.js';
 import { registerFrameRoutes } from './routes/frames.js';
+import { registerClipRoutes } from './routes/clips.js';
+import { CLIP_NODES, createClipService, type ClipService } from './clips/service.js';
+import { createFfmpeg } from './compose/ffmpeg.js';
 import { registerShotDetailRoutes } from './routes/shotDetail.js';
 import { registerCharacterRoutes } from './routes/characters.js';
 import { registerCostRoutes } from './routes/costs.js';
@@ -146,6 +149,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   // 角色定裝版：生成用 Comfy Cloud（與定裝版相同的生成服務），沒有設定時回 503
   // 精緻圖服務在方案與角色之後建立；這兩者改版時透過它標示需重新確認
   let frameService: FrameService | null = null;
+  let clipService: ClipService | null = null;
   const characters = createCharacterService({
     db: deps.db,
     clock,
@@ -173,38 +177,57 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     },
     ...unavailable,
   });
+  const frameGeneration =
+    runtime && generation
+      ? {
+          service: generation,
+          writer: runtime.writer,
+          sendAsset: createCloudAssetSender({
+            transport: runtime.transport,
+            readBytes: async (asset) => {
+              const found = findAsset(deps.db, asset.id);
+              if (!found) throw new Error(`找不到檔案：${asset.id}`);
+              return store.read(found.path);
+            },
+          }),
+        }
+      : null;
   frameService = createFrameService({
     db: deps.db,
     clock,
     store,
+    // 精緻圖的失效與首格更換轉給影片服務（影片與成品）
+    onChange: (videoId, change) => clipService?.invalidate(videoId, change),
+    clipOf: (videoId, shotKey) => clipService?.clipOf(videoId, shotKey) ?? null,
     workflows,
     prompts,
     plans,
     characters,
-    generation:
-      runtime && generation
-        ? {
-            service: generation,
-            writer: runtime.writer,
-            sendAsset: createCloudAssetSender({
-              transport: runtime.transport,
-              readBytes: async (asset) => {
-                const found = findAsset(deps.db, asset.id);
-                if (!found) throw new Error(`找不到檔案：${asset.id}`);
-                return store.read(found.path);
-              },
-            }),
-          }
-        : null,
+    generation: frameGeneration,
     ...(deps.generationUnavailableMessage ? { unavailableMessage: deps.generationUnavailableMessage } : {}),
   });
   for (const node of FRAME_NODES) handlers[node] = frameService.handleGenerated;
+  clipService = createClipService({
+    db: deps.db,
+    clock,
+    workflows,
+    prompts,
+    plans,
+    characters,
+    frames: frameService,
+    generation: frameGeneration,
+    store,
+    ffmpeg: createFfmpeg({ ffmpegPath: process.env.FFMPEG_PATH, ffprobePath: process.env.FFPROBE_PATH }),
+    ...(deps.generationUnavailableMessage ? { unavailableMessage: deps.generationUnavailableMessage } : {}),
+  });
+  for (const node of CLIP_NODES) handlers[node] = clipService.handleGenerated;
   const chat = createChatService({ db: deps.db, clock, workflows, consents, questionnaires, plans, model: text?.agent ?? null, ...unavailable });
   registerStudioRoutes(app, chat, questionnaires);
   registerPlanRoutes(app, plans);
   registerCharacterRoutes(app, characters);
   registerSupplementalViewRoutes(app, boards, plans);
   registerFrameRoutes(app, frameService);
+  registerClipRoutes(app, clipService);
   registerShotDetailRoutes(app, frameService, plans, chat);
   registerAssistRoutes(app, createAssistService({ db: deps.db, clock, prompts, model: text?.assist ?? null, ...unavailable }));
 

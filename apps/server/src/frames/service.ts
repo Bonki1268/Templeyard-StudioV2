@@ -101,6 +101,11 @@ function isFrameTarget(value: Record<string, unknown>): value is FrameTarget {
 
 const RUNNING: readonly GenerationRow['status'][] = ['awaiting_confirm', 'submitted', 'running'];
 
+/** 細修頁的生成設定：一次產生幾張首格候選圖（沒有設定過是 1 張） */
+function candidatesOf(shot: Shot): number {
+  return shot.candidateCount ?? 1;
+}
+
 /** 一張要產生的圖：首格／末格（refined-frame）、關鍵畫格（keyframe）、限定範圍修改（region-edit） */
 type Job =
   | { node: typeof REFINED_FRAME_NODE; kind: 'first' | 'last' }
@@ -394,6 +399,34 @@ export function createFrameService(deps: {
     return generation.service.precheck(video.id, items, consentToken, Array.from({ length: units }, () => [{ model: video.imageModel, units: 1 }]));
   }
 
+  /** 依失效規則標示精緻圖與關鍵畫格，再轉給影片服務（影片與成品由它處理） */
+  function invalidate(videoId: string, change: InvalidationChange) {
+    const plan = deps.plans.current(videoId);
+    if (!plan) return;
+    const { frames: frameKeys, keyframes: keyframeKeys } = invalidatedBy(change, plan.shots);
+    const rows = listFrames(db, videoId);
+    for (const key of frameKeys) {
+      for (const kind of ['first', 'last'] as const) {
+        const frame = currentFrame(rows, key, kind);
+        if (frame) updateFrame(db, frame.id, { needsReconfirm: true });
+      }
+    }
+    for (const key of keyframeKeys) {
+      const shot = plan.shots.find((s) => s.shotKey === key);
+      const times = new Set(rows.filter((row) => row.shotKey === key && row.kind === 'keyframe').map((row) => row.atSec));
+      for (const atSec of times) {
+        const frame = currentFrame(rows, key, 'keyframe', atSec);
+        if (frame && shot) updateFrame(db, frame.id, { needsReconfirm: true });
+      }
+    }
+    deps.onChange?.(videoId, change);
+  }
+
+  /** 這一格的首格換了：關鍵畫格與影片要重新確認 */
+  function firstFrameChanged(videoId: string, shotKey: string) {
+    invalidate(videoId, { type: 'firstFrame', shotKey });
+  }
+
   function detail(videoId: string, shotKey: string): ShotDetail {
     const video = requireVideo(videoId);
     const plan = deps.plans.current(videoId);
@@ -418,7 +451,7 @@ export function createFrameService(deps: {
       keyframeControl: keyframeControlNote(video.videoModel, videoModelLabel(video.videoModel)),
       totalSec: plan?.shots.reduce((sum, s) => sum + s.durationSec, 0) ?? 0,
       targetSec: rules.targetSec,
-      clip: null,
+      clip: deps.clipOf?.(videoId, shotKey) ?? null,
     };
   }
 
@@ -437,7 +470,11 @@ export function createFrameService(deps: {
       if (blockers.length > 0) throw new StudioError(409, `還不能生成：${blockers[0]}`);
       if (get(videoId).generating) throw new StudioError(409, '精緻圖還在生成中');
       const generation = requireGeneration();
-      const wanted = plan.shots.flatMap((shot) => (shot.keyframesEnabled ? [[shot, 'first'], [shot, 'last']] : [[shot, 'first']]) as [Shot, 'first' | 'last'][]);
+      // 首格照這一格的「一次產生幾張候選圖」；末格一張
+      const wanted = plan.shots.flatMap((shot) => [
+        ...Array.from({ length: candidatesOf(shot) }, (): [Shot, 'first' | 'last'] => [shot, 'first']),
+        ...(shot.keyframesEnabled ? [[shot, 'last'] as [Shot, 'first' | 'last']] : []),
+      ]);
       const check = precheck(generation, video, wanted.length, consentToken);
       if (!check.ok) return { status: 'consent_required', check: check.check };
       const uploaded = new Map<string, string>();
@@ -455,10 +492,13 @@ export function createFrameService(deps: {
       const running = currentFrame(listFrames(db, videoId), shotKey, kind);
       if (running && toFrame(running).state === 'generating') throw new StudioError(409, `第 ${shot.seq} 格的精緻圖還在生成中`);
       const generation = requireGeneration();
-      const check = precheck(generation, video, 1, consentToken);
+      const count = kind === 'first' ? candidatesOf(shot) : 1;
+      const check = precheck(generation, video, count, consentToken);
       if (!check.ok) return { status: 'consent_required', check: check.check };
-      const built = await build(generation, video, plan, shot, { node: REFINED_FRAME_NODE, kind }, new Map());
-      return submit(generation, video, plan, [built], consentToken);
+      const uploaded = new Map<string, string>();
+      const built: Built[] = [];
+      for (let index = 0; index < count; index += 1) built.push(await build(generation, video, plan, shot, { node: REFINED_FRAME_NODE, kind }, uploaded));
+      return submit(generation, video, plan, built, consentToken);
     },
 
     confirm(videoId, shotKey) {
@@ -472,18 +512,7 @@ export function createFrameService(deps: {
       return get(videoId);
     },
 
-    invalidate(videoId, change) {
-      const plan = deps.plans.current(videoId);
-      if (!plan) return;
-      const { frames: keys } = invalidatedBy(change, plan.shots);
-      const rows = listFrames(db, videoId);
-      for (const key of keys) {
-        for (const kind of ['first', 'last'] as const) {
-          const frame = currentFrame(rows, key, kind);
-          if (frame) updateFrame(db, frame.id, { needsReconfirm: true });
-        }
-      }
-    },
+    invalidate,
 
     detail,
 
@@ -515,6 +544,7 @@ export function createFrameService(deps: {
         needsReconfirm: false,
         createdAt: clock.now().toISOString(),
       });
+      if (input.kind === 'first') firstFrameChanged(videoId, shotKey);
       return detail(videoId, shotKey);
     },
 
@@ -526,6 +556,7 @@ export function createFrameService(deps: {
       if (toFrame(row).state !== 'ready') throw new StudioError(409, '這張圖還沒產生完成');
       clearSelection(videoId, shotKey, row.kind, row.atSec);
       updateFrame(db, row.id, { selected: true, needsReconfirm: false });
+      if (row.kind === 'first') firstFrameChanged(videoId, shotKey);
       return detail(videoId, shotKey);
     },
 
@@ -573,7 +604,10 @@ export function createFrameService(deps: {
       if (!assetId) return;
       updateFrame(db, generation.target.frameId, { assetId });
       const frame = findFrame(db, generation.target.frameId);
-      if (frame) get(frame.videoId);
+      if (!frame) return;
+      get(frame.videoId);
+      // 新的首格（重生、限定範圍修改、候選圖）：關鍵畫格與影片要重新確認
+      if (frame.kind === 'first') firstFrameChanged(frame.videoId, frame.shotKey);
     },
   };
 }

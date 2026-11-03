@@ -64,6 +64,20 @@
       "when": 1793692735072,
       "tag": "0008_frames",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1793696730313,
+      "tag": "0009_clips",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1793696814265,
+      "tag": "0010_shot_settings",
+      "breakpoints": true
     }
   ]
 }

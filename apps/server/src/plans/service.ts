@@ -89,6 +89,9 @@ const SUBMIT_PLAN_TOOL = {
   schema: planOutputSchema,
 };
 
+/** 細修頁「生成設定」的欄位：只改這些時不套用確認失效規則 */
+const GENERATION_SETTING_KEYS = ['nativeVoice', 'candidateCount'] as const;
+
 export function createPlanService(deps: {
   db: AppDatabase;
   clock: Clock;
@@ -152,7 +155,10 @@ export function createPlanService(deps: {
     });
   }
 
-  function save(videoId: string, input: { version: number; styleNote: string; source: PlanSource; drafts: readonly ShotDraft[]; previous: readonly Shot[]; revertedFrom?: number }): Plan {
+  function save(
+    videoId: string,
+    input: { version: number; styleNote: string; source: PlanSource; drafts: readonly ShotDraft[]; previous: readonly Shot[]; revertedFrom?: number; notify?: boolean },
+  ): Plan {
     const rows = placeShots(videoId, input.drafts);
     // 角色名稱換成角色編號（沒有的建立影片專屬角色）；比對差異仍用名稱
     const ids = deps.characters?.resolve(videoId, [...new Set(rows.flatMap((row) => row.characters))].map((name) => ({ name })));
@@ -169,7 +175,7 @@ export function createPlanService(deps: {
     });
     const saved = withNames(findPlanVersion(db, videoId, input.version));
     if (!saved) throw new Error('方案存檔失敗');
-    if (input.previous.length > 0) deps.onVersionSaved?.(videoId, input.previous, saved);
+    if (input.previous.length > 0 && input.notify !== false) deps.onVersionSaved?.(videoId, input.previous, saved);
     return saved;
   }
 
@@ -306,7 +312,9 @@ export function createPlanService(deps: {
         if (error) throw new StudioError(400, error);
       }
       drafts[index] = next;
-      return save(videoId, { version: current.version + 1, styleNote: current.styleNote, source, drafts, previous: current.shots });
+      // 只改生成設定（原生語音、候選圖張數）不算修改內容，已確認的圖不用重新確認
+      const settingsOnly = Object.keys(defined).every((key) => (GENERATION_SETTING_KEYS as readonly string[]).includes(key));
+      return save(videoId, { version: current.version + 1, styleNote: current.styleNote, source, drafts, previous: current.shots, notify: !settingsOnly });
     },
 
     replaceViewKey(videoId, from, to) {

@@ -15,6 +15,8 @@ export type AssetStore = {
   read(relativePath: string): Buffer;
   /** 檔案是否存在 */
   exists(relativePath: string): boolean;
+  /** 相對路徑的絕對路徑（交給本機 FFmpeg 讀檔用） */
+  pathOf(relativePath: string): string;
 };
 
 const FOLDERS: Record<AssetKind, string> = {
@@ -66,6 +68,9 @@ export function createAssetStore(rootDir: string): AssetStore {
     },
     exists(relativePath) {
       return existsSync(resolveInside(relativePath));
+    },
+    pathOf(relativePath) {
+      return resolveInside(relativePath);
     },
   };
 }

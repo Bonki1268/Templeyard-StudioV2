@@ -3,12 +3,14 @@ import {
   CAMERA_ANGLES,
   CAMERA_MOVES,
   KEYFRAME_REMINDER,
+  MAX_CANDIDATES,
   SHOT_SIZES,
   estimateDialogueSec,
   formatClock,
   keyframeTimesError,
   parseKeyframeTimes,
   suggestKeyframeTimes,
+  videoModelLabel,
   type Frame,
   type ShotDetail,
 } from '@templeyard/shared';
@@ -167,12 +169,12 @@ function Editor({ videoId, from, detail, plan, chat }: EditorProps) {
   const saveCustom = useMutation({ mutationFn: () => patchShot(videoId, shot.shotKey, { customPrompt: customPrompt.trim() || null }), onSuccess: refresh });
   const select = useMutation({ mutationFn: (frameId: string) => selectShotFrame(videoId, shot.shotKey, frameId), onSuccess: refresh });
   const upload = useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async ({ file, kind }: { file: File; kind: 'first' | 'last' }) => {
       // 上傳前一樣在瀏覽器去識別（偵測臉孔並遮蔽），原圖不送到後端
       const image = await loadImage(file);
       const detector = await getFaceDetector();
       const blob = await renderDeidentified(image, boxesFromDetections(await detector.detect(image)));
-      await uploadShotFrame(videoId, shot.shotKey, { kind: 'first', mime: DEID_OUTPUT_MIME, dataBase64: await blobToBase64(blob) });
+      await uploadShotFrame(videoId, shot.shotKey, { kind, mime: DEID_OUTPUT_MIME, dataBase64: await blobToBase64(blob) });
     },
     onSuccess: refresh,
   });
@@ -246,7 +248,14 @@ function Editor({ videoId, from, detail, plan, chat }: EditorProps) {
           {detail.keyframes.map((k) => (
             <FrameFigure key={k.id} name={`第 ${k.atSec ?? 0} 秒關鍵畫格`} frame={k} caption={names.get(k.id)} />
           ))}
-          {shot.keyframesEnabled && <FrameFigure name="末格" frame={detail.last} caption={detail.last ? names.get(detail.last.id) : undefined} />}
+          {(shot.keyframesEnabled || detail.last) && (
+            <FrameFigure
+              name="末格"
+              frame={detail.last}
+              caption={detail.last ? names.get(detail.last.id) : undefined}
+              uploaded={detail.versions.find((v) => v.id === detail.last?.id)?.userUploaded}
+            />
+          )}
         </section>
 
         <section className={styles.timeline} aria-label="單格時間軸">
@@ -259,6 +268,10 @@ function Editor({ videoId, from, detail, plan, chat }: EditorProps) {
             {estimate !== null && <li>{`台詞 0:00–${clockWithTenths(estimate)}`}</li>}
           </ul>
           <p>{`總長度 ${detail.totalSec} 秒／目標長度 ${detail.targetSec} 秒`}</p>
+          {/* 偏差比對（第 11 階段）：門檻待實測，只顯示相似度 */}
+          {detail.clip?.similarity.map((item) => (
+            <p key={item.atSec}>{`第 ${item.atSec} 秒關鍵畫格與影片的相似度：${Math.round(item.score * 100)}%`}</p>
+          ))}
         </section>
       </div>
 
@@ -315,18 +328,23 @@ function Editor({ videoId, from, detail, plan, chat }: EditorProps) {
             labels={Object.fromEntries([['', '不指定'], ...(video.data?.photos.map((p, i) => [p.id, `照片 ${i + 1}`]) ?? [])])}
             onChange={(photoId) => setDraft({ ...draft, photoId: photoId || null })}
           />
-          <label className={styles.field}>
-            <span>上傳自己的首格</span>
-            <input
-              type="file"
-              accept="image/png,image/jpeg"
-              aria-label="上傳自己的首格"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) upload.mutate(file);
-              }}
-            />
-          </label>
+          {(['first', 'last'] as const).map((kind) => {
+            const label = kind === 'first' ? '上傳自己的首格' : '上傳自己的末格';
+            return (
+              <label key={kind} className={styles.field}>
+                <span>{label}</span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  aria-label={label}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) upload.mutate({ file, kind });
+                  }}
+                />
+              </label>
+            );
+          })}
           <p className={styles.muted}>上傳前會在瀏覽器自動遮蔽人臉，原圖不會送到後端。</p>
         </details>
 
@@ -380,6 +398,23 @@ function Editor({ videoId, from, detail, plan, chat }: EditorProps) {
           </Button>
         </details>
 
+        <details open aria-label="生成設定">
+          <summary>生成設定</summary>
+          <label className={styles.inline}>
+            <input type="checkbox" checked={draft.nativeVoice} onChange={(event) => setDraft({ ...draft, nativeVoice: event.target.checked })} />
+            使用模型原生語音
+          </label>
+          <p className={styles.muted}>關掉時影片裡的人不開口說台詞，台詞只出現在字幕。</p>
+          <Select
+            label="一次產生幾張候選圖"
+            value={String(draft.candidateCount)}
+            options={Array.from({ length: MAX_CANDIDATES }, (_, index) => String(index + 1))}
+            labels={Object.fromEntries(Array.from({ length: MAX_CANDIDATES }, (_, index) => [String(index + 1), `${index + 1} 張`]))}
+            onChange={(value) => setDraft({ ...draft, candidateCount: Number(value) })}
+          />
+          <p className={styles.muted}>{`模型沿用這支影片的設定（${video.data ? videoModelLabel(video.data.video.videoModel) : '讀取中'}），不能在這裡更換。`}</p>
+        </details>
+
         <details open aria-label="進階：生成指令">
           <summary>進階：生成指令</summary>
           {shot.customPrompt && <Tag tone="info">此格使用自訂指令</Tag>}
@@ -424,7 +459,7 @@ function Editor({ videoId, from, detail, plan, chat }: EditorProps) {
           <Button variant="primary" disabled={!dirty || Boolean(keyframeError) || save.isPending} onClick={() => save.mutate()}>
             儲存這一格
           </Button>
-          <Button disabled={consent.busy} onClick={() => paid(1, '同意並重生', (token) => regenerateFrame(videoId, shot.shotKey, token))}>
+          <Button disabled={consent.busy} onClick={() => paid(shot.candidateCount ?? 1, '同意並重生', (token) => regenerateFrame(videoId, shot.shotKey, token))}>
             重生這一格
           </Button>
           <Button onClick={() => navigate(`/videos/${videoId}/studio?panel=${from}`)}>完成這一格</Button>

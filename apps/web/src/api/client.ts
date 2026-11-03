@@ -4,6 +4,7 @@ import {
   assistResponseSchema,
   characterResponseSchema,
   chatListResponseSchema,
+  clipsResponseSchema,
   shotDetailSchema,
   framesResponseSchema,
   planResponseSchema,
@@ -33,6 +34,7 @@ import {
   type Plan,
   type PlanResponse,
   type Questionnaire,
+  type ClipsResponse,
   type ShotDetail,
   type ShotPatch,
   type Budget,
@@ -379,4 +381,32 @@ export async function editShotRegion(
 
 export async function generateShotKeyframes(videoId: string, shotKey: string, consentToken: string | undefined): Promise<void> {
   await request(`/api/videos/${videoId}/shots/${shotKey}/keyframes/generate`, { method: 'POST', body: JSON.stringify(consentToken ? { consentToken } : {}) });
+}
+
+// ── 分鏡影片與成品（第 11 階段） ──
+
+export async function fetchClips(videoId: string): Promise<ClipsResponse> {
+  return clipsResponseSchema.parse(await request(`/api/videos/${videoId}/clips`));
+}
+
+/** 生成影片：需要同意時回傳後端的預估項目（影片秒數、背景音樂），同意後再帶憑證送一次 */
+export async function startClips(videoId: string, consentToken: string | undefined): Promise<{ status: 'started' } | { status: 'consent'; items: CostItem[] }> {
+  let response: Response;
+  try {
+    response = await fetch(`/api/videos/${videoId}/generate/clips`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(consentToken ? { consentToken } : {}),
+    });
+  } catch {
+    throw new ApiRequestError('連不上本機後端，請確認 pnpm dev 有在執行', 0);
+  }
+  const body = await readJson(response);
+  if (response.ok) return { status: 'started' };
+  const consent = consentRequiredResponseSchema.safeParse(body);
+  if (response.status === 409 && consent.success) {
+    return { status: 'consent', items: consent.data.check.estimate.lines.map((line) => ({ model: line.model, units: line.units })) };
+  }
+  const parsed = apiErrorSchema.safeParse(body);
+  throw new ApiRequestError(parsed.success ? parsed.data.message : `後端回應錯誤（${response.status}）`, response.status);
 }

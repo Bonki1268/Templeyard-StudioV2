@@ -51,15 +51,12 @@ export const generateClipsSchema = z.object({ consentToken: z.string({ error: '�
 
 /** 生成中面板的內容類型：「影片・4 格」 */
 export function clipGeneratingLabel(shotCount: number): string {
-  void shotCount;
-  throw new Error('尚未實作');
+  return `影片・${shotCount} 格`;
 }
 
 /** 要生成幾秒：卡片秒數低於模型最短長度時生成最短長度（合成時再從頭裁到卡片秒數），超過最長長度時用最長長度 */
 export function generatedClipSec(durationSec: number, range: { min?: number | undefined; max?: number | undefined } = {}): number {
-  void durationSec;
-  void range;
-  throw new Error('尚未實作');
+  return Math.min(range.max ?? Infinity, Math.max(range.min ?? 0, durationSec));
 }
 
 /**
@@ -67,41 +64,80 @@ export function generatedClipSec(durationSec: number, range: { min?: number | un
  * 「0～3 秒：第 3 秒的畫面接近關鍵畫格 1；3～8 秒：停在末格」
  */
 export function keyframeTimeline(durationSec: number, keyframeTimes: readonly number[]): string {
-  void durationSec;
-  void keyframeTimes;
-  throw new Error('尚未實作');
+  if (keyframeTimes.length === 0) return '';
+  const times = [...keyframeTimes].sort((a, b) => a - b);
+  const segments = times.map((t, index) => `${index === 0 ? 0 : times[index - 1]}～${t} 秒：第 ${t} 秒的畫面接近關鍵畫格 ${index + 1}`);
+  segments.push(`${times.at(-1)}～${durationSec} 秒：停在末格`);
+  return segments.join('；');
 }
 
 /** 成品字幕：依卡片順序與秒數排出每一句的起訖時間；字幕欄空白的格子不出字幕 */
 export type SubtitleEvent = { startSec: number; endSec: number; text: string };
 
 export function subtitleEvents(shots: readonly { durationSec: number; subtitle: string }[]): SubtitleEvent[] {
-  void shots;
-  throw new Error('尚未實作');
+  const events: SubtitleEvent[] = [];
+  let start = 0;
+  for (const shot of shots) {
+    const text = shot.subtitle.trim();
+    if (text) events.push({ startSec: start, endSec: start + shot.durationSec, text });
+    start += shot.durationSec;
+  }
+  return events;
 }
 
 /** ASS 的時間格式：H:MM:SS.cc */
 export function assTime(sec: number): string {
-  void sec;
-  throw new Error('尚未實作');
+  const centis = Math.round(sec * 100);
+  const h = Math.floor(centis / 360000);
+  const m = Math.floor((centis % 360000) / 6000);
+  const s = Math.floor((centis % 6000) / 100);
+  const c = centis % 100;
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${h}:${two(m)}:${two(s)}.${two(c)}`;
 }
+
+const ASS_FORMAT = 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text';
 
 /** 產生 ASS 字幕檔（02：Noto Sans TC、下方置中、白字；1920×1080） */
 export function buildAss(events: readonly SubtitleEvent[], options: { font?: string } = {}): string {
-  void events;
-  void options;
-  throw new Error('尚未實作');
+  const font = options.font ?? 'Noto Sans TC';
+  const lines = [
+    '[Script Info]',
+    'ScriptType: v4.00+',
+    'PlayResX: 1920',
+    'PlayResY: 1080',
+    'WrapStyle: 0',
+    '',
+    '[V4+ Styles]',
+    'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
+    `Style: Default,${font},64,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,3,0,2,80,80,72,1`,
+    '',
+    '[Events]',
+    ASS_FORMAT,
+    ...events.map((event) => {
+      const text = event.text.replace(/[{}]/g, '').replace(/\r?\n/g, '\\N');
+      return `Dialogue: 0,${assTime(event.startSec)},${assTime(event.endSec)},Default,,0,0,0,,${text}`;
+    }),
+  ];
+  return `${lines.join('\n')}\n`;
 }
 
 /** 從 ASS 取回每一句字幕的文字（\N 換回換行） */
 export function assDialogues(ass: string): string[] {
-  void ass;
-  throw new Error('尚未實作');
+  return ass
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith('Dialogue:'))
+    .map((line) => {
+      // Text 是第 10 個欄位，之後的逗號都屬於文字
+      const fields = line.slice('Dialogue:'.length).split(',');
+      return fields.slice(9).join(',').replace(/\\N/g, '\n');
+    });
 }
 
 /** 偏差比對的相似度：兩張同樣大小的灰階畫面，1 減去平均像素差（0～1，取到小數第 2 位） */
 export function grayscaleSimilarity(a: Uint8Array, b: Uint8Array): number {
-  void a;
-  void b;
-  throw new Error('尚未實作');
+  if (a.length !== b.length || a.length === 0) throw new Error('畫面大小不同，不能比對');
+  let diff = 0;
+  for (let index = 0; index < a.length; index += 1) diff += Math.abs((a[index] ?? 0) - (b[index] ?? 0));
+  return Math.round((1 - diff / a.length / 255) * 100) / 100;
 }

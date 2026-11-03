@@ -360,6 +360,9 @@ export const shots = sqliteTable(
     customPrompt: text('custom_prompt'),
     factSources: text('fact_sources', { mode: 'json' }).$type<string[]>().notNull(),
     dialogueEstimateSec: real('dialogue_estimate_sec'),
+    // 第 11 階段：細修頁的生成設定；null 表示沒有設定過（使用原生語音、1 張候選圖）
+    nativeVoice: integer('native_voice', { mode: 'boolean' }),
+    candidateCount: integer('candidate_count'),
   },
   (table) => [index('shots_plan_idx').on(table.planId), index('shots_key_idx').on(table.shotKey)],
 );
@@ -427,3 +430,43 @@ export const frames = sqliteTable(
 );
 
 export type FrameRow = typeof frames.$inferSelect;
+
+// ── 第 11 階段：分鏡影片與成品（05「clips、finals」） ──
+
+export type KeyframeSimilarityRow = { atSec: number; score: number };
+
+export const clips = sqliteTable(
+  'clips',
+  {
+    id: text('id').primaryKey(),
+    videoId: text('video_id')
+      .notNull()
+      .references(() => videos.id),
+    shotKey: text('shot_key').notNull(),
+    assetId: text('asset_id').references(() => assets.id),
+    generationId: text('generation_id').references(() => generations.id),
+    selected: integer('selected', { mode: 'boolean' }).notNull().default(false),
+    keyframeSimilarity: text('keyframe_similarity', { mode: 'json' }).$type<KeyframeSimilarityRow[]>().notNull(),
+    basedOn: text('based_on', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+    needsReconfirm: integer('needs_reconfirm', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('clips_video_shot_idx').on(table.videoId, table.shotKey)],
+);
+
+export type ClipRow = typeof clips.$inferSelect;
+
+export const finals = sqliteTable('finals', {
+  id: text('id').primaryKey(),
+  videoId: text('video_id')
+    .notNull()
+    .references(() => videos.id),
+  assetId: text('asset_id')
+    .notNull()
+    .references(() => assets.id),
+  clipIds: text('clip_ids', { mode: 'json' }).$type<string[]>().notNull(),
+  subtitleAssetId: text('subtitle_asset_id').references(() => assets.id),
+  createdAt: text('created_at').notNull(),
+});
+
+export type FinalRow = typeof finals.$inferSelect;

@@ -45,11 +45,27 @@ const FIELDS = [
   'photoId',
   'keyframesEnabled',
   'keyframeTimes',
+  'nativeVoice',
+  'candidateCount',
 ] as const satisfies readonly (keyof ShotDraft)[];
+
+/** 生成設定沒有設定過時的值 */
+const SETTING_DEFAULTS = { nativeVoice: true, candidateCount: 1 } as const;
+
+function valueOf(shot: Shot, key: (typeof FIELDS)[number]): unknown {
+  if (key === 'nativeVoice') return shot.nativeVoice ?? SETTING_DEFAULTS.nativeVoice;
+  if (key === 'candidateCount') return shot.candidateCount ?? SETTING_DEFAULTS.candidateCount;
+  return shot[key];
+}
 
 /** 從這一格建立編輯狀態 */
 export function draftFromShot(shot: Shot): ShotDraft {
-  return Object.fromEntries(FIELDS.map((key) => [key, Array.isArray(shot[key]) ? [...(shot[key] as unknown[])] : shot[key]])) as ShotDraft;
+  return Object.fromEntries(
+    FIELDS.map((key) => {
+      const value = valueOf(shot, key);
+      return [key, Array.isArray(value) ? [...(value as unknown[])] : value];
+    }),
+  ) as ShotDraft;
 }
 
 function same(a: unknown, b: unknown, unordered: boolean): boolean {
@@ -65,7 +81,7 @@ function same(a: unknown, b: unknown, unordered: boolean): boolean {
 export function patchFrom(shot: Shot, draft: ShotDraft): ShotPatch {
   const patch: Record<string, unknown> = {};
   for (const key of FIELDS) {
-    if (!same(shot[key], draft[key], key === 'characters' || key === 'keyframeTimes')) patch[key] = draft[key];
+    if (!same(valueOf(shot, key), draft[key], key === 'characters' || key === 'keyframeTimes')) patch[key] = draft[key];
   }
   return patch as ShotPatch;
 }
