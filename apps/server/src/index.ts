@@ -16,7 +16,8 @@ import { countTemples } from './temples/repository.js';
 const envFile = path.join(repoRoot, '.env.local');
 if (!process.env.TEMPLEYARD_NO_ENV_FILE && existsSync(envFile)) process.loadEnvFile(envFile);
 
-const port = Number(process.env.API_PORT ?? 3001);
+// 留白（例如照 .env.example 複製後沒填）時用預設 3001
+const port = Number(process.env.API_PORT?.trim() || 3001);
 const dataDir = resolveDataDir();
 mkdirSync(dataDir, { recursive: true });
 const db = openDatabase(path.join(dataDir, 'app.db'));
