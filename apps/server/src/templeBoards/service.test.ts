@@ -146,7 +146,8 @@ describe('產生寺廟定裝版', () => {
     expect(uploaded).toContain(own.deidSha256);
     expect(uploaded).not.toContain(own.originalSha256);
     expect(uploaded).not.toContain(other.originalSha256);
-    const calls = world.fake.calls.filter((c) => c.tool === 'partner_generate');
+    // 付費工具先回要求確認，帶 confirm: true 才真的送出；只看真的送出的那幾次
+    const calls = world.fake.calls.filter((c) => c.tool === 'partner_generate' && c.args?.confirm === true);
     const refs = calls.map((c) => c.args?.fake_reference_images);
     // 兩個視角（廟前全景、正殿內部）各自把自己的照片放第一張
     expect(refs).toHaveLength(2);
