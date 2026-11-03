@@ -63,7 +63,11 @@
   cursor: pointer;
 }
 
+/* 點擊目標至少 44px 高（04「互動與無障礙」） */
 .link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   font-size: 13px;
   color: var(--color-primary);
   white-space: nowrap;
