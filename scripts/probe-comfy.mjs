@@ -162,11 +162,19 @@ function parseUploadCommand(text) {
 
 async function probeUpload() {
   if (!(await rpc('tools/list', {}))?.tools?.some((t) => t.name === 'upload_file')) return;
-  // 1×1 的灰色 PNG（合成的，不是照片）
-  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mN4+vQpAAZ8Av5L2y3jAAAAAElFTkSuQmCC', 'base64');
-  const file = path.join(outDir, 'probe-upload.png');
-  writeFileSync(file, png);
   console.log('  上傳一張合成的測試圖（不花錢）');
+  const { record } = await uploadFile(TEST_IMAGE);
+  save('upload.json', record);
+}
+
+/** 情境測試用的合成圖（320×240，不是照片，沒有人臉） */
+const TEST_IMAGE = 'tests/e2e/fixtures/photos/廟前全景.png';
+
+/** upload_file → 一次性網址 → PUT；回傳雲端的 { name, subfolder, type } */
+async function uploadFile(relativePath) {
+  const file = path.resolve(repoRoot, relativePath);
+  const bytes = readFileSync(file);
+  const mime = file.endsWith('.png') ? 'image/png' : file.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
   const requested = await tool('upload_file', { file_path: file, client_os: 'darwin' });
   // 一次性的上傳網址帶有簽章：存檔時去掉網址的查詢字串
   const hideSignature = (value) => JSON.parse(JSON.stringify(value ?? null).replace(/(https:\/\/[^\s'"?\\]+)\?[^\s'"\\]+/g, '$1?…'));
@@ -175,16 +183,23 @@ async function probeUpload() {
     response: { ok: requested.ok, text: hideSignature(requested.text), structured: hideSignature(requested.structured), error: requested.error },
   };
   const { url, headers } = parseUploadCommand(`${requested.text ?? ''} ${JSON.stringify(requested.structured ?? {})}`);
-  record.parsed = { url: url ? `${url.split('?')[0]}?…（已省略簽章）` : null, headers };
+  // 一次性網址本身就是授權：存檔時只留網址的開頭
+  record.parsed = { url: url ? `${url.slice(0, 40)}…（已省略）` : null, headers };
+  record.response.text = record.response.text?.replace(/https:\/\/[^\s'"]+/g, (found) => `${found.slice(0, 40)}…（已省略）`);
+  let uploaded = null;
   if (url) {
     try {
-      const put = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'image/png', ...headers }, body: png });
-      record.put = { status: put.status, body: (await put.text()).slice(0, 2000) };
+      const put = await fetch(url, { method: 'PUT', headers: { 'Content-Type': mime, ...headers }, body: bytes });
+      const body = await put.text();
+      record.put = { status: put.status, body: body.slice(0, 2000) };
+      if (put.ok) uploaded = JSON.parse(body);
     } catch (error) {
       record.put = { error: error instanceof Error ? error.message : String(error) };
     }
   }
-  save('upload.json', record);
+  // LoadImage 用的值：subfolder 不是空的時候是「subfolder/name」
+  if (uploaded) uploaded.loader = uploaded.subfolder ? `${uploaded.subfolder}/${uploaded.name}` : uploaded.name;
+  return { record, uploaded };
 }
 
 // ── 第 2 輪：依請求檔送出（預設只取得扣點說明，加 --confirm 才真的生成） ──
@@ -197,17 +212,42 @@ async function probeUpload() {
  * - paid 為 true：沒有 --confirm 時只送不帶 confirm 的那次，記下雲端回的扣點說明；有 --confirm 才帶 confirm: true
  * - 上一筆的結果可以用 "{{prev.<欄位>}}" 帶進下一筆（例如上傳回來的檔案參照）
  */
-function fillPrevious(value, previous) {
+function fillPrevious(value, previous, saved = {}) {
   if (typeof value === 'string') {
-    return value.replace(/\{\{prev\.([\w.]+)\}\}/g, (_, key) => {
-      let node = previous;
+    return value.replace(/\{\{(prev|saved)\.([\w.]+)\}\}/g, (_, source, key) => {
+      let node = source === 'prev' ? previous : saved;
       for (const part of key.split('.')) node = node?.[part];
       return node === undefined ? '' : String(node);
     });
   }
-  if (Array.isArray(value)) return value.map((item) => fillPrevious(item, previous));
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, fillPrevious(v, previous)]));
+  if (Array.isArray(value)) return value.map((item) => fillPrevious(item, previous, saved));
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, fillPrevious(v, previous, saved)]));
   return value;
+}
+
+/** 從回應裡找出可以下載的網址（排隊任務的 get_output，或同步回傳的 results[].url） */
+function outputUrls(value) {
+  const text = JSON.stringify(value ?? {});
+  return [...new Set(text.match(/https:\/\/[^\s"'\\]+\/api\/s\/[^\s"'\\]+/g) ?? [])].concat(
+    ((value?.results ?? value?.structured?.results ?? []).map((r) => r.url).filter(Boolean)),
+  );
+}
+
+async function downloadOutputs(label, urls) {
+  const files = [];
+  for (const [index, url] of urls.entries()) {
+    try {
+      const response = await fetch(url);
+      const type = response.headers.get('content-type') ?? '';
+      const ext = type.includes('mp4') ? 'mp4' : type.includes('png') ? 'png' : type.includes('jpeg') ? 'jpg' : type.includes('webp') ? 'webp' : 'bin';
+      const name = `${label.replace(/[^\w\u4e00-\u9fff-]+/g, '_')}-${index + 1}.${ext}`;
+      writeFileSync(path.join(outDir, name), Buffer.from(await response.arrayBuffer()));
+      files.push(name);
+    } catch (error) {
+      files.push(`下載失敗：${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  return files;
 }
 
 function parsed(result) {
@@ -244,8 +284,21 @@ async function roundTwo(file) {
   console.log(confirm ? '第 2 輪：付費的每一筆會先顯示扣點說明，問過你才送出' : '第 2 輪預演：付費的呼叫不送出');
   const results = [];
   let previous = {};
+  const saved = {};
   for (const request of requests) {
-    const toolArgs = fillPrevious(structuredClone(request.args ?? {}), previous);
+    // 上傳（不花錢）：upload_file → PUT，記下雲端的 name，之後用 {{saved.<saveAs>.name}}／{{saved.<saveAs>.loader}} 帶入
+    if (request.upload) {
+      console.log(`  ${request.label}`);
+      const { record, uploaded } = await uploadFile(request.upload);
+      if (request.saveAs && uploaded) saved[request.saveAs] = uploaded;
+      results.push({ label: request.label, upload: record, uploaded });
+      if (!uploaded) {
+        console.log('    上傳失敗，停在這裡（後面的請求要用到這張圖）');
+        break;
+      }
+      continue;
+    }
+    const toolArgs = fillPrevious(structuredClone(request.args ?? {}), previous, saved);
     if (request.file && request.fileArg) toolArgs[request.fileArg] = readFileSync(path.resolve(repoRoot, request.file)).toString('base64');
     console.log(`  ${request.label}`);
     if (!request.paid) {
@@ -269,12 +322,17 @@ async function roundTwo(file) {
     if (answer.trim().toLowerCase() === 'y') {
       const submitted = await tool(request.tool, { ...toolArgs, confirm: true });
       const data = parsed(submitted);
-      entry.submitted = data;
+      entry.submitted = { ...data, text: submitted.text };
       const promptId = data?.prompt_id ?? data?.result?.prompt_id;
+      let urls = outputUrls({ ...data, structured: submitted.structured });
       if (promptId) {
         entry.status = parsed(await waitJob(promptId));
-        entry.output = parsed(await tool('get_output', { prompt_id: promptId, client_os: 'darwin', inline_urls: false }));
+        const output = await tool('get_output', { prompt_id: promptId, client_os: 'darwin', inline_urls: false });
+        entry.output = { ...parsed(output), text: output.text };
+        urls = outputUrls(entry.output);
       }
+      entry.files = await downloadOutputs(request.label, urls);
+      console.log(`    產出：${entry.files.join('、') || '（沒有找到網址）'}`);
       previous = data;
     } else {
       entry.skipped = '使用者略過';

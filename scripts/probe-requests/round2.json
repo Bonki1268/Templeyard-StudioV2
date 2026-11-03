@@ -1,0 +1,61 @@
+[
+  {
+    "label": "上傳測試圖 1（廟前全景，合成圖）",
+    "upload": "tests/e2e/fixtures/photos/廟前全景.png",
+    "saveAs": "front"
+  },
+  {
+    "label": "上傳測試圖 2（三川殿，合成圖）",
+    "upload": "tests/e2e/fixtures/photos/三川殿.png",
+    "saveAs": "hall"
+  },
+  {
+    "label": "07 第 4 項：Nano Banana Pro 用兩張參考圖產生一張 16:9 精緻圖",
+    "tool": "partner_generate",
+    "paid": true,
+    "args": {
+      "type": "image",
+      "model": "vertexai/nano-banana-pro",
+      "aspect_ratio": "16:9",
+      "prompt": "A photorealistic 16:9 still of a traditional Taiwanese temple courtyard at early morning, empty of people. Use the first reference image for the overall temple front and the second for the entrance hall details. Soft warm light, no text, no watermark.",
+      "medias": [
+        { "role": "reference_image", "name": "{{saved.front.name}}", "subfolder": "{{saved.front.subfolder}}", "type": "input" },
+        { "role": "reference_image", "name": "{{saved.hall.name}}", "subfolder": "{{saved.hall.subfolder}}", "type": "input" }
+      ]
+    }
+  },
+  {
+    "label": "07 第 2 項：Gemini Omni 1.1 Flash 以首格生成 4 秒影片（圖生影片範本）",
+    "tool": "run_template",
+    "paid": true,
+    "args": {
+      "name": "api_google_gemini_omni_flash_1_1_i2v",
+      "input_overrides": {
+        "11": { "image": "{{saved.front.loader}}" },
+        "7": {
+          "model.prompt": "A 4-second, 16:9 clip. Use @Image1 as the first frame and keep the temple exactly unchanged. The camera slowly pushes in toward the temple entrance; incense smoke drifts across the courtyard. Ambient sound only: a distant temple bell and soft wind. No background music, no subtitles, no text on screen.",
+          "model.resolution": "720p",
+          "model.aspect_ratio": "16:9"
+        }
+      }
+    }
+  },
+  {
+    "label": "（選做）Seedance 2.0 首尾畫格生成 4 秒影片",
+    "tool": "run_template",
+    "paid": true,
+    "args": {
+      "name": "api_seedance2_0_flf2v",
+      "input_overrides": {
+        "3": { "image": "{{saved.front.loader}}" },
+        "4": { "image": "{{saved.hall.loader}}" },
+        "1": {
+          "model.prompt": "The camera glides from the temple front to the entrance hall in one smooth move, keeping both buildings unchanged. Ambient sound only, no background music, no text on screen.",
+          "model.duration": 4,
+          "model.resolution": "720p",
+          "model.ratio": "16:9"
+        }
+      }
+    }
+  }
+]
