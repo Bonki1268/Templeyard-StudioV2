@@ -1,10 +1,12 @@
 import { SHOT_SIZES, missingViewName, shotTitle, type Shot, type ShotCheck, type ShotInput } from '@templeyard/shared';
 import { useState, type DragEvent } from 'react';
+import { Link } from 'react-router';
 import { Button } from '../../components/Button';
 import { Tag } from '../../components/Tag';
 import styles from './PlanPanel.module.css';
 
 type ShotCardProps = {
+  videoId: string;
   shot: Shot;
   check: ShotCheck | undefined;
   views: readonly { viewKey: string; viewName: string }[];
@@ -35,7 +37,7 @@ const TEXT_FIELDS: { key: TextKey; label: string }[] = [
 ];
 
 /** 分鏡卡片：序號與時間、景別與運鏡、場景視角、畫面內容、台詞、字幕；可排序、複製、刪除 */
-export function ShotCard({ shot, check, views, index, count, readOnly, busy, onChange, onMove, onDuplicate, onRemove, onDragStart, onDrop }: ShotCardProps) {
+export function ShotCard({ videoId, shot, check, views, index, count, readOnly, busy, onChange, onMove, onDuplicate, onRemove, onDragStart, onDrop }: ShotCardProps) {
   const name = `第 ${shot.seq} 格`;
   const [texts, setTexts] = useState<Record<TextKey, string>>({ description: shot.description, dialogue: shot.dialogue, subtitle: shot.subtitle });
   const missing = missingViewName(shot.viewKey);
@@ -129,6 +131,9 @@ export function ShotCard({ shot, check, views, index, count, readOnly, busy, onC
           <Button aria-label={`刪除：${name}`} disabled={busy || count <= 1} onClick={onRemove}>
             刪除
           </Button>
+          <Link className={styles.detailLink} to={`/videos/${videoId}/shots/${shot.shotKey}?from=plan`}>
+            {`細修：${name}`}
+          </Link>
         </div>
       )}
       </div>

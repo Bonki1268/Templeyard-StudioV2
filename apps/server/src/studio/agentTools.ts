@@ -1,5 +1,5 @@
 import { defineTool, type AgentTool } from '@templeyard/agent';
-import { costItemSchema, generateQuestionnaireInputSchema, revisePlanInputSchema, templeSearchQuerySchema, type WorkflowConfig } from '@templeyard/shared';
+import { SHOT_SIZES, costItemSchema, generateQuestionnaireInputSchema, revisePlanInputSchema, templeSearchQuerySchema, type WorkflowConfig } from '@templeyard/shared';
 import { z } from 'zod';
 import { UnknownModelError, estimateCost } from '../costs/estimate.js';
 import type { AppDatabase } from '../db/client.js';
@@ -142,4 +142,42 @@ export function createAgentTools(deps: {
     },
   });
   return [...tools, revisePlanTool];
+}
+
+/** 細修頁的對話（第 10 階段）：只修改這一格 */
+export const REVISE_SHOT_TOOL = 'revise_shot';
+
+export function reviseShotTool(plans: PlanService, videoId: string, shotKey: string): AgentTool<unknown> {
+  return defineTool({
+    name: REVISE_SHOT_TOOL,
+    label: '修改這一格',
+    subject: '這一格的修改',
+    description: '修改使用者正在細修的這一格：只寫要改的欄位。每次修改都會產生新的方案版本。',
+    inputSchema: z
+      .object({
+        durationSec: z.number().int().min(1).max(30),
+        shotSize: z.enum(SHOT_SIZES),
+        cameraMove: z.string(),
+        cameraSpeed: z.string(),
+        cameraAngle: z.string(),
+        description: z.string(),
+        actionStart: z.string(),
+        actionEnd: z.string(),
+        dialogue: z.string(),
+        speaker: z.string(),
+        subtitle: z.string(),
+      })
+      .partial()
+      .refine((value) => Object.keys(value).length > 0, { error: '至少要改一個欄位' }),
+    paid: false,
+    run: async (input) => {
+      try {
+        const plan = plans.updateShot(videoId, shotKey, input, 'chat_edit');
+        return { ok: true, content: `已存成第 ${plan.version} 版：${plan.diff.summary}`, summary: plan.diff.summary };
+      } catch (error: unknown) {
+        if (error instanceof StudioError) return { ok: false, content: error.message, summary: error.message };
+        throw error;
+      }
+    },
+  });
 }

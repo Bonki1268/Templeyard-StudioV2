@@ -23,22 +23,55 @@ export type ShotDraft = Pick<
   | 'keyframeTimes'
 >;
 
+const FIELDS = [
+  'description',
+  'actionStart',
+  'actionEnd',
+  'dialogue',
+  'speaker',
+  'subtitle',
+  'durationSec',
+  'shotSize',
+  'cameraMove',
+  'cameraSpeed',
+  'cameraAngle',
+  'viewKey',
+  'lighting',
+  'characters',
+  'photoId',
+  'keyframesEnabled',
+  'keyframeTimes',
+] as const satisfies readonly (keyof ShotDraft)[];
+
 /** 從這一格建立編輯狀態 */
-export function draftFromShot(_shot: Shot): ShotDraft {
-  throw new Error('尚未實作');
+export function draftFromShot(shot: Shot): ShotDraft {
+  return Object.fromEntries(FIELDS.map((key) => [key, Array.isArray(shot[key]) ? [...(shot[key] as unknown[])] : shot[key]])) as ShotDraft;
+}
+
+function same(a: unknown, b: unknown, unordered: boolean): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    const left = unordered ? [...a].sort() : a;
+    const right = unordered ? [...b].sort() : b;
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+  return a === b;
 }
 
 /** 和這一格不同的欄位（角色與時間點比較內容，不看順序） */
-export function patchFrom(_shot: Shot, _draft: ShotDraft): ShotPatch {
-  throw new Error('尚未實作');
+export function patchFrom(shot: Shot, draft: ShotDraft): ShotPatch {
+  const patch: Record<string, unknown> = {};
+  for (const key of FIELDS) {
+    if (!same(shot[key], draft[key], key === 'characters' || key === 'keyframeTimes')) patch[key] = draft[key];
+  }
+  return patch as ShotPatch;
 }
 
 /** 有沒有還沒儲存的修改 */
-export function isDirty(_shot: Shot, _draft: ShotDraft): boolean {
-  throw new Error('尚未實作');
+export function isDirty(shot: Shot, draft: ShotDraft): boolean {
+  return Object.keys(patchFrom(shot, draft)).length > 0;
 }
 
 /** 圈選範圍的百分比輸入（0～100）轉成比例（0～1） */
-export function percentBox(_percent: { left: number; top: number; width: number; height: number }): { x: number; y: number; width: number; height: number } {
-  throw new Error('尚未實作');
+export function percentBox(percent: { left: number; top: number; width: number; height: number }): { x: number; y: number; width: number; height: number } {
+  return { x: percent.left / 100, y: percent.top / 100, width: percent.width / 100, height: percent.height / 100 };
 }

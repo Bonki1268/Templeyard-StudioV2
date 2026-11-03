@@ -83,5 +83,12 @@ export function buildAgentSystem(context: AgentContext): string {
       '使用者要修改方案時，呼叫 revise_plan，依序號（seq）只改要改的欄位；修改後簡短說明改了哪幾格。每次修改都會產生新的方案版本，使用者可以回到前一版。',
     );
   }
+  if (context.focusShot) {
+    lines.push(
+      '',
+      `## 這次只針對分鏡第 ${context.focusShot.seq} 格`,
+      `使用者在這一格的細修頁說話：只能用 revise_shot 修改第 ${context.focusShot.seq} 格，只寫要改的欄位，不改其他格；修改後簡短說明改了什麼。`,
+    );
+  }
   return lines.join('\n');
 }

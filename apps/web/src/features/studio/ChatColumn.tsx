@@ -12,6 +12,8 @@ type ChatColumnProps = {
   sending: boolean;
   error: string | null;
   onSend: (content: string) => void;
+  /** 輸入框的名稱；細修頁是「對 Agent 說（只針對這一格）」 */
+  inputLabel?: string;
 };
 
 function ToolCalls({ calls }: { calls: ToolCallSummary[] }) {
@@ -43,7 +45,7 @@ function Bubble({ who, lines, calls }: { who: 'user' | 'agent'; lines: string[];
 }
 
 /** 左欄：與創作 Agent 的對話；底部是輸入框 */
-export function ChatColumn({ messages, live, sending, error, onSend }: ChatColumnProps) {
+export function ChatColumn({ messages, live, sending, error, onSend, inputLabel = '對 Agent 說' }: ChatColumnProps) {
   const [draft, setDraft] = useState('');
 
   function submit(event: FormEvent) {
@@ -74,7 +76,7 @@ export function ChatColumn({ messages, live, sending, error, onSend }: ChatColum
         )}
       </section>
       <form className={styles.composer} onSubmit={submit}>
-        <TextField label="對 Agent 說" value={draft} onChange={setDraft} multiline maxLength={2000} placeholder="例如：觀眾以年輕人為主" />
+        <TextField label={inputLabel} value={draft} onChange={setDraft} multiline maxLength={2000} placeholder="例如：觀眾以年輕人為主" />
         <Button type="submit" disabled={sending || draft.trim() === ''}>
           傳送
         </Button>

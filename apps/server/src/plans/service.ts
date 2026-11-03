@@ -8,6 +8,7 @@ import {
   applyRevision,
   diffShots,
   estimateDialogueSec,
+  keyframeTimesError,
   planOutputSchema,
   planTargetSec,
   shotInputSchema,
@@ -292,8 +293,20 @@ export function createPlanService(deps: {
       return withNames(findCurrentPlan(db, videoId));
     },
 
-    updateShot() {
-      throw new Error('尚未實作');
+    updateShot(videoId, shotKey, patch, source = 'user_edit') {
+      requireVideo(videoId);
+      const current = withNames(findCurrentPlan(db, videoId));
+      const index = current?.shots.findIndex((shot) => shot.shotKey === shotKey) ?? -1;
+      if (!current || index < 0) throw new StudioError(404, '方案沒有這一格');
+      const drafts = draftsOf(current);
+      const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));
+      const next = shotInputSchema.parse({ ...drafts[index], ...defined });
+      if (next.keyframesEnabled) {
+        const error = keyframeTimesError(next.keyframeTimes, next.durationSec);
+        if (error) throw new StudioError(400, error);
+      }
+      drafts[index] = next;
+      return save(videoId, { version: current.version + 1, styleNote: current.styleNote, source, drafts, previous: current.shots });
     },
 
     replaceViewKey(videoId, from, to) {

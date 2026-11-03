@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Route, Routes } from 'react-router';
 import { CreateVideoPage } from './pages/CreateVideoPage';
 import { SeriesHomePage } from './pages/SeriesHomePage';
+import { ShotDetailPage } from './pages/ShotDetailPage';
 import { StudioPage } from './pages/StudioPage';
 import { TempleBoardPage } from './pages/TempleBoardPage';
 
@@ -18,6 +19,7 @@ export function App() {
         <Route path="/series/:sid/videos/new" element={<CreateVideoPage />} />
         <Route path="/videos/:vid/temple-board" element={<TempleBoardPage />} />
         <Route path="/videos/:vid/studio" element={<StudioPage />} />
+        <Route path="/videos/:vid/shots/:shotKey" element={<ShotDetailPage />} />
       </Routes>
     </QueryClientProvider>
   );

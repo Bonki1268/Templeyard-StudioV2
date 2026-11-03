@@ -4,6 +4,7 @@ import {
   assistResponseSchema,
   characterResponseSchema,
   chatListResponseSchema,
+  shotDetailSchema,
   framesResponseSchema,
   planResponseSchema,
   planVersionResponseSchema,
@@ -32,6 +33,8 @@ import {
   type Plan,
   type PlanResponse,
   type Questionnaire,
+  type ShotDetail,
+  type ShotPatch,
   type Budget,
   type CostCheck,
   type CostItem,
@@ -238,15 +241,20 @@ export async function saveTempleBoardVersion(videoId: string): Promise<TempleBoa
 
 // ── 創作工作區（第 6 階段） ──
 
-export async function fetchChat(videoId: string): Promise<ChatMessage[]> {
-  return chatListResponseSchema.parse(await request(`/api/videos/${videoId}/chat`)).messages;
+/** 對話的網址：有 shotKey 時是細修頁這一格的對話 */
+function chatPath(videoId: string, shotKey?: string) {
+  return shotKey ? `/api/videos/${videoId}/shots/${shotKey}/chat` : `/api/videos/${videoId}/chat`;
+}
+
+export async function fetchChat(videoId: string, shotKey?: string): Promise<ChatMessage[]> {
+  return chatListResponseSchema.parse(await request(chatPath(videoId, shotKey))).messages;
 }
 
 /** 對 Agent 說一句話：回應以 SSE 串流，每收到一則事件就交給 onEvent */
-export async function streamChat(videoId: string, content: string, onEvent: (event: ChatEvent) => void): Promise<void> {
+export async function streamChat(videoId: string, content: string, onEvent: (event: ChatEvent) => void, shotKey?: string): Promise<void> {
   let response: Response;
   try {
-    response = await fetch(`/api/videos/${videoId}/chat`, {
+    response = await fetch(chatPath(videoId, shotKey), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
       body: JSON.stringify({ content }),
@@ -340,4 +348,35 @@ export async function regenerateFrame(videoId: string, shotKey: string, consentT
 
 export async function confirmFrame(videoId: string, shotKey: string): Promise<FramesResponse> {
   return framesResponseSchema.parse(await request(`/api/videos/${videoId}/shots/${shotKey}/frames/confirm`, { method: 'POST' }));
+}
+
+// ── 分鏡細修（第 10 階段） ──
+
+export async function fetchShotDetail(videoId: string, shotKey: string): Promise<ShotDetail> {
+  return shotDetailSchema.parse(await request(`/api/videos/${videoId}/shots/${shotKey}`));
+}
+
+export async function patchShot(videoId: string, shotKey: string, patch: ShotPatch): Promise<void> {
+  await request(`/api/videos/${videoId}/shots/${shotKey}`, { method: 'PATCH', body: JSON.stringify(patch) });
+}
+
+export async function uploadShotFrame(videoId: string, shotKey: string, input: { kind: 'first' | 'last'; mime: string; dataBase64: string }): Promise<void> {
+  await request(`/api/videos/${videoId}/shots/${shotKey}/frames/upload`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function selectShotFrame(videoId: string, shotKey: string, frameId: string): Promise<void> {
+  await request(`/api/videos/${videoId}/shots/${shotKey}/frames/${frameId}/select`, { method: 'POST' });
+}
+
+export async function editShotRegion(
+  videoId: string,
+  shotKey: string,
+  frameId: string,
+  input: { box: { x: number; y: number; width: number; height: number }; instruction: string; consentToken?: string },
+): Promise<void> {
+  await request(`/api/videos/${videoId}/shots/${shotKey}/frames/${frameId}/edit`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function generateShotKeyframes(videoId: string, shotKey: string, consentToken: string | undefined): Promise<void> {
+  await request(`/api/videos/${videoId}/shots/${shotKey}/keyframes/generate`, { method: 'POST', body: JSON.stringify(consentToken ? { consentToken } : {}) });
 }

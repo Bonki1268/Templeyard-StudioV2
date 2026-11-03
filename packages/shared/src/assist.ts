@@ -26,6 +26,8 @@ export const ASSIST_FIELDS = [
   // 第 8 階段：方案的角色卡（規格書「5 分鏡方案：新角色的描述與連續性鎖」）
   { key: 'character.description', label: '角色的外觀描述', scope: 'video', node: 'character-design' },
   { key: 'character.locks', label: '角色的連續性鎖', scope: 'video', node: 'character-design' },
+  // 第 10 階段：分鏡細修「限定範圍修改的指令」
+  { key: 'shot.regionEdit', label: '限定範圍修改的指令（只改圈選的一處）', scope: 'video' },
 ] as const satisfies readonly AssistField[];
 
 export type AssistFieldKey = (typeof ASSIST_FIELDS)[number]['key'];

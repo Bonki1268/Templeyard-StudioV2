@@ -15,7 +15,7 @@ import { videos } from '../db/schema.js';
 import { findSeries, type Clock } from '../series/repository.js';
 import { findTemple } from '../temples/repository.js';
 import { findVideo } from '../videos/repository.js';
-import { createAgentTools } from './agentTools.js';
+import { createAgentTools, reviseShotTool } from './agentTools.js';
 import { BOARD_NOT_CONFIRMED, StudioError, VIDEO_NOT_FOUND } from './errors.js';
 import type { PlanService } from '../plans/service.js';
 import type { QuestionnaireService } from './questionnaire.js';
@@ -73,7 +73,13 @@ export function createChatService(deps: {
   }
 
   /** 這支影片的資料，寫進 Agent 的系統指令 */
-  function systemFor(video: Video): string {
+  function requireShot(videoId: string, shotKey: string) {
+    const shot = deps.plans?.current(videoId)?.shots.find((s) => s.shotKey === shotKey);
+    if (!shot) throw new StudioError(404, '方案沒有這一格');
+    return shot;
+  }
+
+  function systemFor(video: Video, focusShot: { seq: number } | null = null): string {
     const temple = findTemple(db, video.templeId);
     const seriesRow = findSeries(db, video.seriesId);
     if (!temple || !seriesRow) throw new Error('影片的寺廟或系列不存在');
@@ -84,44 +90,59 @@ export function createChatService(deps: {
       models: { image: imageModelLabel(video.imageModel), video: videoModelLabel(video.videoModel) },
       questionnaireSubmitted: Boolean(findQuestionnaire(db, video.id)?.submittedAt),
       plan: deps.plans?.current(video.id) ?? null,
+      focusShot,
     });
   }
 
   return {
-    list(videoId) {
+    list(videoId, shotKey) {
       requireVideo(videoId);
-      return listChatMessages(db, videoId);
+      if (shotKey) requireShot(videoId, shotKey);
+      return listChatMessages(db, videoId, shotKey);
     },
 
     prepare(videoId) {
       prepare(videoId);
     },
 
-    async send(videoId, content, onEvent) {
+    async send(videoId, content, onEvent, shotKey) {
       const { video, model } = prepare(videoId);
+      const focus = shotKey ? requireShot(videoId, shotKey) : null;
       // 之前的對話只送文字；Claude 要求第一則是使用者訊息，所以略過開頭的 Agent 訊息
-      const history: AgentMessage[] = listChatMessages(db, videoId).map((m) => ({
+      const history: AgentMessage[] = listChatMessages(db, videoId, shotKey).map((m) => ({
         role: m.role === 'user' ? 'user' : 'assistant',
         content: m.content,
       }));
       while (history[0]?.role === 'assistant') history.shift();
 
       const userMessage = db.transaction(() => {
-        const saved = insertChatMessage(db, { id: clock.newId(), videoId, role: 'user', content, toolCalls: [], createdAt: clock.now().toISOString() });
-        if (video.creativeInput === null) {
+        const saved = insertChatMessage(db, {
+          id: clock.newId(),
+          videoId,
+          role: 'user',
+          content,
+          toolCalls: [],
+          createdAt: clock.now().toISOString(),
+          ...(shotKey ? { shotKey } : {}),
+        });
+        if (video.creativeInput === null && !shotKey) {
           db.update(videos).set({ creativeInput: content, updatedAt: clock.now().toISOString() }).where(eq(videos.id, videoId)).run();
         }
         return saved;
       });
       onEvent({ type: 'user', message: userMessage });
 
-      const tools = createAgentTools({ db, videoId, questionnaires: deps.questionnaires, workflows: deps.workflows, ...(deps.plans ? { plans: deps.plans } : {}) });
+      // 細修頁：只能修改這一格
+      const tools =
+        focus && deps.plans
+          ? [reviseShotTool(deps.plans, videoId, focus.shotKey)]
+          : createAgentTools({ db, videoId, questionnaires: deps.questionnaires, workflows: deps.workflows, ...(deps.plans ? { plans: deps.plans } : {}) });
       // 付費工具要有這一輪的同意憑證；第 6 階段的對話不帶憑證，所以付費工具一律不執行
       const registry = createToolRegistry(tools, { verifyConsent: () => false });
       try {
         const result = await runAgentTurn({
           model,
-          system: systemFor(video),
+          system: systemFor(video, focus ? { seq: focus.seq } : null),
           history,
           userMessage: content,
           registry,
@@ -135,6 +156,7 @@ export function createChatService(deps: {
           content: result.text,
           toolCalls: result.toolCalls,
           createdAt: clock.now().toISOString(),
+          ...(shotKey ? { shotKey } : {}),
         });
         onEvent({ type: 'done', message: agentMessage });
       } catch (error: unknown) {

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FRAME_SHOT_STATE_LABELS, clipBlockers, frameShotState, type FramesResponse, type ShotFrames } from '@templeyard/shared';
 import { useId } from 'react';
+import { Link } from 'react-router';
 import { ApiRequestError, confirmFrame, regenerateFrame } from '../../api/client';
 import { Button } from '../../components/Button';
 import { Tag, type TagTone } from '../../components/Tag';
@@ -27,10 +28,13 @@ export function GeneratingPanel({ label }: { label: string | null }) {
   const titleId = useId();
   return (
     <section className={styles.panel} aria-labelledby={titleId}>
-      <h2 id={titleId} className={styles.title}>
-        生成中
-      </h2>
-      <p className={styles.label}>{label ?? '精緻圖'}</p>
+      <div className={styles.generating} role="status" aria-live="polite">
+        <span className={styles.spinner} data-testid="generating-indicator" aria-hidden="true" />
+        <h2 id={titleId} className={styles.title}>
+          生成中
+        </h2>
+        <p className={styles.label}>{label ?? '精緻圖'}</p>
+      </div>
       <p className={styles.muted}>可以先離開這個畫面，完成後會一次顯示結果；允許通知時也會通知你。</p>
     </section>
   );
@@ -58,7 +62,7 @@ function ShotCard({ videoId, imageModel, shot, onRegenerated }: { videoId: strin
   }
 
   return (
-    <article className={styles.card} aria-label={name}>
+    <article className={`${styles.card} ${state === 'needs_reconfirm' ? styles.cardWarning : ''}`} aria-label={name}>
       <div className={styles.cardHead}>
         <h3 className={styles.cardTitle}>{name}</h3>
         <Tag tone={TONES[state]}>{FRAME_SHOT_STATE_LABELS[state]}</Tag>
@@ -77,6 +81,9 @@ function ShotCard({ videoId, imageModel, shot, onRegenerated }: { videoId: strin
         <Button disabled={consent.busy} onClick={regenerate}>
           {`重生：${name}`}
         </Button>
+        <Link className={styles.link} to={`/videos/${videoId}/shots/${shot.shotKey}?from=frames`}>
+          {`細修：${name}`}
+        </Link>
       </div>
       {(consent.error || confirm.isError) && (
         <p className={styles.error} role="alert">

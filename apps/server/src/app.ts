@@ -15,11 +15,12 @@ import { resolveDataDir } from './paths.js';
 import { createAssistService } from './assist/service.js';
 import { CHARACTER_LOOK_NODE, CHARACTER_SHEET_NODE, createCharacterService } from './characters/service.js';
 import { createPlanService } from './plans/service.js';
-import { REFINED_FRAME_NODE, createFrameService, type FrameService } from './frames/service.js';
+import { FRAME_NODES, createFrameService, type FrameService } from './frames/service.js';
 import { planChangeInvalidations } from '@templeyard/shared';
 import { registerAssetRoutes } from './routes/assets.js';
 import { registerAssistRoutes } from './routes/assist.js';
 import { registerFrameRoutes } from './routes/frames.js';
+import { registerShotDetailRoutes } from './routes/shotDetail.js';
 import { registerCharacterRoutes } from './routes/characters.js';
 import { registerCostRoutes } from './routes/costs.js';
 import { registerPhotoRoutes } from './routes/photos.js';
@@ -175,6 +176,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   frameService = createFrameService({
     db: deps.db,
     clock,
+    store,
     workflows,
     prompts,
     plans,
@@ -196,13 +198,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         : null,
     ...(deps.generationUnavailableMessage ? { unavailableMessage: deps.generationUnavailableMessage } : {}),
   });
-  handlers[REFINED_FRAME_NODE] = frameService.handleGenerated;
+  for (const node of FRAME_NODES) handlers[node] = frameService.handleGenerated;
   const chat = createChatService({ db: deps.db, clock, workflows, consents, questionnaires, plans, model: text?.agent ?? null, ...unavailable });
   registerStudioRoutes(app, chat, questionnaires);
   registerPlanRoutes(app, plans);
   registerCharacterRoutes(app, characters);
   registerSupplementalViewRoutes(app, boards, plans);
   registerFrameRoutes(app, frameService);
+  registerShotDetailRoutes(app, frameService, plans, chat);
   registerAssistRoutes(app, createAssistService({ db: deps.db, clock, prompts, model: text?.assist ?? null, ...unavailable }));
 
   // 啟動時以 prompt_id 取回已送出、還沒完成的任務（F21），不重新送出

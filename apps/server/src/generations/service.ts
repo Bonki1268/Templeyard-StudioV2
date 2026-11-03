@@ -1,4 +1,4 @@
-import type { AssetKind, CostCheck, CostEstimate, CostItem, McpCall, WorkflowConfig } from '@templeyard/shared';
+import type { Asset, AssetKind, CostCheck, CostEstimate, CostItem, McpCall, WorkflowConfig } from '@templeyard/shared';
 import type { ComfyClient, Limiter, WaitResult } from '@templeyard/comfy-client';
 import { and, eq, inArray } from 'drizzle-orm';
 import { insertAsset } from '../assets/repository.js';
@@ -77,6 +77,8 @@ export type GenerationService = {
     consentToken: string | null | undefined,
     requestItems?: readonly CostItem[][],
   ): Precheck;
+  /** 把一個檔案存成資產（例如使用者上傳、已去識別的首格）；和生成的產出存在同一個資料夾 */
+  saveAsset(input: { kind: AssetKind; mime: string; bytes: Uint8Array }): Asset;
   /** 等某筆生成結束（成功、失敗或逾時），回傳最後的紀錄 */
   whenSettled(generationId: string): Promise<GenerationRow>;
   /** 啟動時呼叫：已送出、生成中的紀錄以 prompt_id 繼續追蹤，不重新送出；還沒送出的標示失敗 */
@@ -267,6 +269,12 @@ export function createGenerationService(deps: GenerationServiceDeps): Generation
       }
       const id = await accept(request, check.estimate);
       return { status: 'accepted', generationId: id };
+    },
+
+    saveAsset(input) {
+      const id = clock.newId();
+      const saved = store.save({ id, kind: input.kind, mime: input.mime, bytes: input.bytes });
+      return insertAsset(db, { id, kind: input.kind, mime: input.mime, path: saved.path, sha256: saved.sha256 });
     },
 
     async submitBatch(requests, consentToken) {

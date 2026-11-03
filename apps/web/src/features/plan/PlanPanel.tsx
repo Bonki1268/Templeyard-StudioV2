@@ -247,6 +247,7 @@ export function PlanPanel({ videoId, data, seriesVisualStyle, imageModel, savedV
         {shots.map((shot, index) => (
           <li key={`${current.version}-${selected}-${shot.shotKey}-${index}`}>
             <ShotCard
+              videoId={videoId}
               shot={shot}
               check={check.shots[shot.shotKey]}
               views={data.views}

@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { fetchChat, streamChat } from '../../api/client';
 import { videoDetailKey } from '../videos/useVideoDetail';
 
-export function chatKey(videoId: string) {
-  return ['chat', videoId] as const;
+export function chatKey(videoId: string, shotKey?: string) {
+  return shotKey ? (['chat', videoId, shotKey] as const) : (['chat', videoId] as const);
 }
 
 export function questionnaireKey(videoId: string) {
@@ -19,9 +19,9 @@ export type LiveReply = { text: string[]; toolCalls: ToolCallSummary[] };
  * 創作對話：對話紀錄、送出一句話（SSE 串流）、串流中的 Agent 回覆與錯誤。
  * 串流結束後重新讀取對話、問卷與影片（Agent 可能開啟了問卷、影片換了階段）。
  */
-export function useStudioChat(videoId: string) {
+export function useStudioChat(videoId: string, shotKey?: string) {
   const queryClient = useQueryClient();
-  const chat = useQuery({ queryKey: chatKey(videoId), queryFn: () => fetchChat(videoId), enabled: Boolean(videoId) });
+  const chat = useQuery({ queryKey: chatKey(videoId, shotKey), queryFn: () => fetchChat(videoId, shotKey), enabled: Boolean(videoId) });
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liveUser, setLiveUser] = useState<ChatMessage | null>(null);
@@ -36,7 +36,10 @@ export function useStudioChat(videoId: string) {
     setLive({ text: [], toolCalls: [] });
     let result: ToolCallSummary[] | null = null;
     try {
-      await streamChat(videoId, content, (event) => {
+      await streamChat(
+        videoId,
+        content,
+        (event) => {
         if (event.type === 'user') setLiveUser(event.message);
         else if (event.type === 'text') setLive((old) => ({ text: [...(old?.text ?? []), event.text], toolCalls: old?.toolCalls ?? [] }));
         else if (event.type === 'tool') setLive((old) => ({ text: old?.text ?? [], toolCalls: [...(old?.toolCalls ?? []), event.call] }));
@@ -46,13 +49,17 @@ export function useStudioChat(videoId: string) {
           setLiveAgent(event.message);
         }
         else setError(event.message);
-      });
+        },
+        shotKey,
+      );
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : 'Agent 回覆失敗，請再試一次');
     } finally {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: chatKey(videoId) }),
+        queryClient.invalidateQueries({ queryKey: chatKey(videoId, shotKey) }),
         queryClient.invalidateQueries({ queryKey: questionnaireKey(videoId) }),
+        // 細修頁的對話可能改了這一格
+        queryClient.invalidateQueries({ queryKey: ['shot', videoId] }),
         queryClient.invalidateQueries({ queryKey: videoDetailKey(videoId) }),
         // Agent 可能修改了分鏡方案
         queryClient.invalidateQueries({ queryKey: ['plan', videoId] }),

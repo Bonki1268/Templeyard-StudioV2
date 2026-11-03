@@ -1,5 +1,5 @@
 import type { ChatMessage, Questionnaire, QuestionnaireAnswer, ToolCallSummary } from '@templeyard/shared';
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import type { AppDatabase } from '../db/client.js';
 import { chatMessages, questionnaires, type ChatMessageRow, type QuestionnaireRow } from '../db/schema.js';
 
@@ -9,12 +9,17 @@ function toChatMessage(row: ChatMessageRow): ChatMessage {
   return { id: row.id, videoId: row.videoId, role: row.role, content: row.content, toolCalls: row.toolCalls, createdAt: row.createdAt };
 }
 
-/** 這支影片的對話（scope 為 video），依時間與寫入順序 */
-export function listChatMessages(db: AppDatabase, videoId: string): ChatMessage[] {
+/** 這支影片的對話，依時間與寫入順序；有 shotKey 時是這一格的對話（scope 為 shot），沒有時是整支影片的對話 */
+export function listChatMessages(db: AppDatabase, videoId: string, shotKey?: string): ChatMessage[] {
   return db
     .select()
     .from(chatMessages)
-    .where(eq(chatMessages.videoId, videoId))
+    .where(
+      and(
+        eq(chatMessages.videoId, videoId),
+        shotKey ? and(eq(chatMessages.scope, 'shot'), eq(chatMessages.shotKey, shotKey)) : eq(chatMessages.scope, 'video'),
+      ),
+    )
     .orderBy(asc(chatMessages.createdAt), asc(sql`rowid`))
     .all()
     .map(toChatMessage);
@@ -22,9 +27,10 @@ export function listChatMessages(db: AppDatabase, videoId: string): ChatMessage[
 
 export function insertChatMessage(
   db: AppDatabase,
-  row: { id: string; videoId: string; role: 'user' | 'agent'; content: string; toolCalls: ToolCallSummary[]; createdAt: string },
+  row: { id: string; videoId: string; role: 'user' | 'agent'; content: string; toolCalls: ToolCallSummary[]; createdAt: string; shotKey?: string },
 ): ChatMessage {
-  return toChatMessage(db.insert(chatMessages).values({ ...row, scope: 'video', shotKey: null }).returning().get());
+  const { shotKey, ...rest } = row;
+  return toChatMessage(db.insert(chatMessages).values({ ...rest, scope: shotKey ? 'shot' : 'video', shotKey: shotKey ?? null }).returning().get());
 }
 
 function toQuestionnaire(row: QuestionnaireRow): Questionnaire {

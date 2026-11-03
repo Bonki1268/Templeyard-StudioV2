@@ -19,26 +19,40 @@ export const KEYFRAME_CONTROL: Record<string, '軟性控制' | '精準控制'> =
 };
 
 /** 解析輸入框的時間點：「3、6」或「3,6」；不是數字時回傳錯誤 */
-export function parseKeyframeTimes(_text: string): { times: number[] } | { error: string } {
-  throw new Error('尚未實作');
+export function parseKeyframeTimes(text: string): { times: number[] } | { error: string } {
+  const parts = text
+    .split(/[、,，\s]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const times = parts.map(Number);
+  if (times.some((value) => !Number.isFinite(value))) return { error: '時間點要是數字，以「、」分開' };
+  return { times };
 }
 
 /**
  * 時間點規則（規格書 5b）：介於 0 秒與這一格長度之間（不含兩端）、彼此至少相隔 1 秒、最多 4 張；
  * 通過時回傳 null
  */
-export function keyframeTimesError(_times: readonly number[], _durationSec: number): string | null {
-  throw new Error('尚未實作');
+export function keyframeTimesError(times: readonly number[], durationSec: number): string | null {
+  if (times.length === 0) return '請至少設定一個時間點';
+  if (times.length > MAX_KEYFRAMES) return `中間關鍵畫格最多 ${MAX_KEYFRAMES} 張`;
+  if (times.some((t) => t <= 0 || t >= durationSec)) return `時間點要介於 0 秒與 ${durationSec} 秒之間`;
+  const sorted = [...times].sort((a, b) => a - b);
+  // 浮點誤差：3 與 4 相隔剛好 1 秒要算通過
+  if (sorted.some((t, i) => i > 0 && t - (sorted[i - 1] ?? 0) < 1 - 1e-9)) return '時間點彼此至少相隔 1 秒';
+  return null;
 }
 
 /** 建議時間點：方案已有建議（Agent 依動作轉折給的）且符合規則就用；否則取這一格的中間（四捨五入到整秒） */
-export function suggestKeyframeTimes(_shot: { durationSec: number; keyframeTimes: readonly number[] }): number[] {
-  throw new Error('尚未實作');
+export function suggestKeyframeTimes(shot: { durationSec: number; keyframeTimes: readonly number[] }): number[] {
+  if (shot.keyframeTimes.length > 0 && keyframeTimesError(shot.keyframeTimes, shot.durationSec) === null) return [...shot.keyframeTimes];
+  if (shot.durationSec < 2) return [];
+  return [Math.round(shot.durationSec / 2)];
 }
 
 /** 「Gemini Omni 1.1 Flash：中間關鍵畫格為軟性控制」 */
-export function keyframeControlNote(_videoModelKey: string, _videoModelLabel: string): string {
-  throw new Error('尚未實作');
+export function keyframeControlNote(videoModelKey: string, videoModelLabel: string): string {
+  return `${videoModelLabel}：中間關鍵畫格為${KEYFRAME_CONTROL[videoModelKey] ?? '軟性控制'}`;
 }
 
 /** 細修頁儲存這一格：只送改到的欄位 */
@@ -89,8 +103,9 @@ export const uploadFrameSchema = z.object({
 });
 
 /** 圈選範圍寫成指令用的文字：「左 10%、上 20%、寬 30%、高 40%」 */
-export function regionText(_box: RegionBox): string {
-  throw new Error('尚未實作');
+export function regionText(box: RegionBox): string {
+  const pct = (value: number) => `${Math.round(value * 100)}%`;
+  return `左 ${pct(box.x)}、上 ${pct(box.y)}、寬 ${pct(box.width)}、高 ${pct(box.height)}`;
 }
 
 /** GET /api/videos/:id/shots/:shotKey */
