@@ -47,6 +47,7 @@ export default defineConfig({
         ANTHROPIC_API_KEY: 'fake-claude-key',
         ANTHROPIC_BASE_URL: `http://127.0.0.1:${FAKE_CLAUDE_PORT}`,
         CLAUDE_MODEL_ASSIST: 'fake-claude-model',
+        CLAUDE_MODEL_AGENT: 'fake-claude-agent-model',
         WORKFLOWS_FILE: E2E_WORKFLOWS_FILE,
       },
       reuseExistingServer: false,

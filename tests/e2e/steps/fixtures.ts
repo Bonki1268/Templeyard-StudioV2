@@ -16,6 +16,10 @@ type ScenarioState = {
   uploadedFiles?: string[];
   /** 定裝版產生完成時，各視角（名稱）的視角圖編號；用來判斷重生後換了圖 */
   boardAssets?: Record<string, string | null>;
+  /** 畫面上最近一次顯示的 AI 建議 */
+  aiSuggestion?: string;
+  /** 透過 API 產生的 AI 輔助撰寫紀錄 */
+  assistLogId?: string;
 };
 
 export const test = base.extend<{ state: ScenarioState }>({

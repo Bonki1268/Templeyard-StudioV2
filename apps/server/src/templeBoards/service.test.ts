@@ -148,9 +148,19 @@ describe('產生寺廟定裝版', () => {
     expect(uploaded).not.toContain(other.originalSha256);
     // 付費工具先回要求確認，帶 confirm: true 才真的送出；只看真的送出的那幾次
     const calls = world.fake.calls.filter((c) => c.tool === 'partner_generate' && c.args?.confirm === true);
-    const refs = calls.map((c) => c.args?.fake_reference_images);
-    // 兩個視角（廟前全景、正殿內部）各自把自己的照片放第一張
-    expect(refs).toHaveLength(2);
+    // 參考圖是上傳後拿到的雲端參照；上傳時的檔名是去識別圖的資產編號
+    const fileOf = new Map(world.fake.uploads.map((u) => [u.ref, u.filename]));
+    const refFiles = calls.map((c) => {
+      const refs = c.args?.fake_reference_images;
+      if (!Array.isArray(refs)) throw new Error('沒有參考圖');
+      return refs.map((ref: unknown) => fileOf.get(String(ref)));
+    });
+    const ownFile = `${own.photo.deidentifiedAssetId}.png`;
+    const otherFile = `${other.photo.deidentifiedAssetId}.png`;
+    // 兩個視角（廟前全景、正殿內部）各自把自己的照片放第一張，參考圖都是去識別照片的雲端參照
+    expect(refFiles).toHaveLength(2);
+    expect(refFiles.map((files) => files[0]).sort()).toEqual([ownFile, otherFile].sort());
+    for (const files of refFiles) expect([...files].sort()).toEqual([ownFile, otherFile].sort());
     expect(world.writer.calls[0]?.content).toContain('Image 1（地理、建築外觀）：廟前全景');
     expect(world.writer.calls[0]?.content).toContain('Image 2（建築外觀）：正殿內部');
   });
@@ -423,12 +433,13 @@ describe('確認視角與定裝版', () => {
 
   it('確認定裝版：版本標示已確認、成為系列這間廟目前的版本、影片進入對話、留下確認紀錄', async () => {
     const board = await generated();
+    // 生成時的輪詢會推進假時鐘；確認前把時間設到 10:00，確認時間才看得出是確認當下寫入的
+    world.clock.advance(Date.UTC(2026, 10, 3, 10, 0) - world.clock.now().getTime());
 
     const result = boards.confirm('v1');
 
     expect(result.video.stage).toBe('chat');
-    // 假時鐘和輪詢共用，確認時間是確認當下的時間
-    expect(result.board.version.confirmedAt).toBe(world.clock.now().toISOString());
+    expect(result.board.version.confirmedAt).toBe('2026-11-03T10:00:00.000Z');
     const stored = world.db.select().from(templeBoards).get();
     expect(stored?.currentVersionId).toBe(board?.version.id);
     const records = world.db.select().from(confirmations).where(eq(confirmations.videoId, 'v1')).all();
@@ -486,6 +497,7 @@ describe('沿用與另存新版本', () => {
     addPhoto(world, { viewKey: 'front_overview' });
     await generated('v1');
     expect(boards.reusableFor('s1', 't1')).toBeNull();
+    world.clock.advance(Date.UTC(2026, 10, 3, 10, 0) - world.clock.now().getTime());
 
     const board = boards.confirm('v1').board;
 
@@ -493,9 +505,8 @@ describe('沿用與另存新版本', () => {
       versionId: board.version.id,
       version: 1,
       imageModel: 'nano-banana-pro',
-      confirmedAt: board.version.confirmedAt,
+      confirmedAt: '2026-11-03T10:00:00.000Z',
     });
-    expect(board.version.confirmedAt).not.toBeNull();
     expect(boards.reusableFor('s1', 't2')).toBeNull();
     expect(boards.reusableFor('other-series', 't1')).toBeNull();
   });

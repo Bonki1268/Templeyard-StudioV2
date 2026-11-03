@@ -5,9 +5,11 @@ import type {
   ConfirmationPoint,
   DeidBox,
   GenerationStatus,
+  QuestionnaireAnswer,
   TempleFlag,
   TempleStatus,
   TempleViewSource,
+  ToolCallSummary,
   VideoStage,
 } from '@templeyard/shared';
 
@@ -247,3 +249,58 @@ export const confirmations = sqliteTable(
 );
 
 export type ConfirmationRow = typeof confirmations.$inferSelect;
+
+/** chat_messages：對話紀錄（scope 為 shot 時 shot_key 指向那一格；第 6 階段只有 video） */
+export const chatMessages = sqliteTable(
+  'chat_messages',
+  {
+    id: text('id').primaryKey(),
+    videoId: text('video_id')
+      .notNull()
+      .references(() => videos.id),
+    scope: text('scope').$type<'video' | 'shot'>().notNull(),
+    shotKey: text('shot_key'),
+    role: text('role').$type<'user' | 'agent'>().notNull(),
+    content: text('content').notNull(),
+    // Agent 執行的操作與結果摘要
+    toolCalls: text('tool_calls', { mode: 'json' }).$type<ToolCallSummary[]>().notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('chat_messages_video_idx').on(table.videoId)],
+);
+
+export type ChatMessageRow = typeof chatMessages.$inferSelect;
+
+/** questionnaires：問卷，一支影片一份 */
+export const questionnaires = sqliteTable(
+  'questionnaires',
+  {
+    id: text('id').primaryKey(),
+    videoId: text('video_id')
+      .notNull()
+      .references(() => videos.id),
+    answers: text('answers', { mode: 'json' }).$type<QuestionnaireAnswer[]>().notNull(),
+    submittedAt: text('submitted_at'),
+  },
+  (table) => [uniqueIndex('questionnaires_video_idx').on(table.videoId)],
+);
+
+export type QuestionnaireRow = typeof questionnaires.$inferSelect;
+
+/** ai_assist_logs：AI 輔助撰寫紀錄；系列表單還沒建立系列時 series_id 是 null */
+export const aiAssistLogs = sqliteTable(
+  'ai_assist_logs',
+  {
+    id: text('id').primaryKey(),
+    seriesId: text('series_id').references(() => series.id),
+    videoId: text('video_id').references(() => videos.id),
+    field: text('field').notNull(),
+    userInput: text('user_input').notNull(),
+    suggestion: text('suggestion').notNull(),
+    adopted: integer('adopted', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('ai_assist_logs_video_idx').on(table.videoId)],
+);
+
+export type AiAssistLogRow = typeof aiAssistLogs.$inferSelect;

@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import styles from './OptionGroup.module.css';
 
 export type Option<T extends string | number> = { value: T; label: string };
@@ -9,8 +9,10 @@ export type OptionGroupProps<T extends string | number> = {
   /** 目前選取的值；自己寫時為 null */
   value: T | null;
   onChange: (value: T) => void;
-  /** 「或自己寫」：有傳才顯示；填寫時由上層取消選項 */
-  other?: { value: string; onChange: (text: string) => void };
+  /** 「或自己寫」：有傳才顯示；填寫時由上層取消選項；accessory 放在輸入框旁（例如 AI 幫我寫） */
+  other?: { value: string; onChange: (text: string) => void; accessory?: ReactNode };
+  /** 群組標題旁的附加元件（例如來源標籤）；不算在群組名稱裡 */
+  legendAccessory?: ReactNode;
   /** 整組不能選（例如已確認的定裝版） */
   disabled?: boolean;
 };

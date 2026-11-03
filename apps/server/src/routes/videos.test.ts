@@ -93,6 +93,7 @@ describe('建立影片 POST /api/videos', () => {
       modelsLockedAt: null,
       templeBoardVersionId: null,
       userTempleNotes: '',
+      creativeInput: null,
       costLimit: null,
       createdAt: expect.any(String),
       updatedAt: expect.any(String),

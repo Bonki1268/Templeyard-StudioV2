@@ -36,6 +36,13 @@
       "when": 1793650334228,
       "tag": "0004_temple_boards",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793675075791,
+      "tag": "0005_chat_questionnaire_assist",
+      "breakpoints": true
     }
   ]
 }

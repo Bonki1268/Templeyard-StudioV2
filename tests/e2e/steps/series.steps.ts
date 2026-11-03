@@ -99,10 +99,6 @@ Then(/^「([^」]+)」的「([^」]+)」沒有被選取$/, async ({ page }, grou
   await expect(button).toHaveAttribute('aria-pressed', 'false');
 });
 
-Then(/^「([^」]+)」旁的「AI 幫我寫」按鈕不能按$/, async ({ page }, field: string) => {
-  await expect(page.getByRole('button', { name: `AI 幫我寫：${field}` })).toBeDisabled();
-});
-
 // ── API ──
 
 Given('我已經透過 API 建立一個系列', async ({ request, state }) => {

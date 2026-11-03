@@ -50,4 +50,28 @@ describe('選項按鈕群組', () => {
       expect(button).toHaveAttribute('aria-pressed', 'false');
     }
   });
+
+  it('「或自己寫」旁可以放附加元件（例如 AI 幫我寫）', () => {
+    render(
+      <OptionGroup
+        legend="語氣"
+        options={[{ value: '溫暖', label: '溫暖' }]}
+        value={null}
+        onChange={() => undefined}
+        other={{ value: '', onChange: () => undefined, accessory: <button type="button">AI 幫我寫：語氣（或自己寫）</button> }}
+      />,
+    );
+
+    const group = screen.getByRole('group', { name: '語氣' });
+    expect(within(group).getByRole('button', { name: 'AI 幫我寫：語氣（或自己寫）' })).toBeVisible();
+  });
+
+  it('群組標題旁可以放標籤，不會改變群組的名稱', () => {
+    render(
+      <OptionGroup legend="語氣" legendAccessory={<span>系列預設</span>} options={[{ value: '溫暖', label: '溫暖' }]} value={null} onChange={() => undefined} />,
+    );
+
+    const group = screen.getByRole('group', { name: '語氣' });
+    expect(within(group).getByText('系列預設')).toBeVisible();
+  });
 });

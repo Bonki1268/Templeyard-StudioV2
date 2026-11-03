@@ -5,13 +5,19 @@ import { expect, type APIRequestContext } from '@playwright/test';
 import {
   VIDEO_MODELS,
   assetResponseSchema,
+  chatEventSchema,
+  createSseParser,
+  questionnaireResponseSchema,
+  seriesListResponseSchema,
   photoResponseSchema,
   seriesResponseSchema,
   templeBoardResponseSchema,
   templeSearchResponseSchema,
   videoDetailResponseSchema,
   videoResponseSchema,
+  type ChatEvent,
   type CreateSeriesInput,
+  type Questionnaire,
   type TempleBoard,
   type VideoDetail,
   type VideoModelKey,
@@ -149,4 +155,47 @@ export async function generateBoardViaApi(
   });
   expect(response.status()).toBe(202);
   return waitBoardReady(request, videoId);
+}
+
+// ── 創作工作區（第 6 階段） ──
+
+/** 假的 Claude API（playwright.config.ts 的 FAKE_CLAUDE_PORT） */
+export const FAKE_CLAUDE_URL = 'http://127.0.0.1:3501';
+
+export type FakeClaudeRequest = { model: string; system: string; user: string; tools?: string[] };
+
+export async function fakeClaudeRequests(request: APIRequestContext): Promise<FakeClaudeRequest[]> {
+  const response = await request.get(`${FAKE_CLAUDE_URL}/__requests`);
+  expect(response.status()).toBe(200);
+  return ((await response.json()) as { requests: FakeClaudeRequest[] }).requests;
+}
+
+/** 產生定裝版（廟前全景）並確認，影片進到對話階段 */
+export async function confirmBoardViaApi(request: APIRequestContext, videoId: string): Promise<void> {
+  await generateBoardViaApi(request, videoId);
+  const response = await request.post(`/api/videos/${videoId}/temple-board/confirm`);
+  expect(response.status()).toBe(200);
+}
+
+/** 對 Agent 說一句話，讀完整個 SSE 回應，回傳收到的事件 */
+export async function chatViaApi(request: APIRequestContext, videoId: string, content: string): Promise<ChatEvent[]> {
+  const response = await request.post(`/api/videos/${videoId}/chat`, { data: { content } });
+  expect(response.status()).toBe(200);
+  return createSseParser()
+    .push(await response.text())
+    .map((message) => chatEventSchema.parse(JSON.parse(message.data)));
+}
+
+export async function fetchQuestionnaire(request: APIRequestContext, videoId: string): Promise<Questionnaire | null> {
+  const response = await request.get(`/api/videos/${videoId}/questionnaire`);
+  expect(response.status()).toBe(200);
+  return questionnaireResponseSchema.parse(await response.json()).questionnaire;
+}
+
+export async function fetchSeriesDefaults(request: APIRequestContext, seriesId: string): Promise<Record<string, unknown> | null> {
+  const response = await request.get('/api/series');
+  expect(response.status()).toBe(200);
+  const found = seriesListResponseSchema.parse(await response.json()).series.find((s) => s.id === seriesId);
+  if (!found) throw new Error(`找不到系列：${seriesId}`);
+  return found.questionnaireDefaults;
 }

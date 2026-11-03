@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.135.0",
+    "@templeyard/agent": "workspace:^",
     "@templeyard/comfy-client": "workspace:^",
     "@templeyard/prompts": "workspace:^",
     "@templeyard/shared": "workspace:^",

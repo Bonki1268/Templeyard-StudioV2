@@ -1,5 +1,5 @@
 {
-  "note": "假的 Claude API 用的錄製回應。match 是 system 裡要出現的文字；text 裡的 {{user}} 換成使用者訊息原文（這樣連續性鎖會逐字出現）。AI 產生的文字不做快照比對，測試只驗證格式與流程。",
+  "note": "假的 Claude API 用的錄製回應。match 是 system 裡要出現的文字；matchUser 是訊息裡要出現的文字；afterToolResult 表示最後一則訊息是不是工具結果。text 是一段文字，content 是內容區塊（可含 tool_use）。替換：{{user}} 所有訊息的文字、{{lastUser}} 最後一則使用者文字訊息、{{n}} 第幾次回應。依序找第一筆符合的，特定的要放前面。AI 產生的文字不做快照比對，測試只驗證格式與流程。",
   "recordings": [
     {
       "match": "寺廟定裝版的視角圖",
@@ -16,6 +16,112 @@
     {
       "match": "測試：照實回傳使用者內容",
       "text": "{\"prompt\": \"echo: {{user}}\"}"
+    },
+    {
+      "match": "測試 Agent",
+      "afterToolResult": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "我先查一下。"
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_test_{{n}}",
+          "name": "echo",
+          "input": {
+            "text": "{{lastUser}}"
+          }
+        }
+      ]
+    },
+    {
+      "match": "測試 Agent",
+      "afterToolResult": true,
+      "content": [
+        {
+          "type": "text",
+          "text": "查好了。"
+        }
+      ]
+    },
+    {
+      "match": "廟埕影室的創作 Agent",
+      "matchUser": "測試：問卷格式錯誤",
+      "content": [
+        {
+          "type": "text",
+          "text": "我先幫你開問卷。"
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_bad_{{n}}",
+          "name": "generate_questionnaire",
+          "input": {
+            "questionIds": [
+              "not_a_question"
+            ],
+            "prefill": []
+          }
+        }
+      ]
+    },
+    {
+      "match": "廟埕影室的創作 Agent",
+      "afterToolResult": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "好的，我先整理幾個問題，把影片的條件補齊；不確定的題目可以留白，由系統決定。"
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_q_{{n}}",
+          "name": "generate_questionnaire",
+          "input": {
+            "questionIds": [
+              "story",
+              "goal",
+              "audience",
+              "narration",
+              "character",
+              "tone",
+              "length",
+              "photos",
+              "mustSay"
+            ],
+            "prefill": [
+              {
+                "questionId": "story",
+                "custom": "{{lastUser}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "match": "廟埕影室的創作 Agent",
+      "afterToolResult": true,
+      "content": [
+        {
+          "type": "text",
+          "text": "問卷開在右邊了，看看預填的答案，有需要再修改。"
+        }
+      ]
+    },
+    {
+      "match": "故事編輯",
+      "text": "{\"polished\": \"漁民在廟埕點香，抬頭看見屋脊上的媽祖像（錄製的回應第 {{n}} 版）\", \"notes\": \"錄製的回應\"}"
+    },
+    {
+      "match": "廟埕影室的 AI 輔助撰寫",
+      "matchUser": "測試：AI 建議格式錯誤",
+      "text": "這不是 JSON"
+    },
+    {
+      "match": "廟埕影室的 AI 輔助撰寫",
+      "text": "{\"suggestion\": \"錄製的 AI 建議（第 {{n}} 版）\"}"
     }
   ]
 }

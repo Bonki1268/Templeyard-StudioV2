@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
+import type { ClaudeModel } from '@templeyard/agent';
 import { loadPromptFiles, loadWorkflowConfig, promptsDir, workflowsFile } from '@templeyard/prompts';
 import { createCloudAssetSender, createLimiter, type CloudAssetTransport, type ComfyClient } from '@templeyard/comfy-client';
 import type { PromptWriter } from '@templeyard/prompts';
@@ -38,6 +39,19 @@ export type AppDeps = {
   generationUnavailableMessage?: string;
   /** prompt-studio/prompts 的內容；預設讀 repo 裡的檔案 */
   prompts?: ReadonlyMap<string, PromptFile>;
+  /**
+   * 文字 AI（創作 Agent、AI 輔助撰寫）用的 Claude；沒有設定時為 null，
+   * 對話與 AI 幫我寫回 503 並說明 textUnavailableMessage
+   */
+  text?: TextRuntime | null;
+  textUnavailableMessage?: string;
+};
+
+export type TextRuntime = {
+  /** 創作 Agent（CLAUDE_MODEL_AGENT） */
+  agent: ClaudeModel;
+  /** AI 輔助撰寫（CLAUDE_MODEL_ASSIST） */
+  assist: ClaudeModel;
 };
 
 export type GenerationRuntime = {

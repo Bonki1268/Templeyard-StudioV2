@@ -17,6 +17,7 @@ function toVideo(row: VideoRow): Video {
     modelsLockedAt: row.modelsLockedAt,
     templeBoardVersionId: row.templeBoardVersionId,
     userTempleNotes: row.userTempleNotes,
+    creativeInput: row.creativeInput,
     costLimit: row.costLimit,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

@@ -53,3 +53,21 @@ export function readGenerationEnv(env: Record<string, string | undefined>): Gene
 export function generationUnavailableMessage(missing: readonly string[]): string {
   return `還沒設定生成服務，不能生成：請在 .env.local 設定 ${missing.join('、')}`;
 }
+
+/** 文字 AI（創作 Agent、AI 輔助撰寫）的設定：只需要 Claude，不需要 Comfy Cloud */
+export type TextEnv = { apiKey: string; baseURL: string | undefined; agentModel: string; assistModel: string };
+
+export type TextEnvResult = { config: TextEnv; missing: [] } | { config: null; missing: string[] };
+
+/**
+ * 必填：ANTHROPIC_API_KEY、CLAUDE_MODEL_AGENT、CLAUDE_MODEL_ASSIST；缺少時回傳缺少的名稱（不含值）。
+ * 選填：ANTHROPIC_BASE_URL。
+ */
+export function readTextEnv(_env: Record<string, string | undefined>): TextEnvResult {
+  throw new Error('尚未實作');
+}
+
+/** 文字 AI 沒有設定時，對話與 AI 幫我寫回給使用者的說明 */
+export function textUnavailableMessage(_missing: readonly string[]): string {
+  throw new Error('尚未實作');
+}

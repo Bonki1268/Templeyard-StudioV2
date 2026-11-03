@@ -59,6 +59,8 @@ export const videoSchema = z.object({
   templeBoardVersionId: z.string().nullable().default(null),
   /** 使用者貼上的寺廟歷史與簡介；來源標示「使用者提供」 */
   userTempleNotes: z.string(),
+  /** 創作首頁送出的第一句話（第 6 階段） */
+  creativeInput: z.string().nullable().default(null),
   /** 本支影片的費用上限（點數）；null 表示不設上限 */
   costLimit: z.number().int().nullable(),
   createdAt: z.string(),
