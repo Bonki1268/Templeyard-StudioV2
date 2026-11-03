@@ -65,3 +65,29 @@ describe('創作 Agent 的系統指令', () => {
     expect(buildAgentSystem({ ...context, questionnaireSubmitted: true })).toContain('問卷已送出，不能重新產生問卷');
   });
 });
+
+describe('有分鏡方案時', () => {
+  const plan = {
+    version: 2,
+    shots: [
+      { seq: 1, durationSec: 6, shotSize: '遠景', viewKey: 'front_overview', description: '廟前全景', dialogue: '' },
+      { seq: 2, durationSec: 8, shotSize: '中景', viewKey: 'front_overview', description: '阿嬤在廟埕', dialogue: '媽祖婆保佑大家平安。' },
+    ],
+  };
+
+  it('列出目前的方案：第幾版、每格的秒數、景別、視角、畫面內容與台詞', () => {
+    const system = buildAgentSystem({ ...context, questionnaireSubmitted: true, plan });
+    expect(system).toContain('目前的分鏡方案（第 2 版）');
+    expect(system).toContain('第 1 格（6 秒，遠景，視角 front_overview）：廟前全景');
+    expect(system).toContain('第 2 格（8 秒，中景，視角 front_overview）：阿嬤在廟埕；台詞「媽祖婆保佑大家平安。」');
+  });
+
+  it('說明要修改時呼叫 revise_plan 依序號修改', () => {
+    expect(buildAgentSystem({ ...context, plan })).toContain('revise_plan');
+  });
+
+  it('沒有方案時不提方案', () => {
+    expect(buildAgentSystem(context)).not.toContain('目前的分鏡方案');
+  });
+});
+

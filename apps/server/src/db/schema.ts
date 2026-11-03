@@ -1,11 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { check, index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import type {
   AssetKind,
   ConfirmationPoint,
   DeidBox,
   GenerationStatus,
+  PlanDiff,
+  PlanSource,
   QuestionnaireAnswer,
+  ShotSize,
   TempleFlag,
   TempleStatus,
   TempleViewSource,
@@ -304,3 +307,60 @@ export const aiAssistLogs = sqliteTable(
 );
 
 export type AiAssistLogRow = typeof aiAssistLogs.$inferSelect;
+
+/** plans：分鏡方案；每次修改新增一列，最新版為現行方案 */
+export const plans = sqliteTable(
+  'plans',
+  {
+    id: text('id').primaryKey(),
+    videoId: text('video_id')
+      .notNull()
+      .references(() => videos.id),
+    version: integer('version').notNull(),
+    styleNote: text('style_note').notNull(),
+    source: text('source').$type<PlanSource>().notNull(),
+    diff: text('diff', { mode: 'json' }).$type<PlanDiff>().notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [uniqueIndex('plans_video_version_idx').on(table.videoId, table.version)],
+);
+
+export type PlanRow = typeof plans.$inferSelect;
+
+/** shots：某一版方案中的一格；shot_key 跨版本不變 */
+export const shots = sqliteTable(
+  'shots',
+  {
+    id: text('id').primaryKey(),
+    planId: text('plan_id')
+      .notNull()
+      .references(() => plans.id),
+    shotKey: text('shot_key').notNull(),
+    seq: integer('seq').notNull(),
+    startSec: integer('start_sec').notNull(),
+    durationSec: integer('duration_sec').notNull(),
+    shotSize: text('shot_size').$type<ShotSize>().notNull(),
+    cameraMove: text('camera_move').notNull(),
+    cameraSpeed: text('camera_speed').notNull(),
+    cameraAngle: text('camera_angle').notNull(),
+    description: text('description').notNull(),
+    actionStart: text('action_start').notNull(),
+    actionEnd: text('action_end').notNull(),
+    viewKey: text('view_key').notNull(),
+    lighting: text('lighting').notNull(),
+    // 第 7 階段先存角色名稱；第 8 階段建立 characters 後改存角色編號
+    characterIds: text('character_ids', { mode: 'json' }).$type<string[]>().notNull(),
+    dialogue: text('dialogue').notNull(),
+    speaker: text('speaker').notNull(),
+    subtitle: text('subtitle').notNull(),
+    photoId: text('photo_id'),
+    keyframesEnabled: integer('keyframes_enabled', { mode: 'boolean' }).notNull().default(false),
+    keyframeTimes: text('keyframe_times', { mode: 'json' }).$type<number[]>().notNull(),
+    customPrompt: text('custom_prompt'),
+    factSources: text('fact_sources', { mode: 'json' }).$type<string[]>().notNull(),
+    dialogueEstimateSec: real('dialogue_estimate_sec'),
+  },
+  (table) => [index('shots_plan_idx').on(table.planId), index('shots_key_idx').on(table.shotKey)],
+);
+
+export type ShotRow = typeof shots.$inferSelect;

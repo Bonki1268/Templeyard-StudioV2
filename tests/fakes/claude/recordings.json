@@ -1,6 +1,105 @@
 {
-  "note": "假的 Claude API 用的錄製回應。match 是 system 裡要出現的文字；matchUser 是訊息裡要出現的文字；afterToolResult 表示最後一則訊息是不是工具結果。text 是一段文字，content 是內容區塊（可含 tool_use）。替換：{{user}} 所有訊息的文字、{{lastUser}} 最後一則使用者文字訊息、{{n}} 第幾次回應。依序找第一筆符合的，特定的要放前面。AI 產生的文字不做快照比對，測試只驗證格式與流程。",
+  "note": "假的 Claude API 用的錄製回應。match 是 system 裡要出現的文字；matchUser 是訊息裡要出現的文字；afterToolResult 表示最後一則訊息是不是工具結果。text 是一段文字，content 是內容區塊（可含 tool_use）。替換：{{user}} 所有訊息的文字、{{lastUser}} 最後一則使用者文字訊息、{{n}} 第幾次回應。依序找第一筆符合的，特定的要放前面。AI 產生的文字不做快照比對，測試只驗證格式與流程。story-script 的系統指令也提到「寺廟定裝版的視角」，所以分鏡方案的錄製回應放在最前面。",
   "recordings": [
+    {
+      "match": "導演兼分鏡師",
+      "matchUser": "測試：方案格式錯誤",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_plan_bad_{{n}}",
+          "name": "submit_plan",
+          "input": {
+            "title": "格式錯誤",
+            "shots": []
+          }
+        }
+      ]
+    },
+    {
+      "match": "導演兼分鏡師",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_plan_{{n}}",
+          "name": "submit_plan",
+          "input": {
+            "title": "媽祖顯靈",
+            "logline": "阿嬤帶我們走進板橋慈惠宮",
+            "styleNote": "溫暖寫實的清晨光線，節奏舒緩",
+            "characters": [
+              {
+                "name": "阿嬤",
+                "isSeriesCharacter": false,
+                "description": "七十多歲的在地阿嬤",
+                "continuityLocks": [
+                  "grey cotton cardigan"
+                ]
+              }
+            ],
+            "shots": [
+              {
+                "seq": 1,
+                "durationSec": 6,
+                "shotSize": "遠景",
+                "cameraMove": "固定",
+                "description": "板橋慈惠宮廟前全景，廟門在畫面中央",
+                "actionStart": "廟埕空無一人",
+                "actionEnd": "晨光照到屋脊",
+                "viewKey": "front_overview",
+                "lighting": "清晨",
+                "subtitle": "",
+                "factSources": [
+                  "寺廟資料庫"
+                ]
+              },
+              {
+                "seq": 2,
+                "durationSec": 8,
+                "shotSize": "中景",
+                "cameraMove": "推",
+                "description": "阿嬤站在廟埕左側，面向廟門",
+                "actionStart": "阿嬤雙手合十",
+                "actionEnd": "阿嬤抬頭看廟門",
+                "viewKey": "front_overview",
+                "characters": [
+                  "阿嬤"
+                ],
+                "dialogue": "媽祖婆保佑大家平安。",
+                "speaker": "阿嬤",
+                "subtitle": "媽祖婆保佑大家平安。"
+              },
+              {
+                "seq": 3,
+                "durationSec": 2,
+                "shotSize": "特寫",
+                "cameraMove": "固定",
+                "description": "香爐裡的香煙緩緩升起",
+                "actionStart": "香煙升起",
+                "viewKey": "front_overview",
+                "subtitle": ""
+              },
+              {
+                "seq": 4,
+                "durationSec": 10,
+                "shotSize": "中景",
+                "cameraMove": "搖",
+                "description": "阿嬤走進後殿，鏡頭跟著她",
+                "actionStart": "阿嬤站在後殿門口",
+                "actionEnd": "阿嬤走到神案前",
+                "viewKey": "missing:後殿",
+                "characters": [
+                  "阿嬤"
+                ],
+                "dialogue": "每年農曆三月，大家都會回來。",
+                "speaker": "阿嬤",
+                "subtitle": "每年農曆三月，大家都會回來。"
+              }
+            ]
+          }
+        }
+      ]
+    },
     {
       "match": "寺廟定裝版的視角圖",
       "text": "{\"prompt\": \"Reference plate for one fixed view of a real temple, 16:9, empty of people. {{user}}\", \"notes\": \"錄製的回應：依照片寫出建築外觀與光線\"}"
@@ -42,6 +141,72 @@
         {
           "type": "text",
           "text": "查好了。"
+        }
+      ]
+    },
+    {
+      "match": "廟埕影室的創作 Agent",
+      "matchUser": "第 1 格改成特寫",
+      "afterToolResult": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "好，我把第 1 格改成特寫。"
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_rev_{{n}}",
+          "name": "revise_plan",
+          "input": {
+            "changes": [
+              {
+                "seq": 1,
+                "shotSize": "特寫"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "match": "廟埕影室的創作 Agent",
+      "matchUser": "第 1 格改成特寫",
+      "afterToolResult": true,
+      "content": [
+        {
+          "type": "text",
+          "text": "改好了，請看看右邊的方案。"
+        }
+      ]
+    },
+    {
+      "match": "廟埕影室的創作 Agent",
+      "matchUser": "測試：修改第 9 格",
+      "afterToolResult": false,
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_rev_bad_{{n}}",
+          "name": "revise_plan",
+          "input": {
+            "changes": [
+              {
+                "seq": 9,
+                "shotSize": "特寫"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "match": "廟埕影室的創作 Agent",
+      "matchUser": "測試：修改第 9 格",
+      "afterToolResult": true,
+      "content": [
+        {
+          "type": "text",
+          "text": "方案沒有這一格，請再確認要改哪一格。"
         }
       ]
     },

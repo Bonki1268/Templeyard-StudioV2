@@ -14,6 +14,8 @@ export type ModelRequest = {
   system: string;
   messages: AgentMessage[];
   tools?: ToolSpec[];
+  /** 指定一定要用某個工具（結構化輸出） */
+  toolChoice?: { type: 'tool'; name: string };
   maxTokens?: number;
 };
 

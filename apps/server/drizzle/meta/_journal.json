@@ -43,6 +43,13 @@
       "when": 1793675075791,
       "tag": "0005_chat_questionnaire_assist",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793677184995,
+      "tag": "0006_plans_shots",
+      "breakpoints": true
     }
   ]
 }

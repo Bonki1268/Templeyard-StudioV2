@@ -8,23 +8,29 @@ import { listTemples } from '../temples/repository.js';
 import { searchTemples } from '../temples/search.js';
 import { findVideo } from '../videos/repository.js';
 import { StudioError } from './errors.js';
+import type { PlanService } from '../plans/service.js';
 import type { QuestionnaireService } from './questionnaire.js';
 
 // 創作 Agent 在第 6 階段可以用的工具；都不花錢（付費工具在之後的階段加入，會經過同意憑證檢查）
 
 export const AGENT_TOOL_NAMES = ['search_temples', 'read_series', 'generate_questionnaire', 'estimate_cost'] as const;
 
+/** 方案建立後才有：依序號修改分鏡方案（不花錢） */
+export const REVISE_PLAN_TOOL = 'revise_plan';
+
 /**
  * - search_temples { q }：搜尋寺廟資料庫（只讀），最多 5 筆，每筆帶上來源標記
  * - read_series {}：這支影片的系列設定與系列問卷預設值
  * - generate_questionnaire { questionIds, prefill }：開啟問卷（questionnaires.open）
  * - estimate_cost { items }：依參考單價預估費用；單價待實測時說明
+ * - revise_plan { changes }：這支影片已有分鏡方案時才有；依序號修改，摘要列出改了哪幾格
  */
 export function createAgentTools(deps: {
   db: AppDatabase;
   videoId: string;
   questionnaires: QuestionnaireService;
   workflows: WorkflowConfig;
+  plans?: PlanService;
 }): AgentTool<unknown>[] {
   const { db, videoId, questionnaires, workflows } = deps;
 

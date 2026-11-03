@@ -17,6 +17,7 @@ import { findTemple } from '../temples/repository.js';
 import { findVideo } from '../videos/repository.js';
 import { createAgentTools } from './agentTools.js';
 import { BOARD_NOT_CONFIRMED, StudioError, VIDEO_NOT_FOUND } from './errors.js';
+import type { PlanService } from '../plans/service.js';
 import type { QuestionnaireService } from './questionnaire.js';
 import { findQuestionnaire, insertChatMessage, listChatMessages } from './repository.js';
 
@@ -50,6 +51,8 @@ export function createChatService(deps: {
   workflows: WorkflowConfig;
   consents: ConsentStore;
   questionnaires: QuestionnaireService;
+  /** 有分鏡方案時，Agent 的系統指令列出方案，並多了 revise_plan */
+  plans?: PlanService;
   model: ClaudeModel | null;
   unavailableMessage?: string;
 }): ChatService {

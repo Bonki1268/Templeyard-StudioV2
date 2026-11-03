@@ -96,3 +96,16 @@ describe('以錄製的回應跑完一輪工具流程', () => {
     expect(sent[1]?.user).toContain('回傳：查一下板橋慈惠宮');
   });
 });
+
+describe('指定工具', () => {
+  it('toolChoice 轉成 tool_choice 送出', async () => {
+    const model = createClaudeModel({ apiKey: FAKE_CLAUDE_API_KEY, model: 'm', baseURL: fake.url });
+    await model.create({
+      system: '測試 Agent：指定工具',
+      messages: [{ role: 'user', content: '你好' }],
+      tools: [{ name: 'echo', description: '回聲', input_schema: { type: 'object', properties: {} } }],
+      toolChoice: { type: 'tool', name: 'echo' },
+    });
+    expect(fake.requests.at(-1)?.toolChoice).toEqual({ type: 'tool', name: 'echo' });
+  });
+});

@@ -7,6 +7,7 @@ export * from './generations.js';
 export * from './health.js';
 export * from './models.js';
 export * from './photos.js';
+export * from './plans.js';
 export * from './promptFiles.js';
 export * from './questionnaire.js';
 export * from './series.js';

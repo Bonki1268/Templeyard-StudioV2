@@ -1,11 +1,12 @@
 import { createClaudeModel, type ClaudeModel } from '@templeyard/agent';
 import { loadPromptFiles, loadWorkflowConfig, promptsDir, workflowsFile } from '@templeyard/prompts';
 import type { VideoStage } from '@templeyard/shared';
+import { eq } from 'drizzle-orm';
 import { FAKE_CLAUDE_API_KEY, startFakeClaude, type FakeClaude } from '../../../../../tests/fakes/claude/server.js';
 import { insertAsset } from '../../assets/repository.js';
 import { createConsentStore } from '../../costs/consents.js';
 import { openDatabase, type AppDatabase } from '../../db/client.js';
-import { series, temples, videos } from '../../db/schema.js';
+import { series, templeBoardVersions, templeBoards, templeViews, temples, videos } from '../../db/schema.js';
 import { insertPhoto } from '../../photos/repository.js';
 import type { Clock } from '../../series/repository.js';
 
@@ -136,4 +137,23 @@ export function addPhoto(world: StudioWorld, input: { templeId?: string; viewKey
     },
     world.clock,
   ).id;
+}
+
+/** 這支影片確認過的寺廟定裝版（只有資料，沒有圖）：預設只有「廟前全景」 */
+export function addConfirmedBoard(world: StudioWorld, videoId: string, views: { viewKey: string; viewName: string }[] = [{ viewKey: 'front_overview', viewName: '廟前全景' }]): string {
+  const boardId = `board-${videoId}`;
+  const versionId = `board-version-${videoId}`;
+  world.db.insert(templeBoards).values({ id: boardId, seriesId: 's1', templeId: 't1', currentVersionId: versionId }).run();
+  world.db
+    .insert(templeBoardVersions)
+    .values({ id: versionId, boardId, version: 1, imageModel: 'nano-banana-pro', appearanceLocks: [], defaultLighting: '晴天午後', confirmedAt: 'x' })
+    .run();
+  for (const view of views) {
+    world.db
+      .insert(templeViews)
+      .values({ id: `${versionId}-${view.viewKey}`, boardVersionId: versionId, viewKey: view.viewKey, viewName: view.viewName, source: 'photo', confirmed: true })
+      .run();
+  }
+  world.db.update(videos).set({ templeBoardVersionId: versionId }).where(eq(videos.id, videoId)).run();
+  return versionId;
 }

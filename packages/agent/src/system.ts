@@ -12,6 +12,8 @@ export type AgentContext = {
   models: { image: string; video: string };
   /** 問卷是否已送出（送出後不能重新產生） */
   questionnaireSubmitted: boolean;
+  /** 目前的分鏡方案（建立後才有）：每格一行摘要 */
+  plan?: { version: number; shots: readonly { seq: number; durationSec: number; shotSize: string; viewKey: string; description: string; dialogue: string }[] } | null;
 };
 
 function orNone(value: string | number | null): string {
@@ -26,6 +28,8 @@ function orNone(value: string | number | null): string {
  * - 問卷題庫：每題的代號、題目、選項；每支影片不同的題目
  * - 規則：寺廟事實只引用上面的資料；不能更改模型；不能自行觸發付費生成；用繁體中文（台灣用語）
  * - 問卷已送出時：說明不能重新產生問卷
+ * - 有分鏡方案時：列出目前的方案（第幾版、每格的秒數、景別、視角、畫面內容、台詞），
+ *   說明要修改時呼叫 revise_plan 依序號修改，修改後列出改了哪幾格
  */
 export function buildAgentSystem(context: AgentContext): string {
   const { temple, series, models } = context;

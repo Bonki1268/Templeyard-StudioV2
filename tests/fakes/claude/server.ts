@@ -26,7 +26,7 @@ type Recording = {
   text?: string;
   content?: unknown[];
 };
-export type RecordedRequest = { model: string; system: string; user: string; tools?: string[] };
+export type RecordedRequest = { model: string; system: string; user: string; tools?: string[]; toolChoice?: unknown };
 
 type Message = { role?: string; content: unknown };
 
@@ -101,13 +101,20 @@ export async function startFakeClaude(options: { port?: number } = {}): Promise<
       res.end(JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } }));
       return;
     }
-    const body = JSON.parse(await readBody(req)) as { model?: string; system?: unknown; messages?: Message[]; tools?: { name?: string }[] };
+    const body = JSON.parse(await readBody(req)) as {
+      model?: string;
+      system?: unknown;
+      messages?: Message[];
+      tools?: { name?: string }[];
+      tool_choice?: unknown;
+    };
     const messages = body.messages ?? [];
     const system = textOf(body.system);
     const user = messages.map((m) => textOf(m.content)).join('\n');
     const afterToolResult = isToolResult(messages.at(-1));
     const recorded: RecordedRequest = { model: String(body.model ?? ''), system, user };
     if (body.tools) recorded.tools = body.tools.map((tool) => String(tool.name ?? ''));
+    if (body.tool_choice !== undefined) recorded.toolChoice = body.tool_choice;
     requests.push(recorded);
 
     const recording = recordings.find(

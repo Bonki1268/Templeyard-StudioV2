@@ -1,6 +1,7 @@
 import { assistRequestSchema, type AssistRequest } from '@templeyard/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { aiAssistLogs, generations } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
+import { aiAssistLogs, generations, videos } from '../db/schema.js';
 import { addVideo, createStudioWorld, type StudioWorld } from '../studio/__fixtures__/studio.js';
 import { StudioError } from '../studio/errors.js';
 import { createAssistService, type AssistService } from './service.js';
@@ -93,8 +94,10 @@ describe('產生 AI 建議', () => {
   });
 
   it('不會產生任何生成紀錄，也不會改動影片', async () => {
+    const before = world.db.select().from(videos).where(eq(videos.id, 'v1')).get();
     await suggest({ field: 'creative.input', videoId: 'v1' });
     expect(world.db.select().from(generations).all()).toEqual([]);
+    expect(world.db.select().from(videos).where(eq(videos.id, 'v1')).get()).toEqual(before);
   });
 
   it.each([
