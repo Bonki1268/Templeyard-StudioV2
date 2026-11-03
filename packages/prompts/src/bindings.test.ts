@@ -91,7 +91,7 @@ describe('組出 MCP 呼叫', () => {
     shot: { durationSec: 4 },
   };
 
-  it('Gemini Omni：run_template 第 26 號節點；秒數與比例寫進指令開頭，解析度固定 720p', () => {
+  it('Gemini Omni：圖生影片範本的第 7 號節點（07 實測，2026-11-03）；秒數、比例與首格寫進指令開頭，解析度固定 720p', () => {
     const call = buildMcpCall({
       modelKey: 'gemini-omni-1.1-flash',
       config: config(),
@@ -102,13 +102,13 @@ describe('組出 MCP 呼叫', () => {
     expect(call).toEqual({
       tool: 'run_template',
       args: {
-        name: 'api_google_gemini_omni_flash_1_1_t2v',
+        name: 'api_google_gemini_omni_flash_1_1_i2v',
         input_overrides: {
-          26: {
-            'model.prompt': 'A 4-second, 16:9 clip. The temple at dusk.',
+          7: {
+            'model.prompt': 'A 4-second, 16:9 clip. Use @Image1 as the first frame. The temple at dusk.',
             'model.aspect_ratio': '16:9',
             'model.resolution': '720p',
-            'model.task_type': 'text_to_video',
+            'model.task_type': 'image_to_video',
             'model.seed': 42,
           },
         },
@@ -116,7 +116,7 @@ describe('組出 MCP 呼叫', () => {
     });
   });
 
-  it('Seedance：partner_generate，比例與秒數寫進 params', () => {
+  it('Seedance：首尾畫格範本的第 1 號節點（07 實測，2026-11-03），比例、秒數與種子寫進節點', () => {
     const call = buildMcpCall({
       modelKey: 'seedance-2.0',
       config: config(),
@@ -125,13 +125,12 @@ describe('組出 MCP 呼叫', () => {
       seed: 1,
     });
     expect(call).toEqual({
-      tool: 'partner_generate',
+      tool: 'run_template',
       args: {
-        type: 'video',
-        model: 'byteplus/seedance-2.0-t2v',
-        client_os: 'darwin',
-        prompt: 'The temple at dusk.',
-        params: { model: 'Seedance 2.0 Mini', resolution: '720p', ratio: '16:9', duration: 5 },
+        name: 'api_seedance2_0_flf2v',
+        input_overrides: {
+          1: { 'model.prompt': 'The temple at dusk.', 'model.resolution': '720p', 'model.generate_audio': true, 'model.ratio': '16:9', 'model.duration': 5, seed: 1 },
+        },
       },
     });
   });
@@ -154,10 +153,8 @@ describe('組出 MCP 呼叫', () => {
   it('不改動設定檔裡的 args', () => {
     buildMcpCall({ modelKey: 'seedance-2.0', config: config(), bindings: { prompt: 'output.prompt' }, values, seed: 1 });
     expect(config().models['seedance-2.0']?.args).toEqual({
-      type: 'video',
-      model: 'byteplus/seedance-2.0-t2v',
-      client_os: 'darwin',
-      params: { model: 'Seedance 2.0 Mini', resolution: '720p' },
+      name: 'api_seedance2_0_flf2v',
+      input_overrides: { 1: { 'model.resolution': '720p', 'model.generate_audio': true } },
     });
   });
 
