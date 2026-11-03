@@ -171,7 +171,9 @@ Then('網址是新影片的建立影片頁', async ({ page, request, state }) =>
 });
 
 Then(/^「(.+)」可以選$/, async ({ page }, label: string) => {
-  await expect(page.getByLabel(label, { exact: true }).first()).toBeEnabled({ timeout: 20_000 });
+  // 建立影片頁的模型是以 legend 命名的單選群組
+  const options = page.getByRole('group', { name: label, exact: true }).getByRole('radio');
+  await expect(options.first()).toBeEnabled({ timeout: 20_000 });
 });
 
 Then('新影片的複製來源是原影片', async ({ request, state }) => {
@@ -203,10 +205,11 @@ Then('新影片的分鏡方案內容和原影片現行方案相同', async ({ re
   expect(copy.shots.every((shot) => shot.photoId === null)).toBe(true);
 });
 
-Then('新影片沒有照片、寺廟定裝版、精緻圖、影片與成品', async ({ request, state }) => {
+Then('新影片沒有自己的照片，也沒有寺廟定裝版、精緻圖、影片與成品', async ({ request, state }) => {
   const id = requireCopy(state);
   const detail = await fetchDetail(request, id);
-  expect(detail.photos).toEqual([]);
+  // 同系列同一間廟的照片是共用的（video_id 為 null，第 5 階段）；複製不會產生這支影片自己的照片
+  expect(detail.photos.filter((photo) => photo.videoId === id)).toEqual([]);
   expect(detail.video.templeBoardVersionId).toBeNull();
   const frames = framesResponseSchema.parse(await (await request.get(`/api/videos/${id}/frames`)).json());
   expect(frames.shots.every((shot) => shot.first === null && shot.last === null)).toBe(true);
@@ -222,4 +225,13 @@ Then('新影片的角色沒有定裝圖、還沒確認', async ({ request, state
     expect(character.version.lookAssetId).toBeNull();
     expect(character.state).not.toBe('confirmed');
   }
+});
+
+// 同意門檻是全域設定，其他情境會並行修改：需要同意時才會跳出費用確認
+When(/^我按下「(.+)」，需要時在費用確認對話框按下「(.+)」$/, async ({ page }, name: string, confirm: string) => {
+  await page.getByRole('button', { name, exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: '費用確認' });
+  const generating = page.getByRole('heading', { level: 2, name: '生成中', exact: true });
+  await expect(dialog.or(generating)).toBeVisible({ timeout: 20_000 });
+  if (await dialog.isVisible()) await dialog.getByRole('button', { name: confirm, exact: true }).click();
 });
