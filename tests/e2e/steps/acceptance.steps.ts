@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import { planResponseSchema, templeBoardResponseSchema } from '@templeyard/shared';
 import { Then, When } from './fixtures';
 import { consentViaApi } from './support/api';
@@ -40,4 +40,37 @@ Then(/^用到「(.+)」的格子都標示「(.+)」$/, async ({ page, request, s
     const card = page.getByRole('list', { name: '精緻圖' }).getByRole('article', { name: `第 ${shot.seq} 格`, exact: true });
     await expect(card.getByText(tag, { exact: true })).toBeVisible({ timeout: 20_000 });
   }
+});
+
+// ── 系列首頁與系列設定（使用者 2026-11-04 提出） ──
+
+type SeriesState = { seriesId?: string; seriesName?: string };
+
+function seriesCardOf(page: Page, state: SeriesState) {
+  if (!state.seriesName) throw new Error('這個場景還沒有建立系列');
+  return page
+    .getByRole('region', { name: '你的系列' })
+    .getByRole('article')
+    .filter({ has: page.getByRole('heading', { name: state.seriesName, exact: true }) });
+}
+
+function settingsVideos(page: Page) {
+  return page.getByRole('list', { name: '這個系列的影片' });
+}
+
+Then(/^這個系列的卡片有標籤「(.+)」$/, async ({ page, state }, tag: string) => {
+  await expect(seriesCardOf(page, state).getByText(tag, { exact: true })).toBeVisible({ timeout: 20_000 });
+});
+
+When('我打開這個系列的系列設定', async ({ page, state }) => {
+  if (!state.seriesId) throw new Error('這個場景還沒有建立系列');
+  await page.goto(`/series/${state.seriesId}/settings`);
+});
+
+Then(/^系列設定列出影片「(.+)」$/, async ({ page }, name: string) => {
+  await expect(settingsVideos(page).getByRole('link', { name, exact: true })).toBeVisible({ timeout: 20_000 });
+});
+
+When(/^我在系列設定按下影片「(.+)」$/, async ({ page }, name: string) => {
+  await settingsVideos(page).getByRole('link', { name, exact: true }).click();
 });

@@ -20,4 +20,4 @@
 
     例子:
       | 按鈕     | 去向                    | 頁面標題 |
-      | 新增影片 | /series/:sid/videos/new | 建立影片 |
+      | 新增第一支影片 | /series/:sid/videos/new | 建立影片 |

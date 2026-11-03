@@ -15,6 +15,7 @@ export * from './plans.js';
 export * from './promptFiles.js';
 export * from './questionnaire.js';
 export * from './series.js';
+export * from './seriesVideos.js';
 export * from './shotDetail.js';
 export * from './sse.js';
 export * from './templeBoards.js';
