@@ -104,16 +104,21 @@ async function tool(name, toolArgs) {
 
 /** 只列出工具名稱、說明與參數格式；這些工具都不會建立任務 */
 const FREE_CALLS = [
-  // 07 第 2 項：Gemini 有哪些 task_type 與範本（圖片生成影片、首尾畫格、參考圖）
-  ['get_template_schema', { name: 'api_google_gemini_omni_flash_1_1_t2v' }],
-  ['search_templates', { query: 'gemini omni image to video' }],
-  ['search_templates', { query: 'first last frame video' }],
-  // 07 第 7 項：Wan 多關鍵畫格
-  ['search_templates', { query: 'wan keyframe' }],
-  ['search_templates', { query: 'wan first last frame' }],
+  // 07 第 2 項：Gemini 的範本參數（文字、圖片、參考圖生成影片；首尾畫格在 i2v 範本）
+  ['get_template_schema', { template_id: 'api_google_gemini_omni_flash_1_1_t2v' }],
+  ['get_template_schema', { template_id: 'api_google_gemini_omni_flash_1_1_i2v' }],
+  ['get_template_schema', { template_id: 'api_google_gemini_omni_flash_1_1_r2v' }],
+  // Seedance 2.0 首尾畫格
+  ['get_template_schema', { template_id: 'api_seedance2_0_flf2v' }],
+  // 07 第 7 項：Wan 首尾畫格與多關鍵畫格
+  ['get_template_schema', { template_id: 'video_wan2_2_14B_flf2v' }],
+  ['get_template_schema', { template_id: 'video_wan_vace_flf2v' }],
   // 07 第 4 項：Nano Banana Pro 怎麼收參考圖
-  ['get_prompting_guide', { model: 'partner' }],
-  ['get_prompting_guide', { topic: 'templates' }],
+  ['get_prompting_guide', { model: 'vertexai' }],
+  ['get_prompting_guide', { model: 'gemini' }],
+  // 範本的扣點預估（只讀、不送出）
+  ['estimate_credits', { template_name: 'api_google_gemini_omni_flash_1_1_i2v' }],
+  ['estimate_credits', { template_name: 'api_seedance2_0_flf2v' }],
 ];
 
 async function roundOne() {
@@ -141,7 +146,45 @@ async function roundOne() {
     results.push({ name, args: toolArgs, result: await tool(name, toolArgs) });
   }
   save('free-calls.json', results);
+  await probeUpload();
   console.log('\n第 1 輪完成，沒有花錢。請把 data/probe/ 底下這次的資料夾交給 Claude Code，它會依結果寫好第 2 輪的請求檔。');
+}
+
+// ── 第 1 輪：上傳一張合成的測試圖（不花錢；不是照片，沒有人臉） ──
+
+/** 從 upload_file 的回應找出上傳網址與 header（回應是一行要在使用者 shell 執行的 PUT 指令） */
+function parseUploadCommand(text) {
+  const url = /https:\/\/[^\s'"]+/.exec(text)?.[0] ?? null;
+  const headers = {};
+  for (const match of text.matchAll(/-H\s+['"]([^:'"]+):\s*([^'"]+)['"]/g)) headers[match[1]] = match[2];
+  return { url, headers };
+}
+
+async function probeUpload() {
+  if (!(await rpc('tools/list', {}))?.tools?.some((t) => t.name === 'upload_file')) return;
+  // 1×1 的灰色 PNG（合成的，不是照片）
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mN4+vQpAAZ8Av5L2y3jAAAAAElFTkSuQmCC', 'base64');
+  const file = path.join(outDir, 'probe-upload.png');
+  writeFileSync(file, png);
+  console.log('  上傳一張合成的測試圖（不花錢）');
+  const requested = await tool('upload_file', { file_path: file, client_os: 'darwin' });
+  // 一次性的上傳網址帶有簽章：存檔時去掉網址的查詢字串
+  const hideSignature = (value) => JSON.parse(JSON.stringify(value ?? null).replace(/(https:\/\/[^\s'"?\\]+)\?[^\s'"\\]+/g, '$1?…'));
+  const record = {
+    request: { file_path: file, client_os: 'darwin' },
+    response: { ok: requested.ok, text: hideSignature(requested.text), structured: hideSignature(requested.structured), error: requested.error },
+  };
+  const { url, headers } = parseUploadCommand(`${requested.text ?? ''} ${JSON.stringify(requested.structured ?? {})}`);
+  record.parsed = { url: url ? `${url.split('?')[0]}?…（已省略簽章）` : null, headers };
+  if (url) {
+    try {
+      const put = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'image/png', ...headers }, body: png });
+      record.put = { status: put.status, body: (await put.text()).slice(0, 2000) };
+    } catch (error) {
+      record.put = { error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+  save('upload.json', record);
 }
 
 // ── 第 2 輪：依請求檔送出（預設只取得扣點說明，加 --confirm 才真的生成） ──
