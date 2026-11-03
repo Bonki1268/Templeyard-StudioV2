@@ -1,5 +1,5 @@
 import type { ToolCallSummary } from '@templeyard/shared';
-import type { z } from 'zod';
+import { z } from 'zod';
 import type { ToolSpec } from './types.js';
 
 // Agent 的工具（02「工具呼叫」、規格書「創作 Agent」）：輸入用 Zod 驗證；
@@ -48,6 +48,11 @@ export function defineTool<I>(tool: AgentTool<I>): AgentTool<unknown> {
 
 export const CONSENT_REQUIRED_RESULT = '這個操作會花錢，要先在畫面上顯示費用、取得使用者同意後才能執行；請先說明預估費用並等使用者同意';
 
+/** Zod 的錯誤寫成給 Claude 看的說明：哪個欄位、哪裡不對 */
+function describeIssues(error: z.ZodError): string {
+  return error.issues.map((issue) => `${issue.path.length > 0 ? issue.path.join('.') : '(整個輸入)'}：${issue.message}`).join('；');
+}
+
 /**
  * 執行工具：
  * - 沒有這個工具：unknown_tool
@@ -56,8 +61,42 @@ export const CONSENT_REQUIRED_RESULT = '這個操作會花錢，要先在畫面�
  * - 工具丟出例外：failed，結果是錯誤訊息
  */
 export function createToolRegistry(
-  _tools: readonly AgentTool<unknown>[],
-  _options: { verifyConsent(token: string | null, toolName: string): boolean },
+  tools: readonly AgentTool<unknown>[],
+  options: { verifyConsent(token: string | null, toolName: string): boolean },
 ): ToolRegistry {
-  throw new Error('尚未實作');
+  return {
+    specs() {
+      return tools.map((tool) => {
+        const { $schema: _schema, ...schema } = z.toJSONSchema(tool.inputSchema, { io: 'input' }) as Record<string, unknown>;
+        return { name: tool.name, description: tool.description, input_schema: schema };
+      });
+    },
+    async run(name, input, context) {
+      const tool = tools.find((t) => t.name === name);
+      if (!tool) {
+        const content = `沒有這個工具：${name}`;
+        return { status: 'unknown_tool', content, subject: null, call: { name, label: name, ok: false, summary: content } };
+      }
+      const fail = (status: ToolRunStatus, content: string): ToolRunResult => ({
+        status,
+        content,
+        subject: tool.subject,
+        call: { name, label: tool.label, ok: false, summary: content },
+      });
+      const parsed = tool.inputSchema.safeParse(input);
+      if (!parsed.success) return fail('invalid_input', `格式不正確：${describeIssues(parsed.error)}。請修正後再呼叫一次`);
+      if (tool.paid && !options.verifyConsent(context.consentToken, name)) return fail('consent_required', CONSENT_REQUIRED_RESULT);
+      try {
+        const outcome = await tool.run(parsed.data, context);
+        return {
+          status: outcome.ok ? 'ok' : 'failed',
+          content: outcome.content,
+          subject: tool.subject,
+          call: { name, label: tool.label, ok: outcome.ok, summary: outcome.summary },
+        };
+      } catch (error: unknown) {
+        return fail('failed', error instanceof Error ? error.message : '工具執行失敗');
+      }
+    },
+  };
 }

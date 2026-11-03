@@ -1,12 +1,13 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { createClaudeModel } from '@templeyard/agent';
 import { createComfyClient, createMcpSession, createMcpUploadTransport } from '@templeyard/comfy-client';
 import { loadWorkflowConfig, workflowsFile } from '@templeyard/prompts';
-import { buildApp, type GenerationRuntime } from './app.js';
+import { buildApp, type GenerationRuntime, type TextRuntime } from './app.js';
 import { createClaudePromptWriter } from './claude/writer.js';
 import { openDatabase } from './db/client.js';
 import { repoRoot, resolveDataDir, templesCsvPath } from './paths.js';
-import { generationUnavailableMessage, readGenerationEnv } from './runtime/env.js';
+import { generationUnavailableMessage, readGenerationEnv, readTextEnv, textUnavailableMessage } from './runtime/env.js';
 import { importTemples } from './temples/import.js';
 import { countTemples } from './temples/repository.js';
 
@@ -52,12 +53,27 @@ if (env.config) {
   console.log(`生成服務還沒設定，缺少：${env.missing.join('、')}`);
 }
 
+// 文字 AI（創作 Agent、AI 輔助撰寫）只需要 Claude；環境變數不齊時對話與 AI 幫我寫回 503
+const textEnv = readTextEnv(process.env);
+let text: TextRuntime | null = null;
+if (textEnv.config) {
+  const claude = { apiKey: textEnv.config.apiKey, ...(textEnv.config.baseURL ? { baseURL: textEnv.config.baseURL } : {}) };
+  text = {
+    agent: createClaudeModel({ ...claude, model: textEnv.config.agentModel }),
+    assist: createClaudeModel({ ...claude, model: textEnv.config.assistModel }),
+  };
+} else {
+  console.log(`Claude 還沒設定，缺少：${textEnv.missing.join('、')}`);
+}
+
 const app = buildApp({
   db,
   assetsDir: path.join(dataDir, 'assets'),
   workflows,
   generation,
   generationUnavailableMessage: generationUnavailableMessage(env.missing),
+  text,
+  textUnavailableMessage: textUnavailableMessage(textEnv.missing),
 });
 
 app.listen({ port, host: '127.0.0.1' }).then(

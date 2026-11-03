@@ -12,14 +12,19 @@ import { createConsentStore, type ConsentStore } from './costs/consents.js';
 import type { AppDatabase } from './db/client.js';
 import { createGenerationService, type SucceededHandler } from './generations/service.js';
 import { resolveDataDir } from './paths.js';
+import { createAssistService } from './assist/service.js';
 import { registerAssetRoutes } from './routes/assets.js';
+import { registerAssistRoutes } from './routes/assist.js';
 import { registerCostRoutes } from './routes/costs.js';
 import { registerPhotoRoutes } from './routes/photos.js';
 import { registerSeriesRoutes } from './routes/series.js';
+import { registerStudioRoutes } from './routes/studio.js';
 import { registerTempleBoardRoutes } from './routes/templeBoards.js';
 import { registerTempleRoutes } from './routes/temples.js';
 import { registerVideoRoutes } from './routes/videos.js';
 import type { Clock } from './series/repository.js';
+import { createChatService } from './studio/chat.js';
+import { createQuestionnaireService } from './studio/questionnaire.js';
 import { TEMPLE_VIEW_NODE, createTempleBoardService } from './templeBoards/service.js';
 
 export type AppDeps = {
@@ -91,11 +96,12 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         handlers,
       })
     : null;
+  const prompts = deps.prompts ?? loadPromptFiles(promptsDir);
   const boards = createTempleBoardService({
     db: deps.db,
     clock,
     workflows,
-    prompts: deps.prompts ?? loadPromptFiles(promptsDir),
+    prompts,
     store,
     generation:
       runtime && generation
@@ -123,6 +129,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   registerAssetRoutes(app, deps.db, store);
   registerCostRoutes(app, deps.db, workflows, consents);
   registerTempleBoardRoutes(app, boards);
+
+  // 創作對話、問卷、AI 輔助撰寫：Claude 沒有設定時回 503 並說明 textUnavailableMessage
+  const text = deps.text ?? null;
+  const unavailable = deps.textUnavailableMessage ? { unavailableMessage: deps.textUnavailableMessage } : {};
+  const questionnaires = createQuestionnaireService({ db: deps.db, clock });
+  const chat = createChatService({ db: deps.db, clock, workflows, consents, questionnaires, model: text?.agent ?? null, ...unavailable });
+  registerStudioRoutes(app, chat, questionnaires);
+  registerAssistRoutes(app, createAssistService({ db: deps.db, clock, prompts, model: text?.assist ?? null, ...unavailable }));
 
   // 啟動時以 prompt_id 取回已送出、還沒完成的任務（F21），不重新送出
   if (generation) app.addHook('onReady', async () => generation.resumeUnfinished());

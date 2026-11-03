@@ -1,6 +1,10 @@
 import {
   apiErrorSchema,
   assetResponseSchema,
+  assistResponseSchema,
+  chatListResponseSchema,
+  questionnaireResponseSchema,
+  submitQuestionnaireResponseSchema,
   budgetResponseSchema,
   consentRequiredResponseSchema,
   consentResponseSchema,
@@ -12,7 +16,13 @@ import {
   templeSearchResponseSchema,
   videoDetailResponseSchema,
   videoResponseSchema,
+  type AnswerInput,
   type Asset,
+  type AssistLog,
+  type AssistRequest,
+  type ChatEvent,
+  type ChatMessage,
+  type Questionnaire,
   type Budget,
   type CostCheck,
   type CostItem,
@@ -31,6 +41,7 @@ import {
   type Video,
   type VideoDetail,
 } from '@templeyard/shared';
+import { readChatStream } from '../features/studio/chatStream';
 
 /** API 回應錯誤：message 與各欄位的說明 */
 export class ApiRequestError extends Error {
@@ -212,4 +223,43 @@ export async function reuseTempleBoard(videoId: string): Promise<TempleBoard> {
 export async function saveTempleBoardVersion(videoId: string): Promise<TempleBoard> {
   const body = await request(`/api/videos/${videoId}/temple-board/versions`, { method: 'POST', body: '{}' });
   return templeBoardResponseSchema.parse(body).board;
+}
+
+// ── 創作工作區（第 6 階段） ──
+
+export async function fetchChat(videoId: string): Promise<ChatMessage[]> {
+  return chatListResponseSchema.parse(await request(`/api/videos/${videoId}/chat`)).messages;
+}
+
+/** 對 Agent 說一句話：回應以 SSE 串流，每收到一則事件就交給 onEvent */
+export async function streamChat(videoId: string, content: string, onEvent: (event: ChatEvent) => void): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`/api/videos/${videoId}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+      body: JSON.stringify({ content }),
+    });
+  } catch {
+    throw new ApiRequestError('連不上本機後端，請確認 pnpm dev 有在執行', 0);
+  }
+  await readChatStream(response, onEvent);
+}
+
+export async function fetchQuestionnaire(videoId: string): Promise<Questionnaire | null> {
+  return questionnaireResponseSchema.parse(await request(`/api/videos/${videoId}/questionnaire`)).questionnaire;
+}
+
+export async function putQuestionnaire(videoId: string, answers: AnswerInput[]): Promise<{ questionnaire: Questionnaire; seriesDefaultsSaved: boolean }> {
+  return submitQuestionnaireResponseSchema.parse(
+    await request(`/api/videos/${videoId}/questionnaire`, { method: 'PUT', body: JSON.stringify({ answers }) }),
+  );
+}
+
+export async function postAssist(input: AssistRequest): Promise<AssistLog> {
+  return assistResponseSchema.parse(await request('/api/assist', { method: 'POST', body: JSON.stringify(input) })).log;
+}
+
+export async function adoptAssist(id: string): Promise<AssistLog> {
+  return assistResponseSchema.parse(await request(`/api/assist/${id}/adopt`, { method: 'POST' })).log;
 }

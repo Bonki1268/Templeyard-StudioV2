@@ -63,11 +63,18 @@ export type TextEnvResult = { config: TextEnv; missing: [] } | { config: null; m
  * 必填：ANTHROPIC_API_KEY、CLAUDE_MODEL_AGENT、CLAUDE_MODEL_ASSIST；缺少時回傳缺少的名稱（不含值）。
  * 選填：ANTHROPIC_BASE_URL。
  */
-export function readTextEnv(_env: Record<string, string | undefined>): TextEnvResult {
-  throw new Error('尚未實作');
+export function readTextEnv(env: Record<string, string | undefined>): TextEnvResult {
+  const apiKey = text(env, 'ANTHROPIC_API_KEY');
+  const agentModel = text(env, 'CLAUDE_MODEL_AGENT');
+  const assistModel = text(env, 'CLAUDE_MODEL_ASSIST');
+  if (!apiKey || !agentModel || !assistModel) {
+    const missing = (['ANTHROPIC_API_KEY', 'CLAUDE_MODEL_AGENT', 'CLAUDE_MODEL_ASSIST'] as const).filter((name) => text(env, name) === undefined);
+    return { config: null, missing };
+  }
+  return { config: { apiKey, baseURL: text(env, 'ANTHROPIC_BASE_URL'), agentModel, assistModel }, missing: [] };
 }
 
 /** 文字 AI 沒有設定時，對話與 AI 幫我寫回給使用者的說明 */
-export function textUnavailableMessage(_missing: readonly string[]): string {
-  throw new Error('尚未實作');
+export function textUnavailableMessage(missing: readonly string[]): string {
+  return `還沒設定 Claude，不能使用創作對話與 AI 幫我寫：請在 .env.local 設定 ${missing.join('、')}`;
 }

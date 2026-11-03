@@ -9,16 +9,14 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useId, useState, type FormEvent } from 'react';
 import { ApiRequestError, postSeries } from '../../api/client';
-import { AIAssistButton } from '../../components/AIAssistButton';
 import { BottomActionBar } from '../../components/BottomActionBar';
 import { Button } from '../../components/Button';
 import { OptionGroup } from '../../components/OptionGroup';
 import { TextField } from '../../components/TextField';
+import { useAiAssist } from '../assist/useAiAssist';
 import styles from './SeriesCreateForm.module.css';
 import { initialSeriesForm, pendingItems, pendingMessage, toCreateSeriesInput, type SeriesFormState } from './seriesForm';
 import { SERIES_LIST_KEY } from './useSeriesList';
-
-const AI_NOT_READY = 'AI 輔助撰寫將在之後的版本開放';
 
 /** 建立新系列表單 */
 export function SeriesCreateForm({ titleId }: { titleId: string }) {
@@ -40,6 +38,13 @@ export function SeriesCreateForm({ titleId }: { titleId: string }) {
   });
 
   const update = (patch: Partial<SeriesFormState>) => setForm((current) => ({ ...current, ...patch }));
+  // 系列還沒建立：AI 幫我寫只依使用者的輸入寫
+  const styleAssist = useAiAssist({
+    field: 'series.visualStyle',
+    fieldLabel: '整體視覺風格',
+    userInput: () => form.visualStyle,
+    onAdopt: (visualStyle) => update({ visualStyle }),
+  });
   const pending = pendingItems(form);
   const note = pendingMessage(pending);
 
@@ -74,8 +79,9 @@ export function SeriesCreateForm({ titleId }: { titleId: string }) {
           placeholder="例如：寫實電影感、清晨暖光、淺景深"
           onChange={(visualStyle) => update({ visualStyle })}
           error={fieldErrors.visualStyle}
-          labelAccessory={<AIAssistButton field="整體視覺風格" disabledReason={AI_NOT_READY} />}
+          labelAccessory={styleAssist.button}
         />
+        {styleAssist.panel}
 
         <OptionGroup
           legend="影片秒數"

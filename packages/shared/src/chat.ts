@@ -49,15 +49,25 @@ export type ChatEvent = z.infer<typeof chatEventSchema>;
 export const QUICK_TAGS = ['歷史故事', '神明傳說', '節慶活動', '景點導覽', '人物代言'] as const;
 export type QuickTag = (typeof QUICK_TAGS)[number];
 
+const OPENINGS: Record<QuickTag, (temple: string) => string> = {
+  歷史故事: (temple) => `我想講${temple}的歷史故事：`,
+  神明傳說: (temple) => `我想講${temple}主祀神明的傳說：`,
+  節慶活動: (temple) => `我想介紹${temple}的節慶活動：`,
+  景點導覽: (temple) => `我想帶大家逛${temple}：`,
+  人物代言: (temple) => `我想請一位代言人介紹${temple}：`,
+};
+
 /** 快捷標籤帶入的句子開頭 */
-export function quickTagOpening(_tag: QuickTag, _templeName: string): string {
-  throw new Error('尚未實作');
+export function quickTagOpening(tag: QuickTag, templeName: string): string {
+  return OPENINGS[tag](templeName);
 }
 
 /**
  * 點快捷標籤：輸入框開頭已經是某個標籤的句子開頭時換掉它，保留後面的內容；
  * 否則把句子開頭加在最前面
  */
-export function applyQuickTag(_current: string, _tag: QuickTag, _templeName: string): string {
-  throw new Error('尚未實作');
+export function applyQuickTag(current: string, tag: QuickTag, templeName: string): string {
+  const existing = QUICK_TAGS.map((t) => quickTagOpening(t, templeName)).find((opening) => current.startsWith(opening));
+  const rest = existing ? current.slice(existing.length) : current;
+  return quickTagOpening(tag, templeName) + rest;
 }

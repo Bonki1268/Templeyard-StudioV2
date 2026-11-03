@@ -21,12 +21,12 @@ import {
   regenerateTempleView,
   saveTempleBoardVersion,
 } from '../api/client';
-import { AIAssistButton } from '../components/AIAssistButton';
 import { BottomActionBar } from '../components/BottomActionBar';
 import { Button } from '../components/Button';
 import { OptionGroup } from '../components/OptionGroup';
 import { Tag } from '../components/Tag';
 import { TextField } from '../components/TextField';
+import { useAiAssist } from '../features/assist/useAiAssist';
 import { useCostConsent } from '../features/costs/useCostConsent';
 import { useVideoDetail } from '../features/videos/useVideoDetail';
 import page from './CreateVideoPage.module.css';
@@ -34,7 +34,6 @@ import styles from './TempleBoardPage.module.css';
 
 // 寺廟定裝版（/videos/:vid/temple-board）：檢視、單張重生與修改、確認 AI 推測、外觀規範與光線、確認定裝版
 
-const AI_ASSIST_NOT_YET = 'AI 幫我寫將在之後的版本開放';
 
 function boardKey(videoId: string) {
   return ['temple-board', videoId] as const;
@@ -193,6 +192,14 @@ type ViewCardProps = {
 function ViewCard({ videoId, seriesId, view, locked, imageModel, onBoard }: ViewCardProps) {
   const [editing, setEditing] = useState(false);
   const [instruction, setInstruction] = useState('');
+  const instructionAssist = useAiAssist({
+    field: 'templeView.instruction',
+    fieldLabel: `修改這張：${view.viewName}`,
+    videoId,
+    target: { viewKey: view.viewKey },
+    userInput: () => instruction,
+    onAdopt: setInstruction,
+  });
   const consent = useCostConsent(videoId);
   const confirmView = useMutation({ mutationFn: () => confirmTempleView(videoId, view.viewKey), onSuccess: onBoard });
   const generating = view.state === 'generating';
@@ -267,8 +274,9 @@ function ViewCard({ videoId, seriesId, view, locked, imageModel, onBoard }: View
               multiline
               maxLength={500}
               placeholder="例如：燈光暗一點，保留神案前的燈火"
-              labelAccessory={<AIAssistButton field={`修改這張：${view.viewName}`} disabledReason={AI_ASSIST_NOT_YET} />}
+              labelAccessory={instructionAssist.button}
             />
+            {instructionAssist.panel}
             <Button
               variant="primary"
               aria-label={`依指令重生：${view.viewName}`}

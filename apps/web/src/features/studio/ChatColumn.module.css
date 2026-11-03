@@ -1,0 +1,88 @@
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+  min-height: 240px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.empty,
+.status {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  color: var(--color-error);
+}
+
+.user,
+.agent {
+  max-width: 92%;
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+}
+
+.user {
+  align-self: flex-end;
+  background: var(--color-surface-muted);
+}
+
+.agent {
+  align-self: flex-start;
+  border: 1px solid var(--color-border);
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.line + .line {
+  margin-top: var(--space-1);
+}
+
+.tools {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tools li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.toolSummary {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.composer {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: end;
+}
+
+.composer > :first-child {
+  justify-self: stretch;
+}

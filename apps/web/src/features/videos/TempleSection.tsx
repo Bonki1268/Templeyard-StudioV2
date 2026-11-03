@@ -2,15 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MAX_TEMPLE_NOTES_LENGTH, type TempleSummary, type VideoDetail } from '@templeyard/shared';
 import { useId, useState } from 'react';
 import { patchVideo, postVideo, searchTemples } from '../../api/client';
-import { AIAssistButton } from '../../components/AIAssistButton';
 import { Button } from '../../components/Button';
 import { Tag } from '../../components/Tag';
 import { TextField } from '../../components/TextField';
+import { useAiAssist } from '../assist/useAiAssist';
 import styles from './TempleSection.module.css';
 import { useDebouncedValue } from './useDebouncedValue';
 import { useUpdateVideoDetail, videoDetailKey } from './useVideoDetail';
-
-const AI_NOT_YET = 'AI 輔助撰寫將在之後的版本開放';
 
 type TempleSectionProps = {
   seriesId: string;
@@ -181,6 +179,18 @@ function TempleNotes({ detail }: { detail: VideoDetail }) {
       setSaved(true);
     },
   });
+  // AI 整理成條列：採用後填入並儲存（只是存下欄位內容，不會送出其他東西）
+  const notesAssist = useAiAssist({
+    field: 'video.templeNotes',
+    label: 'AI 整理成條列',
+    videoId: detail.video.id,
+    userInput: () => notes,
+    onAdopt: (text) => {
+      setNotes(text);
+      setSaved(false);
+      save.mutate(text);
+    },
+  });
 
   return (
     <div className={styles.notes}>
@@ -200,10 +210,11 @@ function TempleNotes({ detail }: { detail: VideoDetail }) {
         labelAccessory={
           <span className={styles.notesAccessory}>
             {notes.trim() && <Tag tone="info">使用者提供</Tag>}
-            <AIAssistButton label="AI 整理成條列" disabledReason={AI_NOT_YET} />
+            {notesAssist.button}
           </span>
         }
       />
+      {notesAssist.panel}
       <p className={styles.saved} role="status">
         {saved ? '已儲存寺廟歷史與簡介' : ''}
       </p>

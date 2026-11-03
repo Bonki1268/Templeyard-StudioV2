@@ -18,11 +18,20 @@ export type OptionGroupProps<T extends string | number> = {
 };
 
 /** 單選的選項按鈕群組：fieldset＋legend，選取狀態以 aria-pressed 標示 */
-export function OptionGroup<T extends string | number>({ legend, options, value, onChange, other, disabled = false }: OptionGroupProps<T>) {
+export function OptionGroup<T extends string | number>({
+  legend,
+  options,
+  value,
+  onChange,
+  other,
+  legendAccessory,
+  disabled = false,
+}: OptionGroupProps<T>) {
   const otherId = useId();
   return (
     <fieldset className={styles.group} disabled={disabled}>
       <legend className={styles.legend}>{legend}</legend>
+      {legendAccessory && <div className={styles.legendAccessory}>{legendAccessory}</div>}
       <div className={styles.options}>
         {options.map((option) => (
           <button
@@ -47,6 +56,7 @@ export function OptionGroup<T extends string | number>({ legend, options, value,
             value={other.value}
             onChange={(event) => other.onChange(event.target.value)}
           />
+          {other.accessory}
         </div>
       )}
     </fieldset>

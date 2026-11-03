@@ -1,4 +1,4 @@
-import type { AssistField } from '@templeyard/shared';
+import { assistOutputSchema, copyPolishOutputSchema, type AssistField } from '@templeyard/shared';
 
 // AI 輔助撰寫（規格書「AI 輔助撰寫」）：先建議、後採用；內容只用提供的資料，不新增沒有來源的寺廟事實。
 
@@ -17,19 +17,57 @@ export type AssistContext = {
   questionTitle: string | null;
 };
 
+const FORMAT_ERROR = 'AI 建議的格式不正確，請再試一次';
+
+const ASSIST_SYSTEM = [
+  `${ASSIST_ROLE}：使用者在廟埕影室（新北市寺廟觀光短影音）填寫欄位時按下「AI 幫我寫」，請依提供的資料寫出完整的內容，供使用者採用。`,
+  '寫法：',
+  '1. 保留使用者輸入的原意；使用者沒有輸入時，依資料寫一版。',
+  '2. 只寫這個欄位需要的內容，簡潔、具體、能拍成畫面；用繁體中文（台灣用語）。',
+  '內容與宗教規則：只使用下方提供的寺廟資料與使用者輸入，不可新增沒有來源的寺廟事實（歷史年代、人物或傳說）；不得對神明不敬，不得出現不敬的動作、台詞或畫面；畫面中不可出現可辨識的真實民眾。',
+  '輸出格式：只回一個 JSON 物件 {"suggestion": "建議的內容"}，不要其他文字。',
+].join('\n');
+
 /**
  * 通用的輔助撰寫請求：
  * - system：角色（ASSIST_ROLE）、內容與宗教規則、輸出格式 {"suggestion": "..."}
  * - user：要寫的欄位、使用者的輸入（留白時說明「使用者沒有輸入，請依資料寫一版」）、寺廟、使用者提供的歷史、
  *   系列設定、創作輸入、視角或題目；沒有的資料不列出
  */
-export function buildAssistRequest(_context: AssistContext): { system: string; user: string } {
-  throw new Error('尚未實作');
+export function buildAssistRequest(context: AssistContext): { system: string; user: string } {
+  const lines = [`要寫的欄位：${context.field.label}`];
+  if (context.viewName) lines.push(`視角：${context.viewName}`);
+  if (context.questionTitle) lines.push(`問卷題目：${context.questionTitle}`);
+  const { temple, series } = context;
+  if (temple) {
+    lines.push(
+      `寺廟：${temple.name}（${temple.district}，主祀${temple.deity}${temple.builtYear === null ? '' : `，創建於 ${temple.builtYear} 年`}；來源：寺廟資料庫）`,
+    );
+  }
+  if (context.userTempleNotes.trim()) lines.push(`使用者提供的寺廟歷史與簡介：${context.userTempleNotes.trim()}`);
+  if (series) lines.push(`系列設定：整體視覺風格「${series.visualStyle}」、影片方向「${series.direction}」、影片秒數 ${series.durationSec} 秒`);
+  if (context.creativeInput?.trim()) lines.push(`創作輸入：${context.creativeInput.trim()}`);
+  const input = context.userInput.trim();
+  lines.push('', input ? `使用者的輸入：\n${input}` : '使用者沒有輸入，請依資料寫一版。');
+  return { system: ASSIST_SYSTEM, user: lines.join('\n') };
 }
 
 /** copy-polish 節點（想講的故事）的變數：prompt-studio/prompts/copy-polish.json 的變數清單 */
-export function copyPolishVariables(_context: AssistContext): Record<string, unknown> {
-  throw new Error('尚未實作');
+export function copyPolishVariables(context: AssistContext): Record<string, unknown> {
+  const temple = context.temple;
+  return {
+    temple: {
+      name: temple?.name ?? '',
+      district: temple?.district ?? '',
+      deity: temple?.deity ?? '',
+      builtYear: temple?.builtYear === null || temple?.builtYear === undefined ? '' : String(temple.builtYear),
+      history: context.userTempleNotes.trim(),
+    },
+    series: { style: context.series?.visualStyle ?? '', direction: context.series?.direction ?? '' },
+    maxChars: '200',
+    instruction: '',
+    story: context.userInput,
+  };
 }
 
 export class AssistOutputError extends Error {
@@ -40,6 +78,21 @@ export class AssistOutputError extends Error {
  * 解析 Claude 回的建議：允許前後空白與 ```json 程式碼區塊；
  * generic 取 suggestion，copy-polish 取 polished；格式不正確丟出 AssistOutputError「AI 建議的格式不正確，請再試一次」
  */
-export function parseAssistOutput(_text: string, _kind: 'generic' | 'copy-polish'): string {
-  throw new Error('尚未實作');
+export function parseAssistOutput(text: string, kind: 'generic' | 'copy-polish'): string {
+  const trimmed = text.trim();
+  const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/.exec(trimmed);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(fenced?.[1] ?? trimmed);
+  } catch {
+    throw new AssistOutputError(FORMAT_ERROR);
+  }
+  if (kind === 'copy-polish') {
+    const result = copyPolishOutputSchema.safeParse(parsed);
+    if (!result.success) throw new AssistOutputError(FORMAT_ERROR);
+    return result.data.polished;
+  }
+  const result = assistOutputSchema.safeParse(parsed);
+  if (!result.success) throw new AssistOutputError(FORMAT_ERROR);
+  return result.data.suggestion;
 }

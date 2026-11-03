@@ -118,6 +118,22 @@ export class QuestionnaireInputError extends Error {
   }
 }
 
+function present(text: string | undefined): text is string {
+  return text !== undefined && text.trim().length > 0;
+}
+
+/** 選項題的選項要在題目的選項裡；文字題不能有選項 */
+function validChoice(question: Question, choice: string | undefined): boolean {
+  return choice !== undefined && question.kind === 'choice' && question.options.includes(choice);
+}
+
+/** 一個預填來源（選項或自己寫）轉成答案；不合用時回傳 null */
+function prefillFrom(question: Question, value: { choice?: string | undefined; custom?: string | undefined }, source: AnswerSource) {
+  if (validChoice(question, value.choice)) return { questionId: question.id, choice: value.choice, source } as QuestionnaireAnswer;
+  if (question.kind !== 'photos' && present(value.custom)) return { questionId: question.id, custom: value.custom.trim(), source } as QuestionnaireAnswer;
+  return null;
+}
+
 /**
  * 預填問卷（規格書「預填順序」）：本次的創作輸入（Agent 的預填）→ 系列問卷預設值 → 系列設定 → 留白由系統選擇。
  * - 只留 Agent 挑的題目，依題庫順序
@@ -125,12 +141,49 @@ export class QuestionnaireInputError extends Error {
  * - 每支影片不同的題目不使用系列問卷預設值
  * - 系列設定只有影片秒數對應「長度」
  */
-export function prefillAnswers(_input: {
+export function prefillAnswers(input: {
   tool: GenerateQuestionnaireInput;
   seriesDefaults: QuestionnaireDefaults | null;
   series: { durationSec: number };
 }): QuestionnaireAnswer[] {
-  throw new Error('尚未實作');
+  const asked = new Set<string>(input.tool.questionIds);
+  return QUESTIONNAIRE_QUESTIONS.filter((q) => asked.has(q.id)).map((question): QuestionnaireAnswer => {
+    const agent = input.tool.prefill.find((p) => p.questionId === question.id);
+    const fromAgent = agent ? prefillFrom(question, agent, 'user') : null;
+    if (fromAgent) return fromAgent;
+    const fallback = input.seriesDefaults?.[question.id];
+    const fromDefaults = !question.perVideo && fallback ? prefillFrom(question, fallback, 'series_default') : null;
+    if (fromDefaults) return fromDefaults;
+    if (question.id === 'length') {
+      const fromSeries = prefillFrom(question, { choice: `${input.series.durationSec} 秒` }, 'series_default');
+      if (fromSeries) return fromSeries;
+    }
+    return { questionId: question.id, source: 'system' };
+  });
+}
+
+/** 兩個答案的內容是否相同（不看來源） */
+function sameContent(a: QuestionnaireAnswer, b: QuestionnaireAnswer): boolean {
+  return (
+    a.choice === b.choice &&
+    a.custom === b.custom &&
+    JSON.stringify([...(a.photoIds ?? [])].sort()) === JSON.stringify([...(b.photoIds ?? [])].sort())
+  );
+}
+
+/** 一題的作答整理成答案（不含來源）；不正確時丟出 QuestionnaireInputError */
+function normalizeInput(question: Question, input: AnswerInput, videoPhotoIds: readonly string[]): Omit<QuestionnaireAnswer, 'source'> {
+  const custom = present(input.custom) ? input.custom.trim() : undefined;
+  if (input.choice !== undefined && custom !== undefined) throw new QuestionnaireInputError('選項和自己寫只能擇一', question.id);
+  if (input.choice !== undefined && !validChoice(question, input.choice)) throw new QuestionnaireInputError('請從選項中選擇', question.id);
+  if (question.kind === 'photos') {
+    const photoIds = [...new Set(input.photoIds ?? [])];
+    if (photoIds.some((id) => !videoPhotoIds.includes(id))) throw new QuestionnaireInputError('找不到這張照片', question.id);
+    return photoIds.length > 0 ? { questionId: question.id, photoIds } : { questionId: question.id };
+  }
+  if (input.choice !== undefined) return { questionId: question.id, choice: input.choice };
+  if (custom !== undefined) return { questionId: question.id, custom };
+  return { questionId: question.id };
 }
 
 /**
@@ -140,19 +193,44 @@ export function prefillAnswers(_input: {
  * - 沒有送的題目當成留白
  */
 export function resolveSubmittedAnswers(
-  _current: readonly QuestionnaireAnswer[],
-  _input: readonly AnswerInput[],
-  _videoPhotoIds: readonly string[],
+  current: readonly QuestionnaireAnswer[],
+  input: readonly AnswerInput[],
+  videoPhotoIds: readonly string[],
 ): QuestionnaireAnswer[] {
-  throw new Error('尚未實作');
+  const asked = new Set(current.map((a) => a.questionId));
+  const byId = new Map<string, Omit<QuestionnaireAnswer, 'source'>>();
+  for (const item of input) {
+    const question = findQuestion(item.questionId);
+    if (!question || !asked.has(item.questionId)) throw new QuestionnaireInputError('這份問卷沒有這一題', item.questionId);
+    byId.set(item.questionId, normalizeInput(question, item, videoPhotoIds));
+  }
+  return current.map((original): QuestionnaireAnswer => {
+    const answer = byId.get(original.questionId) ?? { questionId: original.questionId };
+    const blank = answer.choice === undefined && answer.custom === undefined && (answer.photoIds ?? []).length === 0;
+    if (blank) return { questionId: original.questionId, source: 'system' };
+    const candidate: QuestionnaireAnswer = { ...answer, source: 'user' };
+    return sameContent(candidate, original) ? { ...answer, source: original.source } : candidate;
+  });
 }
 
 /** 寫入系列問卷預設值的內容：排除每支影片不同的題目與留白的題目 */
-export function defaultsFromAnswers(_answers: readonly QuestionnaireAnswer[]): QuestionnaireDefaults {
-  throw new Error('尚未實作');
+export function defaultsFromAnswers(answers: readonly QuestionnaireAnswer[]): QuestionnaireDefaults {
+  const defaults: QuestionnaireDefaults = {};
+  for (const answer of answers) {
+    const question = findQuestion(answer.questionId);
+    if (!question || question.perVideo) continue;
+    if (answer.choice !== undefined) defaults[answer.questionId] = { choice: answer.choice };
+    else if (answer.custom !== undefined) defaults[answer.questionId] = { custom: answer.custom };
+  }
+  return defaults;
 }
 
 /** 左欄的答案摘要：每題一行「題目：答案」；留白是「系統將會選擇」；照片寫張數 */
-export function answerSummaryLines(_answers: readonly QuestionnaireAnswer[]): string[] {
-  throw new Error('尚未實作');
+export function answerSummaryLines(answers: readonly QuestionnaireAnswer[]): string[] {
+  return answers.map((answer) => {
+    const title = findQuestion(answer.questionId)?.title ?? answer.questionId;
+    const photos = answer.photoIds?.length ?? 0;
+    const value = answer.choice ?? answer.custom ?? (photos > 0 ? `${photos} 張` : ANSWER_SOURCE_LABELS.system);
+    return `${title}：${value}`;
+  });
 }

@@ -22,11 +22,18 @@ export function AIAssistButton({ onClick, disabledReason, field, label = 'AI 幫
         className={styles.button}
         onClick={onClick}
         disabled={Boolean(disabledReason)}
-        aria-label={field ? `${label}：${field}` : undefined}
         aria-describedby={disabledReason ? reasonId : undefined}
       >
         <Sparkles size={16} strokeWidth={1.8} aria-hidden="true" />
-        {label}
+        {/* 有欄位名稱時，完整名稱只給輔助科技：用文字內容而不是 aria-label，按鈕才不會被當成那個欄位的標籤 */}
+        {field ? (
+          <>
+            <span aria-hidden="true">{label}</span>
+            <span className={styles.visuallyHidden}>{`${label}：${field}`}</span>
+          </>
+        ) : (
+          label
+        )}
       </button>
       {disabledReason && (
         <span id={reasonId} className={styles.reason}>

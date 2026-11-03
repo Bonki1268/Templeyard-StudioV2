@@ -1,6 +1,24 @@
-import type { GenerateQuestionnaireInput, Questionnaire, SubmitQuestionnaireInput } from '@templeyard/shared';
+import {
+  QuestionnaireInputError,
+  answerSummaryLines,
+  defaultsFromAnswers,
+  prefillAnswers,
+  questionnaireDefaultsSchema,
+  resolveSubmittedAnswers,
+  type GenerateQuestionnaireInput,
+  type Questionnaire,
+  type QuestionnaireDefaults,
+  type SubmitQuestionnaireInput,
+  type Video,
+} from '@templeyard/shared';
+import { eq } from 'drizzle-orm';
 import type { AppDatabase } from '../db/client.js';
-import type { Clock } from '../series/repository.js';
+import { series, videos } from '../db/schema.js';
+import { listPhotosForVideo } from '../photos/repository.js';
+import { findSeries, type Clock } from '../series/repository.js';
+import { findVideo } from '../videos/repository.js';
+import { QUESTIONNAIRE_ALREADY_SUBMITTED, QUESTIONNAIRE_NOT_OPENED, StudioError, VIDEO_NOT_FOUND } from './errors.js';
+import { findQuestionnaire, insertChatMessage, insertQuestionnaire, updateQuestionnaire } from './repository.js';
 
 // 設定問卷（F7）：Agent 開啟問卷、使用者送出；系列第一支送出問卷的影片寫入系列問卷預設值。
 
@@ -22,6 +40,83 @@ export type QuestionnaireService = {
   submit(videoId: string, input: SubmitQuestionnaireInput): { questionnaire: Questionnaire; seriesDefaultsSaved: boolean };
 };
 
-export function createQuestionnaireService(_deps: { db: AppDatabase; clock: Clock }): QuestionnaireService {
-  throw new Error('尚未實作');
+/** 系列問卷預設值：格式不正確時當成沒有，不讓問卷打不開 */
+function readDefaults(value: unknown): QuestionnaireDefaults | null {
+  const parsed = questionnaireDefaultsSchema.safeParse(value);
+  return parsed.success && Object.keys(parsed.data).length > 0 ? parsed.data : null;
+}
+
+export function createQuestionnaireService(deps: { db: AppDatabase; clock: Clock }): QuestionnaireService {
+  const { db, clock } = deps;
+
+  function requireVideo(videoId: string): Video {
+    const video = findVideo(db, videoId);
+    if (!video) throw new StudioError(404, VIDEO_NOT_FOUND);
+    return video;
+  }
+
+  function requireSeries(seriesId: string) {
+    const found = findSeries(db, seriesId);
+    if (!found) throw new Error(`影片的系列不存在：${seriesId}`);
+    return found;
+  }
+
+  return {
+    get(videoId) {
+      requireVideo(videoId);
+      return findQuestionnaire(db, videoId);
+    },
+
+    open(videoId, input) {
+      const video = requireVideo(videoId);
+      const existing = findQuestionnaire(db, videoId);
+      if (existing?.submittedAt) throw new StudioError(409, QUESTIONNAIRE_ALREADY_SUBMITTED);
+      const seriesRow = requireSeries(video.seriesId);
+      const answers = prefillAnswers({
+        tool: input,
+        seriesDefaults: readDefaults(seriesRow.questionnaireDefaults),
+        series: { durationSec: seriesRow.durationSec },
+      });
+      return db.transaction(() => {
+        const questionnaire = existing
+          ? updateQuestionnaire(db, existing.id, { answers })
+          : insertQuestionnaire(db, { id: clock.newId(), videoId, answers });
+        if (video.stage === 'chat') {
+          db.update(videos).set({ stage: 'questionnaire', updatedAt: clock.now().toISOString() }).where(eq(videos.id, videoId)).run();
+        }
+        return questionnaire;
+      });
+    },
+
+    submit(videoId, input) {
+      const video = requireVideo(videoId);
+      const existing = findQuestionnaire(db, videoId);
+      if (!existing) throw new StudioError(409, QUESTIONNAIRE_NOT_OPENED);
+      const photoIds = listPhotosForVideo(db, video).map((photo) => photo.id);
+      let answers;
+      try {
+        answers = resolveSubmittedAnswers(existing.answers, input.answers, photoIds);
+      } catch (error: unknown) {
+        if (error instanceof QuestionnaireInputError) throw new StudioError(400, error.message);
+        throw error;
+      }
+      const seriesRow = requireSeries(video.seriesId);
+      const defaults = defaultsFromAnswers(answers);
+      const saveDefaults = readDefaults(seriesRow.questionnaireDefaults) === null && Object.keys(defaults).length > 0;
+      const now = clock.now().toISOString();
+      return db.transaction(() => {
+        const questionnaire = updateQuestionnaire(db, existing.id, { answers, submittedAt: now });
+        if (saveDefaults) db.update(series).set({ questionnaireDefaults: defaults, updatedAt: now }).where(eq(series.id, seriesRow.id)).run();
+        insertChatMessage(db, {
+          id: clock.newId(),
+          videoId,
+          role: 'user',
+          content: ['送出問卷', ...answerSummaryLines(answers)].join('\n'),
+          toolCalls: [],
+          createdAt: now,
+        });
+        return { questionnaire, seriesDefaultsSaved: saveDefaults };
+      });
+    },
+  };
 }
