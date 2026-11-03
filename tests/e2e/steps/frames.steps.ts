@@ -1,5 +1,13 @@
 import { expect, type APIRequestContext, type APIResponse, type Page } from '@playwright/test';
-import { characterListResponseSchema, framesResponseSchema, planResponseSchema, templeBoardResponseSchema, type ShotInput } from '@templeyard/shared';
+import {
+  characterListResponseSchema,
+  clipsResponseSchema,
+  consentRequiredResponseSchema,
+  framesResponseSchema,
+  planResponseSchema,
+  templeBoardResponseSchema,
+  type ShotInput,
+} from '@templeyard/shared';
 import { Given, Then, When } from './fixtures';
 import { chatViaApi, confirmBoardViaApi, consentViaApi, createSeriesViaApi, createVideoViaApi, fetchVideoDetail, videoIdFrom } from './support/api';
 
@@ -106,14 +114,89 @@ Given(/^我已經透過 API 為一支「(.+)」的影片產生精緻圖$/, async
   await expect.poll(async () => (await fetchFrames(request, videoId)).generating, { timeout: 20_000 }).toBe(false);
 });
 
-Given('我透過 API 確認所有格的精緻圖', async ({ request, state }) => {
-  const videoId = requireVideoId(state);
+async function confirmAllFrames(request: APIRequestContext, state: State, videoId: string) {
   const { shots } = await fetchFrames(request, videoId);
   state.frameAssets = {};
   for (const shot of shots) {
     expect((await request.post(`/api/videos/${videoId}/shots/${shot.shotKey}/frames/confirm`)).status()).toBe(200);
     state.frameAssets[shot.seq] = shot.first?.assetId ?? null;
   }
+}
+
+Given('我透過 API 確認所有格的精緻圖', async ({ request, state }) => {
+  await confirmAllFrames(request, state, requireVideoId(state));
+});
+
+// ── 第 11 階段：影片與成品 ──
+
+async function fetchClips(request: APIRequestContext, videoId: string) {
+  const response = await request.get(`/api/videos/${videoId}/clips`);
+  expect(response.status()).toBe(200);
+  return clipsResponseSchema.parse(await response.json());
+}
+
+/** 先不帶憑證取得預估，照預估同意後再送出 */
+async function submitClips(request: APIRequestContext, videoId: string) {
+  const url = `/api/videos/${videoId}/generate/clips`;
+  const first = await request.post(url, { data: {} });
+  expect(first.status()).toBe(409);
+  const { check } = consentRequiredResponseSchema.parse(await first.json());
+  const consent = await request.post(`/api/videos/${videoId}/consents`, { data: { items: check.estimate.lines.map((line) => ({ model: line.model, units: line.units })) } });
+  expect(consent.status()).toBe(201);
+  const { consentToken } = (await consent.json()) as { consentToken: string };
+  const response = await request.post(url, { data: { consentToken } });
+  expect(response.status()).toBe(202);
+  return consentToken;
+}
+
+async function waitClipsDone(request: APIRequestContext, videoId: string) {
+  await expect.poll(async () => (await fetchClips(request, videoId)).generating, { timeout: 40_000 }).toBe(false);
+}
+
+Given(/^我已經透過 API 為一支「(.+)」的影片確認所有精緻圖$/, async ({ request, state }, temple: string) => {
+  const videoId = await readyPlan(request, state, temple);
+  await submitFrames(request, videoId);
+  await expect.poll(async () => (await fetchFrames(request, videoId)).generating, { timeout: 20_000 }).toBe(false);
+  await confirmAllFrames(request, state, videoId);
+});
+
+Given(/^我已經透過 API 為一支「(.+)」的影片產生成品$/, async ({ request, state }, temple: string) => {
+  const videoId = await readyPlan(request, state, temple);
+  await submitFrames(request, videoId);
+  await expect.poll(async () => (await fetchFrames(request, videoId)).generating, { timeout: 20_000 }).toBe(false);
+  await confirmAllFrames(request, state, videoId);
+  await submitClips(request, videoId);
+  await waitClipsDone(request, videoId);
+  expect((await fetchClips(request, videoId)).final).not.toBeNull();
+});
+
+When('我透過 API 生成影片並等它完成', async ({ request, state }) => {
+  const videoId = requireVideoId(state);
+  await submitClips(request, videoId);
+  await waitClipsDone(request, videoId);
+});
+
+When(/^我透過 API 生成影片，但(.+)$/, async ({ request, state }, situation: string) => {
+  const videoId = requireVideoId(state);
+  const url = `/api/videos/${videoId}/generate/clips`;
+  switch (situation) {
+    case '精緻圖還沒確認':
+    case '沒有同意憑證':
+      state.lastResponse = await request.post(url, { data: {} });
+      return;
+    case '正在生成': {
+      const token = await submitClips(request, videoId);
+      state.lastResponse = await request.post(url, { data: { consentToken: token } });
+      return;
+    }
+    default:
+      throw new Error(`沒有這個情況：${situation}`);
+  }
+});
+
+Then('沒有還不能生成影片的原因', async ({ page }) => {
+  await expect(page.getByRole('button', { name: '生成影片', exact: true })).toBeEnabled({ timeout: 20_000 });
+  await expect(clipBlockers(page)).toHaveCount(0);
 });
 
 When(/^我透過 API 把「(.+)」的外觀描述改成「(.+)」$/, async ({ request, state }, name: string, description: string) => {

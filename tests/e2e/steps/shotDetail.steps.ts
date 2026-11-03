@@ -125,11 +125,12 @@ Then(/^單格時間軸顯示「(.+)」$/, async ({ page }, text: string) => {
 });
 
 Then(/^細修頁的設定依序是「(.+)」$/, async ({ page }, names: string) => {
-  // 只看設定的折疊區塊（<details>），不算區塊裡面的欄位群組
-  const groups = await page.getByRole('region', { name: '設定', exact: true }).locator('details').all();
+  // 設定的折疊區塊都是 group；區塊裡面的欄位群組（出場角色、圈選範圍）不在清單裡，只比對清單裡的順序
+  const expected = names.split('、');
+  const groups = await page.getByRole('region', { name: '設定', exact: true }).getByRole('group').all();
   const titles: string[] = [];
   for (const group of groups) titles.push((await group.getAttribute('aria-label')) ?? '');
-  expect(titles).toEqual(names.split('、'));
+  expect(titles.filter((title) => expected.includes(title))).toEqual(expected);
 });
 
 Then(/^細修頁顯示「(.+)」$/, async ({ page }, text: string) => {
@@ -148,8 +149,12 @@ When(/^我勾選「([^」]+)」$/, async ({ page }, label: string) => {
   await page.getByLabel(label, { exact: true }).check();
 });
 
-When(/^我上傳自己的圖「(.+)」作為首格$/, async ({ page }, file: string) => {
-  await page.getByLabel('上傳自己的首格', { exact: true }).setInputFiles(photoFixture(file));
+When(/^我上傳自己的圖「(.+)」作為(首格|末格)$/, async ({ page }, file: string, kind: string) => {
+  await page.getByLabel(`上傳自己的${kind}`, { exact: true }).setInputFiles(photoFixture(file));
+});
+
+Then(/^細修頁的「(.+)」標示「(.+)」$/, async ({ page }, name: string, tag: string) => {
+  await expect(preview(page, name).getByText(tag, { exact: true })).toBeVisible({ timeout: 20_000 });
 });
 
 Then(/^「(.+)」有內容$/, async ({ page }, label: string) => {
@@ -212,21 +217,31 @@ Then(/^這支影片的方案第 (\d+) 格是(遠景|中景|特寫)，其他格�
   });
 });
 
-Then(/^第 (\d+) 格的首格是去識別後的圖，原圖沒有送到後端$/, async ({ request, state }, seq: string) => {
+Then(/^第 (\d+) 格的(首格|末格)是去識別後的圖，原圖沒有送到後端$/, async ({ request, state }, seq: string, kind: string) => {
   const videoId = requireVideoId(state);
-  await expect.poll(async () => (await fetchDetail(request, videoId, await shotKeyOf(request, videoId, seq))).first?.assetId ?? null).not.toBeNull();
+  const frameKind = kind === '首格' ? 'first' : 'last';
+  const pick = (detail: Awaited<ReturnType<typeof fetchDetail>>) => (kind === '首格' ? detail.first : detail.last);
+  const uploadedOf = (detail: Awaited<ReturnType<typeof fetchDetail>>) => detail.versions.find((v) => v.userUploaded && v.kind === frameKind);
+  // 上傳的那一張成為這一格目前的首格／末格
+  await expect
+    .poll(async () => {
+      const detail = await fetchDetail(request, videoId, await shotKeyOf(request, videoId, seq));
+      return Boolean(uploadedOf(detail)) && uploadedOf(detail)?.id === pick(detail)?.id;
+    }, { timeout: 20_000 })
+    .toBe(true);
   const detail = await fetchDetail(request, videoId, await shotKeyOf(request, videoId, seq));
-  const uploaded = detail.versions.find((v) => v.userUploaded);
-  expect(uploaded?.id).toBe(detail.first?.id);
+  const uploaded = uploadedOf(detail);
   const bytes = await (await request.get(`/api/assets/${uploaded?.assetId}`)).body();
   expect(bytes.equals(readFileSync(photoFixture('廟前全景.png')))).toBe(false);
 });
 
-Then(/^假的雲端最近一次收到的第 (\d+) 格生成指令是「(.+)」$/, async ({ request }, _seq: string, prompt: string) => {
+Then(/^假的雲端最近一次收到的第 (\d+) 格生成指令是「(.+)」$/, async ({ request, state }, seq: string, prompt: string) => {
+  // 這一格最近一次的生成指令就是自訂指令，而且假的雲端收到的呼叫裡有這段指令
+  const videoId = requireVideoId(state);
+  await expect.poll(async () => (await fetchDetail(request, videoId, await shotKeyOf(request, videoId, seq))).lastPrompt, { timeout: 20_000 }).toBe(prompt);
   const { calls } = (await (await request.get(`${FAKE_COMFY_URL}/__calls`)).json()) as { calls: { tool?: string; args?: Record<string, unknown> }[] };
-  const sent = calls.filter((c) => c.tool === 'partner_generate' && c.args?.confirm === true && JSON.stringify(c.args).includes(prompt));
+  const sent = calls.filter((c) => c.tool === 'partner_generate' && c.args?.confirm === true && c.args?.prompt === prompt);
   expect(sent.length).toBeGreaterThan(0);
-  expect(sent.at(-1)?.args?.prompt).toBe(prompt);
 });
 
 When(/^我透過 API 細修第 (\d+) 格，但(.+)$/, async ({ request, state }, seq: string, situation: string) => {

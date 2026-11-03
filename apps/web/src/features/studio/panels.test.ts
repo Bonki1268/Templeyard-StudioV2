@@ -13,6 +13,11 @@ describe('面板', () => {
   it('Agent 開啟問卷後：創作首頁與設定問卷', () => {
     expect(reachablePanels({ hasQuestionnaire: true })).toEqual(['home', 'questionnaire']);
   });
+
+  it('影片生成中或有成品後：可以看成品面板（第 11 階段）', () => {
+    expect(reachablePanels({ hasQuestionnaire: true, hasPlan: true, hasFrames: true, hasFinal: true })).toEqual(['home', 'questionnaire', 'plan', 'frames', 'final']);
+    expect(reachablePanels({ hasQuestionnaire: true, hasPlan: true, hasFrames: true, hasFinal: false })).not.toContain('final');
+  });
 });
 
 describe('要顯示哪個面板', () => {

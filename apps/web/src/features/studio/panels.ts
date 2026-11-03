@@ -12,7 +12,7 @@ export type StudioPanel = (typeof STUDIO_PANELS)[number]['key'];
 
 export const PANEL_NOT_REACHED = '還沒到這一步';
 
-export type StudioProgress = { hasQuestionnaire: boolean; hasPlan?: boolean; hasFrames?: boolean };
+export type StudioProgress = { hasQuestionnaire: boolean; hasPlan?: boolean; hasFrames?: boolean; hasFinal?: boolean };
 
 /** 到達過的面板：創作首頁一定可以；Agent 開啟問卷後可以看問卷；有分鏡方案後可以看方案；送出精緻圖後可以看精緻圖；成品在之後的階段才會到達 */
 export function reachablePanels(progress: StudioProgress): StudioPanel[] {

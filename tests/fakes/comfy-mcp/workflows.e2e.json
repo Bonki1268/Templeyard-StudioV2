@@ -75,6 +75,30 @@
         "unit": "second",
         "credits": 31,
         "verified": false
+      },
+      "frameInputs": {
+        "first": {
+          "paths": [
+            [
+              "fake_first_frame"
+            ]
+          ]
+        },
+        "last": {
+          "paths": [
+            [
+              "fake_last_frame"
+            ]
+          ]
+        }
+      },
+      "references": {
+        "paths": [
+          [
+            "fake_reference_images"
+          ]
+        ],
+        "max": 3
       }
     },
     "seedance-2.0": {
@@ -280,5 +304,9 @@
         "verified": false
       }
     }
+  },
+  "music": {
+    "model": "ace-step-1.5",
+    "tags": "traditional Taiwanese temple ambience, gentle guzheng and soft percussion, instrumental, no vocals"
   }
 }

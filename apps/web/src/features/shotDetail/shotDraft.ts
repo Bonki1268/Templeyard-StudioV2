@@ -21,7 +21,11 @@ export type ShotDraft = Pick<
   | 'photoId'
   | 'keyframesEnabled'
   | 'keyframeTimes'
->;
+> & {
+  /** 生成設定：沒有設定過的格子是使用原生語音、1 張候選圖 */
+  nativeVoice: boolean;
+  candidateCount: number;
+};
 
 const FIELDS = [
   'description',

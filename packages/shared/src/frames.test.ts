@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLIPS_NOT_OPEN, clipBlockers, frameShotState, generatingLabel, invalidatedBy, planChangeInvalidations, type Frame } from './frames.js';
+import { clipBlockers, frameShotState, generatingLabel, invalidatedBy, planChangeInvalidations, type Frame } from './frames.js';
 
 function frame(overrides: Partial<Frame> = {}): Frame {
   return {
@@ -34,7 +34,7 @@ describe('一格精緻圖的狀態', () => {
 });
 
 describe('「生成影片」旁的原因', () => {
-  it('列出還沒確認與需重新確認的格子，最後是影片生成還沒開放', () => {
+  it('列出還沒確認、需重新確認與生成中的格子', () => {
     expect(
       clipBlockers([
         { seq: 1, first: frame({ selected: true }), last: null, needsLast: false },
@@ -42,15 +42,19 @@ describe('「生成影片」旁的原因', () => {
         { seq: 3, first: frame({ selected: true, needsReconfirm: true }), last: null, needsLast: false },
         { seq: 4, first: frame({ state: 'generating', assetId: null }), last: null, needsLast: false },
       ]),
-    ).toEqual(['第 2 格：精緻圖還沒確認', '第 3 格：精緻圖需重新確認', '第 4 格：精緻圖還在生成中', CLIPS_NOT_OPEN]);
+    ).toEqual(['第 2 格：精緻圖還沒確認', '第 3 格：精緻圖需重新確認', '第 4 格：精緻圖還在生成中']);
   });
 
-  it('全部確認時只剩影片生成還沒開放', () => {
-    expect(clipBlockers([{ seq: 1, first: frame({ selected: true }), last: null, needsLast: false }])).toEqual([CLIPS_NOT_OPEN]);
+  it('全部確認時沒有原因，可以生成影片（第 11 階段開放）', () => {
+    expect(clipBlockers([{ seq: 1, first: frame({ selected: true }), last: null, needsLast: false }])).toEqual([]);
+  });
+
+  it('需要末格的格子，末格也要確認', () => {
+    expect(clipBlockers([{ seq: 1, first: frame({ selected: true }), last: frame({ id: 'f2', kind: 'last' }), needsLast: true }])).toEqual(['第 1 格：精緻圖還沒確認']);
   });
 
   it('沒有精緻圖的格子', () => {
-    expect(clipBlockers([{ seq: 1, first: null, last: null, needsLast: false }])).toEqual(['第 1 格：還沒有精緻圖', CLIPS_NOT_OPEN]);
+    expect(clipBlockers([{ seq: 1, first: null, last: null, needsLast: false }])).toEqual(['第 1 格：還沒有精緻圖']);
   });
 });
 

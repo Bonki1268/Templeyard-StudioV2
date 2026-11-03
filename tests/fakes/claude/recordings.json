@@ -338,6 +338,10 @@
       "text": "{\"prompt\": \"Keyframe. {{user}}\", \"notes\": \"錄製的回應：中間關鍵畫格\"}"
     },
     {
+      "match": "圖生影片",
+      "text": "{\"prompt\": \"Shot video. {{user}}\", \"notes\": \"錄製的回應：分鏡影片\"}"
+    },
+    {
       "match": "限定範圍修改：只改指定的一處",
       "text": "{\"prompt\": \"Region edit. {{user}}\", \"notes\": \"錄製的回應：限定範圍修改\"}"
     },

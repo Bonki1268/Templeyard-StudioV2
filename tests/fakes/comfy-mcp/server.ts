@@ -1,6 +1,10 @@
+import { execFileSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 // 假的 Comfy Cloud MCP 伺服器：行為照 docs/07-實測紀錄.md 與 docs/reference/comfyui-test/server.mjs
 // - initialize 回 Mcp-Session-Id；之後每次要帶，不認得的 session 回 404（過期）
@@ -11,6 +15,8 @@ import type { AddressInfo } from 'node:net';
 // 任務結果由指令裡的標記決定：[fail] 失敗、[cancel] 取消、[never] 一直在跑、[slow] 第 40 次查詢才完成、其他第 2 次查詢時完成
 // - fake_upload_file：假的上傳工具（真的上傳方式待實測，07「下一輪測試」第 1 項），回 { file_ref }，記下收到的檔案 sha256
 // - GET /__calls：情境測試查詢收到的呼叫與上傳（只有假伺服器有）
+// - 產出依任務種類：影片（partner_generate 的 type 是 video，或範本名稱有 t2v／i2v）回 12 秒 1280×720、30 fps、有聲音的 MP4；
+//   音訊（範本名稱有 audio）回 40 秒的 WAV；其他回 1×1 PNG。影片與音訊用本機 FFmpeg 產生一次（不花錢）
 
 export const FAKE_API_KEY = 'fake-comfy-key';
 export const FAKE_PNG = Buffer.from(
@@ -18,7 +24,39 @@ export const FAKE_PNG = Buffer.from(
   'base64',
 );
 
-type Job = { id: string; tool: string; prompt: string; polls: number };
+type JobKind = 'image' | 'video' | 'audio';
+type Job = { id: string; tool: string; prompt: string; polls: number; kind: JobKind };
+
+function jobKindOf(args: Record<string, unknown>): JobKind {
+  const name = typeof args.name === 'string' ? args.name : '';
+  if (args.type === 'video' || /t2v|i2v|video/.test(name)) return 'video';
+  if (args.type === 'audio' || /audio/.test(name)) return 'audio';
+  return 'image';
+}
+
+const media = new Map<JobKind, { mime: string; bytes: Buffer }>();
+
+/** 用本機 FFmpeg 產生假的影片與音訊（只產生一次） */
+function fakeMedia(kind: JobKind): { mime: string; bytes: Buffer } {
+  if (kind === 'image') return { mime: 'image/png', bytes: FAKE_PNG };
+  const cached = media.get(kind);
+  if (cached) return cached;
+  const dir = mkdtempSync(path.join(tmpdir(), 'fake-comfy-'));
+  const ffmpeg = process.env.FFMPEG_PATH || 'ffmpeg';
+  try {
+    const file = path.join(dir, kind === 'video' ? 'clip.mp4' : 'music.wav');
+    const args =
+      kind === 'video'
+        ? ['-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30:duration=12', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=12', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'ultrafast', '-c:a', 'aac', '-shortest', file]
+        : ['-f', 'lavfi', '-i', 'sine=frequency=220:duration=40', '-ac', '1', '-ar', '16000', file];
+    execFileSync(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', ...args]);
+    const made = { mime: kind === 'video' ? 'video/mp4' : 'audio/wav', bytes: readFileSync(file) };
+    media.set(kind, made);
+    return made;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
 export type RecordedCall = { method: string; tool?: string; args?: Record<string, unknown>; sessionId?: string };
 export type RecordedUpload = { ref: string; sha256: string; mime: string; filename: string };
 
@@ -72,7 +110,7 @@ export async function startFakeComfyMcp(options: { port?: number } = {}): Promis
         return text('This generation will spend about 124 credits. Ask the user, then call again with confirm: true to proceed.');
       }
       const id = randomUUID();
-      jobs.set(id, { id, tool, prompt: promptOf(args), polls: 0 });
+      jobs.set(id, { id, tool, prompt: promptOf(args), polls: 0, kind: jobKindOf(args) });
       return text(JSON.stringify({ prompt_id: id, status: 'queued' }));
     }
     if (tool === 'fake_upload_file') {
@@ -116,13 +154,14 @@ export async function startFakeComfyMcp(options: { port?: number } = {}): Promis
       return;
     }
     if (req.method === 'GET' && req.url?.startsWith('/api/s/')) {
-      const id = req.url.slice('/api/s/'.length);
-      if (!jobs.has(id)) {
+      const job = jobs.get(req.url.slice('/api/s/'.length));
+      if (!job) {
         res.writeHead(404).end();
         return;
       }
-      res.writeHead(200, { 'Content-Type': 'image/png' });
-      res.end(FAKE_PNG);
+      const file = fakeMedia(job.kind);
+      res.writeHead(200, { 'Content-Type': file.mime });
+      res.end(file.bytes);
       return;
     }
     if (req.method !== 'POST') {

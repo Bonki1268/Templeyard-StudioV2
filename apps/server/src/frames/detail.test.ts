@@ -199,3 +199,90 @@ describe('限定範圍修改', () => {
     await expectStudioError(() => t.frames.editRegion('v1', 'k1', other, input), 404, '找不到這張精緻圖');
   });
 });
+
+// ── 第 11 階段：第 10 階段稽核補上的規則與生成設定 ──
+
+describe('上傳自己的末格', () => {
+  it('上傳成為這一格目前的末格，標示使用者上傳', async () => {
+    await generatedFrames();
+    const detail = t.frames.upload('v1', 'k1', uploadFrameSchema.parse({ kind: 'last', mime: 'image/png', dataBase64: FAKE_PNG.toString('base64') }));
+    expect(detail.last).toMatchObject({ kind: 'last', state: 'ready' });
+    expect(detail.versions.find((v) => v.id === detail.last?.id)?.userUploaded).toBe(true);
+  });
+});
+
+describe('關鍵畫格的確認失效（03 第 162、163 行）', () => {
+  async function withKeyframe() {
+    await generatedFrames();
+    t.plans.updateShot('v1', 'k4', { keyframesEnabled: true, keyframeTimes: [5] });
+    await t.frames.generateKeyframes('v1', 'k4', t.consent(2));
+    await t.settleAll();
+    expect(t.frames.detail('v1', 'k4').keyframes[0]?.needsReconfirm).toBe(false);
+  }
+
+  it('卡片內容改了：這一格的關鍵畫格要重新確認', async () => {
+    await withKeyframe();
+    t.plans.updateShot('v1', 'k4', { description: '阿嬤慢慢走進廟裡' });
+    expect(t.frames.detail('v1', 'k4').keyframes[0]?.needsReconfirm).toBe(true);
+  });
+
+  it('首格換了（重生完成）：這一格的關鍵畫格要重新確認，其他格不受影響', async () => {
+    await withKeyframe();
+    await t.frames.regenerate('v1', 'k4', 'first', t.consent(1));
+    await t.settleAll();
+    expect(t.frames.detail('v1', 'k4').keyframes[0]?.needsReconfirm).toBe(true);
+    expect(t.frames.detail('v1', 'k2').first?.needsReconfirm).toBe(false);
+  });
+
+  it('首格換了時通知影片服務（firstFrame）；選回舊的首格也算', async () => {
+    const changes: unknown[] = [];
+    t.onFrameChange.push((_videoId, change) => changes.push(change));
+    await generatedFrames();
+    changes.length = 0;
+    await t.frames.regenerate('v1', 'k2', 'first', t.consent(1));
+    await t.settleAll();
+    expect(changes).toContainEqual({ type: 'firstFrame', shotKey: 'k2' });
+    changes.length = 0;
+    const old = t.frames.detail('v1', 'k2').versions[0]?.id ?? '';
+    t.frames.select('v1', 'k2', old);
+    expect(changes).toContainEqual({ type: 'firstFrame', shotKey: 'k2' });
+  });
+
+  it('方案改版的失效也轉給影片服務', async () => {
+    const changes: unknown[] = [];
+    t.onFrameChange.push((_videoId, change) => changes.push(change));
+    await generatedFrames();
+    t.plans.updateShot('v1', 'k1', { durationSec: 5 });
+    expect(changes).toContainEqual({ type: 'shot', shotKey: 'k1', durationChanged: true });
+  });
+});
+
+describe('生成設定：一次產生幾張候選圖', () => {
+  it('重生這一格產生設定的張數（同意的張數要夠）', async () => {
+    await generatedFrames();
+    t.plans.updateShot('v1', 'k2', { candidateCount: 3 });
+    expect((await t.frames.regenerate('v1', 'k2', 'first', t.consent(1))).status).toBe('consent_required');
+    expect((await t.frames.regenerate('v1', 'k2', 'first', t.consent(3))).status).toBe('accepted');
+    await t.settleAll();
+    expect(t.frames.detail('v1', 'k2').versions.filter((v) => v.kind === 'first')).toHaveLength(4);
+  });
+
+  it('生成所有格時，每格的首格也照各自的張數', async () => {
+    t.plans.updateShot('v1', 'k1', { candidateCount: 2 });
+    expect((await t.frames.generate('v1', t.consent(4))).status).toBe('consent_required');
+    expect((await t.frames.generate('v1', t.consent(5))).status).toBe('accepted');
+    await t.settleAll();
+    expect(t.frames.detail('v1', 'k1').versions.filter((v) => v.kind === 'first')).toHaveLength(2);
+  });
+});
+
+describe('細修頁的影片', () => {
+  it('這一格有影片時一併回傳（偏差比對用），沒有時是 null', async () => {
+    expect(t.frames.detail('v1', 'k2').clip).toBeNull();
+    t.clipLookup.current = (_videoId, shotKey) =>
+      shotKey === 'k2'
+        ? { id: 'c1', shotKey: 'k2', assetId: 'a1', state: 'ready', error: null, selected: false, needsReconfirm: false, similarity: [{ atSec: 4, score: 0.8 }], createdAt: 'x' }
+        : null;
+    expect(t.frames.detail('v1', 'k2').clip?.similarity).toEqual([{ atSec: 4, score: 0.8 }]);
+  });
+});

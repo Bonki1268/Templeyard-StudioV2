@@ -24,6 +24,9 @@ export const DIALOGUE_PAUSE_AFTER_SEC = 0.5;
 /** 「生成」在第 9 階段才開放 */
 export const FRAMES_NOT_OPEN = '精緻圖生成將在之後的版本開放';
 
+/** 細修頁「生成設定」一次最多產生幾張候選圖 */
+export const MAX_CANDIDATES = 4;
+
 export const shotSchema = z.object({
   /** 跨版本不變的格子識別碼 */
   shotKey: z.string(),
@@ -51,6 +54,10 @@ export const shotSchema = z.object({
   customPrompt: z.string().nullable(),
   factSources: z.array(z.string()),
   dialogueEstimateSec: z.number().nullable(),
+  /** 生成設定（細修頁）：是否使用模型原生語音說台詞；關掉時影片不說台詞，台詞只出現在字幕。沒有設定時是使用 */
+  nativeVoice: z.boolean().optional(),
+  /** 生成設定（細修頁）：一次產生幾張首格候選圖。沒有設定時是 1 張 */
+  candidateCount: z.number().int().min(1).max(MAX_CANDIDATES).optional(),
 });
 export type Shot = z.infer<typeof shotSchema>;
 

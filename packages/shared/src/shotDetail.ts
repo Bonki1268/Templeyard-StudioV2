@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { clipSchema } from './clips.js';
 import { frameSchema } from './frames.js';
-import { MAX_VIDEO_SEC, SHOT_SIZES, shotSchema } from './plans.js';
+import { MAX_CANDIDATES, MAX_VIDEO_SEC, SHOT_SIZES, shotSchema } from './plans.js';
 
 // 分鏡細修（01 F12、F13；規格書「分鏡細修」「5b. 中間關鍵畫格」；03「/videos/:vid/shots/:shotKey」）
 
@@ -76,6 +77,8 @@ export const shotPatchSchema = z
     keyframesEnabled: z.boolean(),
     keyframeTimes: z.array(z.number()).max(MAX_KEYFRAMES, `中間關鍵畫格最多 ${MAX_KEYFRAMES} 張`),
     customPrompt: z.string().max(4000).nullable(),
+    nativeVoice: z.boolean(),
+    candidateCount: z.number({ error: '候選圖張數要是數字' }).int('候選圖張數要是整數').min(1, '候選圖至少 1 張').max(MAX_CANDIDATES, `候選圖最多 ${MAX_CANDIDATES} 張`),
   })
   .partial()
   .refine((value) => Object.keys(value).length > 0, { error: '沒有要修改的欄位' });
@@ -121,5 +124,7 @@ export const shotDetailSchema = z.object({
   keyframeControl: z.string(),
   totalSec: z.number(),
   targetSec: z.number(),
+  /** 這一格目前的影片（第 11 階段）；偏差比對的相似度在這裡 */
+  clip: clipSchema.nullable(),
 });
 export type ShotDetail = z.infer<typeof shotDetailSchema>;

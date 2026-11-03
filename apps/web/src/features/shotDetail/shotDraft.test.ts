@@ -56,3 +56,20 @@ describe('圈選範圍', () => {
     expect(percentBox({ left: 10, top: 20, width: 30, height: 40 })).toEqual({ x: 0.1, y: 0.2, width: 0.3, height: 0.4 });
   });
 });
+
+describe('生成設定（第 11 階段）', () => {
+  it('沒有設定過的格子：使用原生語音、1 張候選圖，剛打開時沒有修改', () => {
+    const draft = draftFromShot(shot);
+    expect(draft).toMatchObject({ nativeVoice: true, candidateCount: 1 });
+    expect(isDirty(shot, draft)).toBe(false);
+  });
+
+  it('改了生成設定：只送出改到的設定', () => {
+    const draft = { ...draftFromShot(shot), nativeVoice: false, candidateCount: 3 };
+    expect(patchFrom(shot, draft)).toEqual({ nativeVoice: false, candidateCount: 3 });
+  });
+
+  it('設定過的格子照它的設定', () => {
+    expect(draftFromShot({ ...shot, nativeVoice: false, candidateCount: 2 })).toMatchObject({ nativeVoice: false, candidateCount: 2 });
+  });
+});

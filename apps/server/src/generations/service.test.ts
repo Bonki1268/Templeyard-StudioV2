@@ -6,7 +6,7 @@ import { loadWorkflowConfig, workflowsFile } from '@templeyard/prompts';
 import type { McpCall, WorkflowConfig } from '@templeyard/shared';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { FAKE_API_KEY, FAKE_PNG, startFakeComfyMcp, type FakeComfyMcp } from '../../../../tests/fakes/comfy-mcp/server.js';
+import { FAKE_API_KEY, startFakeComfyMcp, type FakeComfyMcp } from '../../../../tests/fakes/comfy-mcp/server.js';
 import { findAsset } from '../assets/repository.js';
 import { createAssetStore } from '../assets/store.js';
 import { createConsentStore, type ConsentStore } from '../costs/consents.js';
@@ -226,8 +226,10 @@ describe('送出、雲端確認、追蹤與結算', () => {
     expect(handled).toHaveLength(1);
     const assetId = handled[0]?.[0] ?? '';
     const asset = findAsset(db, assetId);
-    expect(asset).toMatchObject({ kind: 'clip', mime: 'image/png', cloudOk: true });
-    expect(readFileSync(path.join(assetsDir, asset?.path ?? ''))).toEqual(FAKE_PNG);
+    // 假的雲端對影片任務回 MP4（第 11 階段）：下載回來的檔案原樣存下
+    expect(asset).toMatchObject({ kind: 'clip', mime: 'video/mp4', cloudOk: true });
+    const saved = readFileSync(path.join(assetsDir, asset?.path ?? ''));
+    expect(saved.subarray(4, 8).toString('latin1')).toBe('ftyp');
   });
 
   it('拿到 prompt_id 後立刻寫入紀錄（結束前就查得到）', async () => {

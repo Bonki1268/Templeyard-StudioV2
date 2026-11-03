@@ -67,3 +67,19 @@ describe('儲存這一格', () => {
     await expectStudioError(() => t.plans.updateShot('v1', 'nope', { description: 'x' }), 404, '方案沒有這一格');
   });
 });
+
+describe('生成設定（第 11 階段）', () => {
+  it('儲存原生語音與候選圖張數，存成新的版本', () => {
+    const plan = t.plans.updateShot('v1', 'k2', { nativeVoice: false, candidateCount: 3 });
+    expect(plan.shots[1]).toMatchObject({ nativeVoice: false, candidateCount: 3 });
+    expect(plan.version).toBe(2);
+  });
+
+  it('只改生成設定不算修改內容：已確認的精緻圖不用重新確認', async () => {
+    await t.frames.generate('v1', t.consent(4));
+    await t.settleAll();
+    t.frames.confirm('v1', 'k2');
+    t.plans.updateShot('v1', 'k2', { candidateCount: 2 });
+    expect(t.frames.detail('v1', 'k2').first).toMatchObject({ selected: true, needsReconfirm: false });
+  });
+});

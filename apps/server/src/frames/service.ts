@@ -123,6 +123,13 @@ export function createFrameService(deps: {
   generation: FrameGeneration | null;
   /** 使用者上傳的首格存在這裡；沒有時交給生成服務存 */
   store?: AssetStore;
+  /**
+   * 精緻圖有變動時通知（第 11 階段）：失效規則套用到精緻圖之後轉給影片服務；
+   * 這一格的首格換了（重生、上傳、選回、限定範圍修改完成）時送出 { type: 'firstFrame' }
+   */
+  onChange?: (videoId: string, change: InvalidationChange) => void;
+  /** 這一格目前的影片（細修頁的偏差比對；第 11 階段） */
+  clipOf?: (videoId: string, shotKey: string) => ShotDetail['clip'];
   unavailableMessage?: string;
 }): FrameService {
   const { db, clock } = deps;
@@ -411,6 +418,7 @@ export function createFrameService(deps: {
       keyframeControl: keyframeControlNote(video.videoModel, videoModelLabel(video.videoModel)),
       totalSec: plan?.shots.reduce((sum, s) => sum + s.durationSec, 0) ?? 0,
       targetSec: rules.targetSec,
+      clip: null,
     };
   }
 

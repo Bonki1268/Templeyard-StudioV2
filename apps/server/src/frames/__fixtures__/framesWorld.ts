@@ -1,4 +1,4 @@
-import { planChangeInvalidations, type PromptFile } from '@templeyard/shared';
+import { planChangeInvalidations, type InvalidationChange, type PromptFile, type ShotDetail } from '@templeyard/shared';
 import { eq } from 'drizzle-orm';
 import { CHARACTER_LOOK_NODE, CHARACTER_SHEET_NODE, createCharacterService, type CharacterService } from '../../characters/service.js';
 import { generations, videos } from '../../db/schema.js';
@@ -21,6 +21,10 @@ export type FramesWorld = {
   settleAll(): Promise<void>;
   /** 用另一份生成指令（例如更新過的 refined-frame）重新建立精緻圖服務 */
   framesWith(prompts: ReadonlyMap<string, PromptFile>): FrameService;
+  /** 精緻圖服務送出的變動（失效規則、首格換了），第 11 階段的影片服務接在這裡 */
+  onFrameChange: ((videoId: string, change: InvalidationChange) => void)[];
+  /** 細修頁讀這一格的影片（第 11 階段的影片服務接在這裡） */
+  clipLookup: { current: ((videoId: string, shotKey: string) => ShotDetail['clip']) | null };
   close(): Promise<void>;
 };
 
@@ -92,6 +96,8 @@ export async function createFramesWorld(): Promise<FramesWorld> {
   world.db.update(videos).set({ stage: 'plan' }).where(eq(videos.id, 'v1')).run();
 
   let frames: FrameService | null = null;
+  const onFrameChange: ((videoId: string, change: InvalidationChange) => void)[] = [];
+  const clipLookup: FramesWorld['clipLookup'] = { current: null };
   const plans = createPlanService({
     db: world.db,
     clock: world.clock,
@@ -112,11 +118,15 @@ export async function createFramesWorld(): Promise<FramesWorld> {
       plans,
       characters,
       generation: { service: world.generation, writer: world.writer, sendAsset: world.sendAsset },
+      onChange: (videoId, change) => {
+        for (const listener of onFrameChange) listener(videoId, change);
+      },
+      clipOf: (videoId, shotKey) => clipLookup.current?.(videoId, shotKey) ?? null,
     });
     for (const node of FRAME_NODES) world.handlers[node] = created.handleGenerated;
     return created;
   };
   frames = framesWith(world.prompts);
 
-  return { world, characters, plans, frames, grandmaId, photo, consent, settleAll, framesWith, close: () => world.close() };
+  return { world, characters, plans, frames, grandmaId, photo, consent, settleAll, framesWith, onFrameChange, clipLookup, close: () => world.close() };
 }

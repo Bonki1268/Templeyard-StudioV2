@@ -66,6 +66,16 @@ export const workflowModelSchema = z.object({
   args: z.record(z.string(), z.unknown()).optional(),
   slots: z.partialRecord(slotNameSchema, slotSchema).optional(),
   references: referenceSlotSchema.optional(),
+  /**
+   * 影片模型的首格與末格（首尾畫格）放在呼叫參數的哪裡（07「下一輪測試」：Gemini 的圖片輸入範本還沒實測）。
+   * 沒有設定時，影片生成會在送出前停下來說明原因。
+   */
+  frameInputs: z
+    .object({
+      first: z.object({ paths: z.array(z.array(z.string().min(1)).min(1)).min(1) }),
+      last: z.object({ paths: z.array(z.array(z.string().min(1)).min(1)).min(1) }).optional(),
+    })
+    .optional(),
   price: modelPriceSchema,
 });
 export type WorkflowModel = z.infer<typeof workflowModelSchema>;
@@ -75,6 +85,8 @@ export const workflowConfigSchema = z.object({
   note: z.string().optional(),
   upload: uploadConfigSchema.nullable().default(null),
   models: z.record(z.string().min(1), workflowModelSchema),
+  /** 成品的背景音樂（02：ACE-Step 生成）；沒有設定時成品不加背景音樂 */
+  music: z.object({ model: z.string().min(1), tags: z.string().min(1) }).nullable().default(null),
 });
 export type WorkflowConfig = z.infer<typeof workflowConfigSchema>;
 
