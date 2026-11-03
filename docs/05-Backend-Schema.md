@@ -154,7 +154,7 @@ erDiagram
 | 表 | 欄位 | 說明 |
 | --- | --- | --- |
 | plans | id, video_id, version, style_note, source (agent／user_edit／chat_edit／revert), diff (json), created_at | 每次修改新增一列；最新版為現行方案 |
-| shots | id, plan_id, shot_key, seq, start_sec, duration_sec, shot_size, camera_move, camera_speed, camera_angle, description, action_start, action_end, view_key, lighting, character_ids (json), dialogue, speaker, subtitle, photo_id, keyframes_enabled, keyframe_times (json), custom_prompt, fact_sources (json), dialogue_estimate_sec | 一列是某一版方案中的一格 |
+| shots | id, plan_id, shot_key, seq, start_sec, duration_sec, shot_size, camera_move, camera_speed, camera_angle, description, action_start, action_end, view_key, lighting, character_ids (json), dialogue, speaker, subtitle, photo_id, keyframes_enabled, keyframe_times (json), custom_prompt, fact_sources (json), dialogue_estimate_sec, native_voice (nullable), candidate_count (nullable) | 一列是某一版方案中的一格；`native_voice`、`candidate_count` 是細修頁的生成設定，null 表示沒設定過（使用原生語音、1 張候選圖） |
 
 `shot_key` 是跨版本不變的格子識別碼：同一格在不同方案版本有相同的 `shot_key`，生成的圖與影片都掛在 `shot_key` 上，因此改版本不會遺失已生成的內容。
 
@@ -177,15 +177,15 @@ erDiagram
 
 | 表 | 欄位 | 說明 |
 | --- | --- | --- |
-| clips | id, video_id, shot_key, asset_id, generation_id, selected, keyframe_similarity (json), based_on (json), needs_reconfirm | 每格的影片片段 |
-| finals | id, video_id, asset_id, clip_ids (json), subtitle_asset_id, created_at | 合成後的成品 |
+| clips | id, video_id, shot_key, asset_id, generation_id, selected, keyframe_similarity (json), based_on (json), needs_reconfirm | 每格的影片片段；`based_on.revision` 記對話修改成品時排定的調整指令 |
+| finals | id, video_id, asset_id, clip_ids (json), subtitle_asset_id, created_at | 合成後的成品；「需重新確認」不另存欄位：用的影片不是各格目前的影片、或任一格影片需重新確認時就是 |
 
 ### `assets` 檔案
 
 | 欄位 | 說明 |
 | --- | --- |
 | id | |
-| kind | original_photo／deid_photo／view／character_sheet／frame／clip／final／subtitle／audio |
+| kind | original_photo／deid_photo／view／character_sheet／frame／clip／final／subtitle／audio（參考圖拼接圖存成 frame） |
 | path | `data/assets/` 下的相對路徑 |
 | mime, width, height, duration_sec, sha256 | |
 | cloud_ok | 是否允許送往雲端（original_photo 永遠為 0） |
@@ -238,19 +238,36 @@ erDiagram
 
 ## 主要 API（REST，JSON）
 
+生成類的 POST 沒有同意憑證時回 409，附上預估與原因（`message: 這次生成需要先同意費用`、`check`）。
+
 | 方法與路徑 | 用途 |
 | --- | --- |
+| `GET /api/health` | 健康檢查 |
 | `GET/POST /api/series`、`PATCH /api/series/:id` | 系列 |
+| `GET/PATCH /api/settings` | 系統設定（單筆同意門檻） |
 | `GET /api/temples?q=` | 寺廟搜尋 |
-| `POST /api/videos`、`PATCH /api/videos/:id` | 建立影片、選模型 |
-| `POST /api/videos/:id/photos` | 上傳去識別後的照片（原圖另一端點，僅存本機） |
-| `POST /api/videos/:id/temple-board/generate`、`POST .../confirm` | 定裝版 |
-| `POST /api/videos/:id/chat` | 與 Agent 對話（回應以 SSE 串流） |
-| `PUT /api/videos/:id/questionnaire` | 送出問卷 |
-| `GET /api/videos/:id/plan`、`POST /api/videos/:id/plan/versions` | 方案與版本 |
-| `POST /api/videos/:id/generate/frames`、`.../generate/clips` | 生成（需帶同意憑證） |
-| `POST /api/videos/:id/shots/:shotKey/regenerate` | 單格重生 |
-| `POST /api/assist` | AI 輔助撰寫 |
-| `GET /api/videos/:id/events` | SSE：生成中／完成／需要確認 |
+| `POST /api/videos`、`GET/PATCH /api/videos/:id` | 建立影片、影片詳細資料、選模型 |
+| `POST /api/videos/:id/photos/originals` | 原圖（只存本機，不會上雲） |
+| `POST /api/videos/:id/photos`、`PATCH .../photos/:photoId` | 去識別後的照片、調整遮蔽 |
+| `GET/PATCH /api/videos/:id/temple-board` | 定裝版、外觀規範與光線 |
+| `POST /api/videos/:id/temple-board/generate`、`.../confirm`、`.../reuse`、`.../versions` | 產生、確認、沿用、另存新版本 |
+| `POST /api/videos/:id/temple-board/views/:viewKey/regenerate`、`.../confirm` | 單一視角重生、確認 |
+| `POST /api/videos/:id/temple-board/supplemental-views`、`.../:viewKey/confirm` | 補充視角 |
+| `GET/POST /api/videos/:id/chat` | 對話紀錄、與 Agent 對話（SSE） |
+| `GET/PUT /api/videos/:id/questionnaire` | 問卷 |
+| `GET /api/videos/:id/plan`、`POST .../plan/generate`、`POST .../plan/versions`、`GET .../plan/versions/:version` | 方案與版本 |
+| `GET /api/videos/:id/characters`、`PATCH /api/characters/:cid`、`POST /api/characters/:cid/generate`、`.../confirm`、`.../series` | 角色、定裝圖、加入系列 |
+| `GET /api/videos/:id/frames`、`POST .../generate/frames` | 精緻圖 |
+| `POST /api/videos/:id/shots/:shotKey/regenerate`、`.../frames/confirm` | 單格重生、確認這一格 |
+| `GET/PATCH /api/videos/:id/shots/:shotKey` | 分鏡細修的資料、儲存這一格 |
+| `POST .../shots/:shotKey/frames/upload`、`.../frames/:frameId/select`、`.../frames/:frameId/edit` | 上傳自己的首格／末格、選回、限定範圍修改 |
+| `POST .../shots/:shotKey/keyframes/generate` | 產生中間關鍵畫格 |
+| `GET/POST .../shots/:shotKey/chat` | 只針對這一格的對話（SSE） |
+| `GET /api/videos/:id/clips`、`POST .../generate/clips` | 影片、成品與生成狀態；生成影片並合成 |
+| `POST /api/videos/:id/final/confirm`、`GET .../final/download` | 確認成品（階段變為 done）、下載 MP4 |
 | `POST /api/videos/:id/copy` | 複製影片 |
-| `GET /api/videos/:id/final/download` | 下載成品 |
+| `GET /api/videos/:id/cost`、`POST .../cost-estimate`、`POST .../consents` | 累計費用、預估、取得同意憑證 |
+| `GET /api/videos/:id/events` | SSE：精緻圖的生成狀態 |
+| `POST /api/assist`、`GET /api/assist/:id`、`POST /api/assist/:id/adopt` | AI 輔助撰寫 |
+| `GET /api/assets/:id` | 讀取本機檔案 |
+

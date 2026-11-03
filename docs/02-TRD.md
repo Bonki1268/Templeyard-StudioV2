@@ -14,7 +14,7 @@
 | 樣式 | CSS Modules + 設計 token（CSS 變數） | 直接對應 UI/UX Brief 的 token；不綁特定元件庫 |
 | 拖曳 | dnd-kit | 分鏡卡片排序、時間軸邊界拖曳；支援鍵盤操作 |
 | 表單驗證 | Zod | 前後端共用同一份 schema |
-| 後端 | Node.js 20 + Fastify | 輕量、TypeScript 支援好、內建 schema 驗證 |
+| 後端 | Node.js 24 + Fastify | 輕量、TypeScript 支援好、內建 schema 驗證 |
 | 即時更新 | Server-Sent Events | 只需伺服器推送「生成中／完成」；比 WebSocket 簡單 |
 | 資料庫 | SQLite + Drizzle ORM | 個人本機使用，單檔即可；Drizzle 型別安全、遷移簡單 |
 | 檔案 | 本機資料夾 `data/assets/` | 原圖、去識別圖、生成結果都存本機 |
@@ -102,13 +102,20 @@ templeyard-studio/
 
 | 模型 | 工具 | 模型代號／範本 | 狀態 |
 | --- | --- | --- | --- |
-| Gemini Omni 1.1 Flash | `run_template` | `api_google_gemini_omni_flash_1_1_t2v`，第 26 號節點：`model.prompt`、`model.aspect_ratio`、`model.resolution`、`model.task_type`、`model.seed`；長度寫在指令裡（3～10 秒） | 文字生成影片已驗證（720p） |
-| Seedance 2.0 | `partner_generate` | `byteplus/seedance-2.0-t2v`，`params`：`model`、`resolution`、`ratio`、`duration` | 文字生成影片已驗證（Mini、720p） |
-| Nano Banana 2 Lite／2／Pro | `partner_generate` | `vertexai/nano-banana-2-lite`、`vertexai/nano-banana-2`、`vertexai/nano-banana-pro` | 2 Lite 已驗證；Pro 待測 |
+| Gemini Omni 1.1 Flash | `run_template` | 圖生影片 `api_google_gemini_omni_flash_1_1_i2v`：首格放第 11 號節點，第 7 號節點放 `model.prompt`、`model.aspect_ratio`、`model.resolution`、`model.task_type`、`model.seed`。有末格或關鍵畫格時改用參考圖範本 `…_1_1_r2v`：首格是 `@Image1`（第 11 號），末格與關鍵畫格拼成一張是 `@Image2`（第 15 號）。長度寫在指令裡（3～10 秒） | 圖生影片已驗證（720p，2026-11-03）；r2v 待實際生成 |
+| Seedance 2.0 | `run_template` | 首尾畫格 `api_seedance2_0_flf2v`：首格第 3 號、末格第 4 號節點，第 1 號節點放 `model.prompt`、`model.duration`、`model.ratio`、`model.resolution` | 首尾畫格已驗證（720p，2026-11-03）；每一格都要有末格 |
+| Nano Banana 2 Lite／2／Pro | `partner_generate` | `vertexai/nano-banana-2-lite`、`vertexai/nano-banana-2`、`vertexai/nano-banana-pro`；要帶 `client_os`。參考圖放 `medias: [{ role: "reference_image", name }]`，一次 1 張，多張先拼成一張 | 2 Lite、Pro 已驗證（2026-11-03） |
 | ACE-Step（背景音樂） | `run_template` | `audio_ace_step1_5_xl_turbo` | 已驗證 |
 | Wan 2.2（多關鍵畫格） | 待確認 | 先找 MCP 是否有對應範本；沒有才評估自訂工作流程 | 待測 |
 
 模型代號、範本名稱與節點編號都放在 `workflows/` 的設定檔，不寫死在程式裡。
+
+**圖片上傳**（2026-11-03 實測）：`upload_file` 收本機檔案路徑，回一行 PUT 指令；照指令把檔案 PUT 到一次性網址，回傳的 `name` 就是雲端參照。不支援 base64。
+
+**參考圖拼接**：模型一次收的參考圖比要給的少時（Nano Banana Pro 一次 1 張；Gemini r2v 的 `@Image2` 1 張），先在本機用 FFmpeg 拼成一張。
+- 版面：每格 640×360；1 張 1×1、2 張 2×1、3～4 張 2×2、5～6 張 3×2、7～9 張 3×3，最多拼 4 張。
+- 指令裡說明每一格是什麼，並要求畫成一個場景。
+- 拼接圖只用可以上雲的圖，存成 `frame` 類型的資產。
 
 ### 任務中斷恢復
 
@@ -127,6 +134,7 @@ templeyard-studio/
 - Gemini Omni 的影片長度與比例要寫進指令本文（例如「A 4-second, 16:9 clip.」），解析度只由 `model.resolution` 決定，寫在指令裡無效。
 - 影片相關指令的寫法依 drama-skills（MIT），對照表見規格書「影片相關指令的依據」。Gemini Omni 沒有現成寫法，依 drama-skills 的「目標模型能力檔案」自訂。
 - Prompt Studio 需擴充：呼叫綁定欄位與驗證、新節點、連續性鎖插入預覽、畫面比例改為 16:9。
+- 背景音樂沒有生成指令節點：曲風寫在 `workflows` 設定的 `music.tags`，長度等於成品長度、只有配樂。
 
 ## 去識別
 
@@ -140,9 +148,12 @@ templeyard-studio/
 - 每格影片不是 1920×1080 時（例如 Gemini、Seedance 以 720p 生成），先放大到 1920×1080 再串接。
 - 串接各格；去除每格的背景音樂：第一版在生成指令中要求不產生背景音樂，不足時再評估人聲分離。
 - 加入背景音樂（ACE-Step 生成，品質待確認）與台詞音軌。
-- 字幕：由卡片字幕欄產生 ASS 檔，以 Noto Sans TC 燒錄於下方置中、白字。
-- 響度：`loudnorm` 統一到單一目標值。
-- 輸出：H.264、1920×1080、24 fps、AAC。
+- 字幕：由卡片字幕欄產生 ASS 檔，以 Noto Sans TC 64px 燒錄於下方置中、白字黑邊。本機沒有這個字型時，libass 會改用系統字型。
+- 背景音樂音量 0.35，與各格聲音混合。
+- 響度：`loudnorm`，I=−16、TP=−1.5、LRA=11。
+- 輸出：H.264（x264 `ultrafast`、crf 20）、1920×1080、24 fps、AAC 192 kbps。
+- 合成後以 ffprobe 檢查規格，不符時回報合成失敗。
+- 偏差比對：擷取關鍵畫格時間點的畫面，縮成 64×36 灰階，和關鍵畫格比對（1 減平均像素差）。「偏差過大」的門檻待實測，目前只顯示相似度。
 
 ## 費用控制
 
@@ -161,7 +172,9 @@ templeyard-studio/
 | `COMFY_MCP_URL` | MCP 端點，預設 `https://cloud.comfy.org/mcp`；測試時指向假 MCP 伺服器 |
 | `COMFY_MAX_CONCURRENT` | 同時執行數 |
 | `DATA_DIR` | 資料庫與檔案位置 |
-| `FFMPEG_PATH` | FFmpeg 執行檔路徑 |
+| `FFMPEG_PATH`、`FFPROBE_PATH` | FFmpeg、ffprobe 執行檔路徑（預設用系統路徑） |
+| `COMFY_POLL_MS`、`WORKFLOWS_FILE` | 輪詢間隔（預設 4000 毫秒）、另一份工作流程設定（預設 `workflows/models.json`） |
+| `API_PORT`、`WEB_PORT` | 後端與前端開發伺服器的連接埠（預設 3001、5173；留白也用預設） |
 
 金鑰只放在 `.env.local`，不寫入 prompt JSON、工作流程檔、資料庫或任何紀錄。
 
