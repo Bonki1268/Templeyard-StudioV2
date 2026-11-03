@@ -16,6 +16,9 @@ export default defineConfig({
           include: ['src/**/*.test.ts'],
           environment: 'node',
           exclude,
+          // 第 11 階段起有用本機 FFmpeg 合成 1080p 成品的整合測試：單獨跑約 2 秒，
+          // 整套並行時多個測試同時編碼會超過預設的 5 秒，放寬到 15 秒
+          testTimeout: 15_000,
         },
       },
       {

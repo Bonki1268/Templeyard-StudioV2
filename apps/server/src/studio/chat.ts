@@ -15,7 +15,8 @@ import { videos } from '../db/schema.js';
 import { findSeries, type Clock } from '../series/repository.js';
 import { findTemple } from '../temples/repository.js';
 import { findVideo } from '../videos/repository.js';
-import { createAgentTools, reviseShotTool } from './agentTools.js';
+import type { ClipService } from '../clips/service.js';
+import { createAgentTools, reviseShotTool, scheduleRegenerationTool } from './agentTools.js';
 import { BOARD_NOT_CONFIRMED, StudioError, VIDEO_NOT_FOUND } from './errors.js';
 import type { PlanService } from '../plans/service.js';
 import type { QuestionnaireService } from './questionnaire.js';
@@ -54,6 +55,8 @@ export function createChatService(deps: {
   questionnaires: QuestionnaireService;
   /** 有分鏡方案時，Agent 的系統指令列出方案，並多了 revise_plan */
   plans?: PlanService;
+  /** 有成品時，Agent 多了 schedule_regeneration（第 12 階段）；影片服務比對話服務晚建立，所以用讀取函式 */
+  clips?: () => ClipService | null;
   model: ClaudeModel | null;
   unavailableMessage?: string;
 }): ChatService {
@@ -90,8 +93,13 @@ export function createChatService(deps: {
       models: { image: imageModelLabel(video.imageModel), video: videoModelLabel(video.videoModel) },
       questionnaireSubmitted: Boolean(findQuestionnaire(db, video.id)?.submittedAt),
       plan: deps.plans?.current(video.id) ?? null,
+      hasFinal: hasFinal(video.id),
       focusShot,
     });
+  }
+
+  function hasFinal(videoId: string): boolean {
+    return Boolean(deps.clips?.()?.get(videoId).final);
   }
 
   return {
@@ -136,7 +144,11 @@ export function createChatService(deps: {
       const tools =
         focus && deps.plans
           ? [reviseShotTool(deps.plans, videoId, focus.shotKey)]
-          : createAgentTools({ db, videoId, questionnaires: deps.questionnaires, workflows: deps.workflows, ...(deps.plans ? { plans: deps.plans } : {}) });
+          : [
+              ...createAgentTools({ db, videoId, questionnaires: deps.questionnaires, workflows: deps.workflows, ...(deps.plans ? { plans: deps.plans } : {}) }),
+              // 有成品時：用對話安排重生（不花錢，使用者確認費用後才重生）
+              ...(deps.plans && hasFinal(videoId) ? [scheduleRegenerationTool(deps.clips?.() as ClipService, deps.plans, deps.workflows, videoId)] : []),
+            ];
       // 付費工具要有這一輪的同意憑證；第 6 階段的對話不帶憑證，所以付費工具一律不執行
       const registry = createToolRegistry(tools, { verifyConsent: () => false });
       try {

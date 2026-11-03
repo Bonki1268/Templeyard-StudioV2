@@ -23,6 +23,7 @@ import { registerFrameRoutes } from './routes/frames.js';
 import { registerClipRoutes } from './routes/clips.js';
 import { CLIP_NODES, createClipService, type ClipService } from './clips/service.js';
 import { createFfmpeg } from './compose/ffmpeg.js';
+import { createCopyService } from './copy/service.js';
 import { registerShotDetailRoutes } from './routes/shotDetail.js';
 import { registerCharacterRoutes } from './routes/characters.js';
 import { registerCostRoutes } from './routes/costs.js';
@@ -221,13 +222,13 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     ...(deps.generationUnavailableMessage ? { unavailableMessage: deps.generationUnavailableMessage } : {}),
   });
   for (const node of CLIP_NODES) handlers[node] = clipService.handleGenerated;
-  const chat = createChatService({ db: deps.db, clock, workflows, consents, questionnaires, plans, model: text?.agent ?? null, ...unavailable });
+  const chat = createChatService({ db: deps.db, clock, workflows, consents, questionnaires, plans, clips: () => clipService, model: text?.agent ?? null, ...unavailable });
   registerStudioRoutes(app, chat, questionnaires);
   registerPlanRoutes(app, plans);
   registerCharacterRoutes(app, characters);
   registerSupplementalViewRoutes(app, boards, plans);
   registerFrameRoutes(app, frameService);
-  registerClipRoutes(app, clipService);
+  registerClipRoutes(app, clipService, createCopyService({ db: deps.db, clock, plans, characters }));
   registerShotDetailRoutes(app, frameService, plans, chat);
   registerAssistRoutes(app, createAssistService({ db: deps.db, clock, prompts, model: text?.assist ?? null, ...unavailable }));
 

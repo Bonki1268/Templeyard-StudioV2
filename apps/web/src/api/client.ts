@@ -410,3 +410,17 @@ export async function startClips(videoId: string, consentToken: string | undefin
   const parsed = apiErrorSchema.safeParse(body);
   throw new ApiRequestError(parsed.success ? parsed.data.message : `後端回應錯誤（${response.status}）`, response.status);
 }
+
+// ── 成品的確認、下載與複製影片（第 12 階段） ──
+
+export async function confirmFinal(videoId: string): Promise<void> {
+  await request(`/api/videos/${videoId}/final/confirm`, { method: 'POST' });
+}
+
+export function finalDownloadUrl(videoId: string): string {
+  return `/api/videos/${videoId}/final/download`;
+}
+
+export async function copyVideo(videoId: string): Promise<Video> {
+  return videoResponseSchema.parse(await request(`/api/videos/${videoId}/copy`, { method: 'POST' })).video;
+}

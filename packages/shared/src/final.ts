@@ -6,15 +6,19 @@ import { z } from 'zod';
 export type ThumbnailItem = { seq: number; shotKey: string; startSec: number; durationSec: number; ratio: number };
 
 export function thumbnailStrip(shots: readonly { seq: number; shotKey: string; durationSec: number }[]): ThumbnailItem[] {
-  void shots;
-  throw new Error('尚未實作');
+  const total = shots.reduce((sum, shot) => sum + shot.durationSec, 0);
+  let start = 0;
+  return shots.map((shot) => {
+    const item = { seq: shot.seq, shotKey: shot.shotKey, startSec: start, durationSec: shot.durationSec, ratio: total > 0 ? shot.durationSec / total : 0 };
+    start += shot.durationSec;
+    return item;
+  });
 }
 
 /** 下載的檔名：「寺廟名稱-YYYY-MM-DD.mp4」；檔名不能用的字元換成「-」 */
 export function downloadFileName(templeName: string, createdAt: string): string {
-  void templeName;
-  void createdAt;
-  throw new Error('尚未實作');
+  const safe = templeName.replace(/[\\/:*?"<>|]+/g, '-').trim() || '廟埕影室';
+  return `${safe}-${createdAt.slice(0, 10)}.mp4`;
 }
 
 /** 成品不能確認的原因 */

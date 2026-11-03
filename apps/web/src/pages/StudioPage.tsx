@@ -203,7 +203,16 @@ function Workspace({ detail }: { detail: VideoDetail }) {
             />
           )}
           {panel === 'final' && clipsGenerating && <GeneratingPanel label={clips.data?.generatingLabel ?? null} />}
-          {panel === 'final' && clips.data && !clipsGenerating && <FinalPanel data={clips.data} />}
+          {panel === 'final' && clips.data && !clipsGenerating && (
+            <FinalPanel
+              video={detail.video}
+              data={clips.data}
+              shots={plan.data?.plan?.shots ?? []}
+              rules={plan.data?.rules ?? null}
+              onRegenerating={() => void clipsStarted()}
+              onConfirmed={() => void queryClient.invalidateQueries({ queryKey: ['video', videoId] })}
+            />
+          )}
           {panel === 'plan' && plan.data?.plan && (
             <PlanPanel key={plan.data.plan.id} savedVersion={savedVersion} onSaved={setSavedVersion} videoId={videoId} data={{ ...plan.data, plan: plan.data.plan }} seriesVisualStyle={series?.visualStyle ?? ''} imageModel={detail.video.imageModel} onFramesStarted={() => void framesStarted()} />
           )}

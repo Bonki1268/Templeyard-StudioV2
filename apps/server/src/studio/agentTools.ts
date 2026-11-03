@@ -1,5 +1,5 @@
 import { defineTool, type AgentTool } from '@templeyard/agent';
-import { SHOT_SIZES, costItemSchema, scheduleRegenerationInputSchema, generateQuestionnaireInputSchema, revisePlanInputSchema, templeSearchQuerySchema, type WorkflowConfig } from '@templeyard/shared';
+import { SHOT_SIZES, costItemSchema, generatedClipSec, planRulesSchema, scheduleRegenerationInputSchema, generateQuestionnaireInputSchema, revisePlanInputSchema, templeSearchQuerySchema, type WorkflowConfig } from '@templeyard/shared';
 import { z } from 'zod';
 import { UnknownModelError, estimateCost } from '../costs/estimate.js';
 import type { AppDatabase } from '../db/client.js';
@@ -187,10 +187,6 @@ export function reviseShotTool(plans: PlanService, videoId: string, shotKey: str
 export const SCHEDULE_REGENERATION_TOOL = 'schedule_regeneration';
 
 export function scheduleRegenerationTool(clips: ClipService, plans: PlanService, workflows: WorkflowConfig, videoId: string): AgentTool<unknown> {
-  void clips;
-  void plans;
-  void workflows;
-  void videoId;
   return defineTool({
     name: SCHEDULE_REGENERATION_TOOL,
     label: '安排重生',
@@ -198,8 +194,25 @@ export function scheduleRegenerationTool(clips: ClipService, plans: PlanService,
     description: '使用者對成品提出修改時，列出要重生的格子序號（shots）與調整指令（instruction）。不會直接重生：使用者看到費用並確認後才重生並重新合成。',
     inputSchema: scheduleRegenerationInputSchema,
     paid: false,
-    run: async () => {
-      throw new Error('尚未實作');
+    run: async (input) => {
+      try {
+        clips.scheduleRevision(videoId, input.shots, input.instruction);
+      } catch (error: unknown) {
+        if (error instanceof StudioError) return { ok: false, content: error.message, summary: error.message };
+        throw error;
+      }
+      // 預估要生成的秒數（照模型的最短、最長長度），金額由「重生並重新合成」的費用確認顯示
+      // 方案的規則帶有這支影片的影片模型名稱；用名稱找回呼叫設定裡的秒數範圍
+      const label = planRulesSchema.parse(plans.get(videoId).rules).videoModelLabel;
+      const model = Object.values(workflows.models).find((m) => m.kind === 'video' && m.label === label);
+      const shots = plans.current(videoId)?.shots.filter((shot) => input.shots.includes(shot.seq)) ?? [];
+      const seconds = shots.reduce(
+        (sum, shot) => sum + generatedClipSec(shot.durationSec, { min: model?.slots?.durationSec?.min, max: model?.slots?.durationSec?.max }),
+        0,
+      );
+      const which = `第 ${shots.map((shot) => shot.seq).join('、')} 格`;
+      const summary = `要重生${which}（${model?.label ?? '影片模型'} × ${seconds} 秒），按「重生並重新合成」確認費用`;
+      return { ok: true, content: `已安排${summary.slice(1)}；調整指令：${input.instruction}`, summary };
     },
   });
 }

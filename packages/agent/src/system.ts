@@ -85,6 +85,14 @@ export function buildAgentSystem(context: AgentContext): string {
       '使用者要修改方案時，呼叫 revise_plan，依序號（seq）只改要改的欄位；修改後簡短說明改了哪幾格。每次修改都會產生新的方案版本，使用者可以回到前一版。',
     );
   }
+  if (context.hasFinal && !context.focusShot) {
+    lines.push(
+      '',
+      '## 成品',
+      '這支影片已經合成成品。使用者對成品提出修改時，呼叫 schedule_regeneration，列出要重生的格子序號與調整指令；',
+      '工具不會直接重生，使用者在右邊看到費用並確認後才會重生並重新合成。安排好後簡短說明要重生哪幾格。',
+    );
+  }
   if (context.focusShot) {
     lines.push(
       '',

@@ -7,7 +7,10 @@ import {
   assDialogues,
   buildAss,
   clipBlockers,
+  FINAL_STALE_MESSAGE,
+  NO_FINAL_MESSAGE,
   clipGeneratingLabel,
+  downloadFileName,
   generatedClipSec,
   grayscaleSimilarity,
   invalidatedBy,
@@ -42,6 +45,7 @@ import type { PlanService } from '../plans/service.js';
 import { findSeries, type Clock } from '../series/repository.js';
 import { StudioError, VIDEO_NOT_FOUND } from '../studio/errors.js';
 import { findVersion as findBoardVersion, listViews } from '../templeBoards/repository.js';
+import { findTemple } from '../temples/repository.js';
 import { findVideo } from '../videos/repository.js';
 import { deleteClips, findClip, insertClip, insertFinal, latestFinal, listClips, updateClip } from './repository.js';
 
@@ -134,6 +138,7 @@ export function createClipService(deps: {
       selected: row.selected,
       needsReconfirm: row.needsReconfirm,
       similarity: row.keyframeSimilarity,
+      revision: revisionOf(row),
       createdAt: row.createdAt,
     };
   }
@@ -267,7 +272,15 @@ export function createClipService(deps: {
   type Built = { clipId: string; shotKey: string; request: Omit<GenerationRequest, 'consentToken'> };
 
   /** 一格影片的生成請求：撰寫最終指令（帶入連續性鎖）→ 上傳首格、末格與參考圖 → 組出 MCP 呼叫 */
-  async function buildClip(generation: FrameGeneration, video: Video, model: WorkflowModel, plan: Plan, shot: Shot, uploaded: Map<string, string>): Promise<Built> {
+  async function buildClip(
+    generation: FrameGeneration,
+    video: Video,
+    model: WorkflowModel,
+    plan: Plan,
+    shot: Shot,
+    uploaded: Map<string, string>,
+    revision: string | null,
+  ): Promise<Built> {
     const file = deps.prompts.get(SHOT_VIDEO_NODE);
     if (!file) throw new Error(`找不到生成指令：${SHOT_VIDEO_NODE}`);
     const frames = deps.frames.detail(video.id, shot.shotKey);
@@ -324,7 +337,8 @@ export function createClipService(deps: {
       references: referenceText,
       nextShot: { actionStart: next?.actionStart ?? '' },
       series: { style: findSeries(db, video.seriesId)?.visualStyle ?? '' },
-      instruction: nativeVoice ? '' : '這一格不使用原生語音：畫面中的人不開口說台詞，台詞只出現在字幕',
+      // 使用者調整指令：對話修改成品時排定的調整（第 12 階段）＋不使用原生語音的說明
+      instruction: [revision ?? '', nativeVoice ? '' : '這一格不使用原生語音：畫面中的人不開口說台詞，台詞只出現在字幕'].filter(Boolean).join('；'),
     };
     const { request } = renderPrompt(file, variables, { model: video.videoModel });
     let composed;
@@ -528,7 +542,10 @@ export function createClipService(deps: {
 
       const uploaded = new Map<string, string>();
       const built: Built[] = [];
-      for (const shot of todo) built.push(await buildClip(generation, video, model, plan, shot, uploaded));
+      for (const shot of todo) {
+        const current = currentRow(rows, shot.shotKey);
+        built.push(await buildClip(generation, video, model, plan, shot, uploaded, current ? revisionOf(current) : null));
+      }
 
       const now = clock.now().toISOString();
       for (const item of built) {
@@ -571,16 +588,37 @@ export function createClipService(deps: {
       return row ? toClip(row) : null;
     },
 
-    scheduleRevision() {
-      throw new Error('尚未實作');
+    scheduleRevision(videoId, seqs, instruction) {
+      requireVideo(videoId);
+      if (!latestFinal(db, videoId)) throw new StudioError(409, NO_FINAL_MESSAGE);
+      const plan = deps.plans.current(videoId);
+      const rows = listClips(db, videoId);
+      const targets = seqs.map((seq) => {
+        const shot = plan?.shots.find((s) => s.seq === seq);
+        const row = shot ? currentRow(rows, shot.shotKey) : null;
+        if (!shot || !row) throw new StudioError(404, `方案沒有第 ${seq} 格`);
+        return row;
+      });
+      for (const row of targets) updateClip(db, row.id, { needsReconfirm: true, basedOn: { ...row.basedOn, revision: instruction } });
+      return get(videoId);
     },
 
-    confirmFinal() {
-      throw new Error('尚未實作');
+    confirmFinal(videoId) {
+      requireVideo(videoId);
+      const { final } = get(videoId);
+      if (!final) throw new StudioError(409, NO_FINAL_MESSAGE);
+      if (final.needsReconfirm) throw new StudioError(409, FINAL_STALE_MESSAGE);
+      setStage(videoId, 'done');
+      return get(videoId);
     },
 
-    finalFile() {
-      throw new Error('尚未實作');
+    finalFile(videoId) {
+      const video = requireVideo(videoId);
+      const row = latestFinal(db, videoId);
+      const asset = row ? findAsset(db, row.assetId) : null;
+      if (!row || !asset) throw new StudioError(404, NO_FINAL_MESSAGE);
+      const temple = findTemple(db, video.templeId);
+      return { path: deps.store.pathOf(asset.path), filename: downloadFileName(temple?.name ?? '廟埕影室', row.createdAt) };
     },
 
     async whenComposed(videoId) {
@@ -609,3 +647,8 @@ export function createClipService(deps: {
 }
 
 const RUNNING: readonly GenerationRow['status'][] = ['awaiting_confirm', 'submitted', 'running'];
+
+/** 對話修改成品時排定的調整指令，記在這一支影片的 based_on.revision */
+function revisionOf(row: ClipRow): string | null {
+  return typeof row.basedOn.revision === 'string' ? row.basedOn.revision : null;
+}

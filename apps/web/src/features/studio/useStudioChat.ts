@@ -60,6 +60,8 @@ export function useStudioChat(videoId: string, shotKey?: string) {
         queryClient.invalidateQueries({ queryKey: questionnaireKey(videoId) }),
         // 細修頁的對話可能改了這一格
         queryClient.invalidateQueries({ queryKey: ['shot', videoId] }),
+        // 對話修改成品時可能安排了重生（第 12 階段）
+        queryClient.invalidateQueries({ queryKey: ['clips', videoId] }),
         queryClient.invalidateQueries({ queryKey: videoDetailKey(videoId) }),
         // Agent 可能修改了分鏡方案
         queryClient.invalidateQueries({ queryKey: ['plan', videoId] }),

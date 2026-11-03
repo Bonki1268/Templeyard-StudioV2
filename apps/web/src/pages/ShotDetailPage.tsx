@@ -95,6 +95,8 @@ export function ShotDetailPage() {
   });
   const plan = useQuery({ queryKey: planKey(vid), queryFn: () => fetchPlan(vid) });
   const chat = useStudioChat(vid, key);
+  // 費用確認放在頁面層：儲存後編輯區會依新的卡片重建，對話框不能跟著消失
+  const consent = useCostConsent(vid);
 
   return (
     <div className={page.page}>
@@ -121,6 +123,7 @@ export function ShotDetailPage() {
           from={from}
           detail={detail.data}
           plan={plan.data}
+          consent={consent}
           chat={<ChatColumn messages={chat.messages} live={chat.live} sending={chat.sending} error={chat.error} onSend={(content) => void chat.send(content)} inputLabel="對 Agent 說（只針對這一格）" />}
         />
       )}
@@ -134,9 +137,10 @@ type EditorProps = {
   detail: ShotDetail;
   plan: Awaited<ReturnType<typeof fetchPlan>>;
   chat: ReactNode;
+  consent: ReturnType<typeof useCostConsent>;
 };
 
-function Editor({ videoId, from, detail, plan, chat }: EditorProps) {
+function Editor({ videoId, from, detail, plan, chat, consent }: EditorProps) {
   const shot = detail.shot;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -146,7 +150,6 @@ function Editor({ videoId, from, detail, plan, chat }: EditorProps) {
   const [customPrompt, setCustomPrompt] = useState(shot.customPrompt ?? '');
   const [box, setBox] = useState({ left: 10, top: 10, width: 30, height: 30 });
   const [instruction, setInstruction] = useState('');
-  const consent = useCostConsent(videoId);
   const video = useQuery({ queryKey: ['video', videoId], queryFn: () => fetchVideoDetail(videoId) });
   const characters = plan.characters;
   const ids = { region: useId(), instruction: useId() };
