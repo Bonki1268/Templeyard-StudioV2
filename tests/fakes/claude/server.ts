@@ -130,8 +130,9 @@ export async function startFakeClaude(options: { port?: number } = {}): Promise<
       res.end(JSON.stringify({ type: 'error', error: { type: 'api_error', message: '假的 Claude 沒有符合的錄製回應' } }));
       return;
     }
-    // rejectTools：模擬不接受強制工具呼叫的模型（2026-11-03 實測遇到 HTTP 400）
-    if (recording.rejectTools && body.tool_choice !== undefined) {
+    // rejectTools：模擬不接受強制工具呼叫的模型（2026-11-03 實測遇到 HTTP 400）；tool_choice 是 auto 時照常回應
+    const forced = isRecord(body.tool_choice) && (body.tool_choice.type === 'tool' || body.tool_choice.type === 'any');
+    if (recording.rejectTools && forced) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'tool_choice is not supported for this model' } }));
       return;

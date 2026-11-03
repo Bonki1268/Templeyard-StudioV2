@@ -58,11 +58,11 @@ describe('Claude API 轉接', () => {
     expect((error as Error).message).toBe('Claude API 的金鑰不正確，請檢查 ANTHROPIC_API_KEY');
   });
 
-  it('沒有符合的回應（HTTP 500）時說明狀態碼', async () => {
+  it('沒有符合的回應（HTTP 500）時說明狀態碼與 Claude 說的原因', async () => {
     const model = createClaudeModel({ apiKey: FAKE_CLAUDE_API_KEY, model: 'm', baseURL: fake.url });
     const error = await model.create({ system: '沒有錄製的系統指令', messages: [{ role: 'user', content: 'hi' }] }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ClaudeCallError);
-    expect((error as Error).message).toBe('Claude API 回應錯誤（HTTP 500）');
+    expect((error as Error).message).toBe('Claude API 回應錯誤（HTTP 500）：假的 Claude 沒有符合的錄製回應');
   }, 30_000);
 
   it('連不上時說明要確認網路', async () => {
@@ -107,5 +107,20 @@ describe('指定工具', () => {
       toolChoice: { type: 'tool', name: 'echo' },
     });
     expect(fake.requests.at(-1)?.toolChoice).toEqual({ type: 'tool', name: 'echo' });
+  });
+
+  it('模型不接受指定工具（HTTP 400）時，改成可以用工具再送一次（2026-11-03 實測）', async () => {
+    const model = createClaudeModel({ apiKey: FAKE_CLAUDE_API_KEY, model: 'm', baseURL: fake.url });
+    const before = fake.requests.length;
+    const response = await model.create({
+      system: '測試 Agent：不接受指定工具',
+      messages: [{ role: 'user', content: '你好' }],
+      tools: [{ name: 'echo', description: '回聲', input_schema: { type: 'object', properties: {} } }],
+      toolChoice: { type: 'tool', name: 'echo' },
+    });
+    expect(response.content).toMatchObject([{ type: 'tool_use', name: 'echo', input: { text: '你好' } }]);
+    const sent = fake.requests.slice(before);
+    expect(sent.map((r) => r.toolChoice)).toEqual([{ type: 'tool', name: 'echo' }, { type: 'auto' }]);
+    expect(sent[1]?.tools).toEqual(['echo']);
   });
 });

@@ -149,6 +149,20 @@
       "text": "{\"prompt\": \"echo: {{user}}\"}"
     },
     {
+      "match": "測試 Agent：不接受指定工具",
+      "rejectTools": true,
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_auto_{{n}}",
+          "name": "echo",
+          "input": {
+            "text": "你好"
+          }
+        }
+      ]
+    },
+    {
       "match": "測試 Agent",
       "afterToolResult": false,
       "content": [
