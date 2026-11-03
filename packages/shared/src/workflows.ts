@@ -98,7 +98,8 @@ export const workflowModelSchema = z.object({
   frameInputs: z
     .object({
       first: z.object({ paths: z.array(z.array(z.string().min(1)).min(1)).min(1) }),
-      last: z.object({ paths: z.array(z.array(z.string().min(1)).min(1)).min(1) }).optional(),
+      /** required：範本一定要末格（例如 Seedance 的首尾畫格範本；沒有末格時會用範本自帶的示範圖） */
+      last: z.object({ paths: z.array(z.array(z.string().min(1)).min(1)).min(1), required: z.boolean().optional() }).optional(),
     })
     .optional(),
   /**

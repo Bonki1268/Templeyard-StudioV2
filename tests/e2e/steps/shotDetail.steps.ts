@@ -185,7 +185,7 @@ Then(/^精緻圖的第 (\d+) 格以警告色外框標示$/, async ({ page }, seq
   const card = page.getByRole('list', { name: '精緻圖' }).getByRole('article', { name: `第 ${seq} 格`, exact: true });
   const colors = await card.evaluate((el) => {
     const probe = document.createElement('span');
-    probe.style.color = 'var(--color-warning-surface)';
+    probe.style.color = 'var(--color-warning-border)';
     document.body.appendChild(probe);
     const warning = getComputedStyle(probe).color;
     probe.remove();

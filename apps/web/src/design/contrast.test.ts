@@ -54,3 +54,13 @@ describe('設計 token 的文字對比至少 4.5:1（04 互動與無障礙）', 
     expect(contrastRatio(color(foreground), color(background))).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+describe('警告色外框和底色、背景的對比至少 3:1（非文字元件，2026-11-03 新增 token）', () => {
+  const tokens = parseCssTokens(tokensCss);
+  it.each([['--color-bg'], ['--color-surface'], ['--color-warning-surface']])('--color-warning-border 對 %s', (background) => {
+    const border = tokens['--color-warning-border'];
+    const bg = tokens[background];
+    if (!border || !bg) throw new Error(`tokens.css 缺少 --color-warning-border 或 ${background}`);
+    expect(contrastRatio(border, bg)).toBeGreaterThanOrEqual(3);
+  });
+});

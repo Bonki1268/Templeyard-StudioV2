@@ -368,3 +368,32 @@ describe('確認成品與下載', () => {
     await expectStudioError(() => t.clips.finalFile('v1'), 404, '還沒有成品');
   });
 });
+
+// ── 第 13 階段：一定要末格的影片模型（Seedance 2.0 的首尾畫格範本） ──
+
+describe('一定要末格的影片模型', () => {
+  it('有格子沒有末格：送出前擋下，說明是哪一格、要怎麼補，不留紀錄', async () => {
+    const workflows = structuredClone(t.world.workflows);
+    const gemini = workflows.models['gemini-omni-1.1-flash'];
+    if (!gemini?.frameInputs) throw new Error('設定缺少 Gemini');
+    gemini.frameInputs = { first: gemini.frameInputs.first, last: { paths: [['fake_last_frame']], required: true } };
+    const strict = createClipService({
+      db: t.world.db,
+      clock: t.world.clock,
+      workflows,
+      prompts: t.world.prompts,
+      plans: t.plans,
+      characters: t.characters,
+      frames: t.frames,
+      generation: { service: t.world.generation, writer: t.world.writer, sendAsset: t.world.sendAsset },
+      store: t.world.store,
+      ffmpeg: createFfmpeg(),
+    });
+    await expectStudioError(
+      () => strict.generate('v1', t.clipConsent()),
+      409,
+      '還不能生成影片：第 1 格沒有末格。Gemini Omni 1.1 Flash 每一格都要有末格，請在細修頁開啟中間關鍵畫格並產生末格',
+    );
+    expect(generationsOf(SHOT_VIDEO_NODE)).toEqual([]);
+  });
+});

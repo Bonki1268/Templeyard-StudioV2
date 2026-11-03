@@ -28,6 +28,7 @@
 | `--color-ai-text` | `#6E5418` | AI 文字、提醒文字 |
 | `--color-ai-surface` | `#FBF6EA` | AI 建議區塊底色 |
 | `--color-warning-surface` | `#FBF0D6` | 「需重新確認」「缺少視角」「AI 推測」標籤 |
+| `--color-warning-border` | `#9A6700` | 「需重新確認」的警告色外框（和底色、背景的對比 ≥ 3:1） |
 | `--color-success` | `#245A40` | 「依照片」「已去識別」「放得下」 |
 | `--color-success-surface` | `#E6F0EA` | 成功標籤底色 |
 | `--color-error` | `#9E1F18` | 對白放不下、檢查未通過 |

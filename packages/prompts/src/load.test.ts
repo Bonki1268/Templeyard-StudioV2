@@ -67,7 +67,8 @@ describe('讀取 workflows/models.json（07 實測，2026-11-03）', () => {
     expect(model).toMatchObject({
       tool: 'run_template',
       args: { name: 'api_seedance2_0_flf2v' },
-      frameInputs: { first: { paths: [['input_overrides', '3', 'image']] }, last: { paths: [['input_overrides', '4', 'image']] } },
+      // 首尾畫格範本一定要末格（沒有時會用範本自帶的示範圖）
+      frameInputs: { first: { paths: [['input_overrides', '3', 'image']] }, last: { paths: [['input_overrides', '4', 'image']], required: true } },
       price: { unit: 'second', credits: 46, verified: true },
     });
   });
