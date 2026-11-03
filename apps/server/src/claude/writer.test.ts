@@ -30,7 +30,16 @@ describe('Claude 撰寫者', () => {
     const written = await writer().write(request('寺廟定裝版的視角圖：測試', '寺廟：板橋慈惠宮'));
 
     expect(written.prompt).toContain('寺廟：板橋慈惠宮');
-    expect(fake.requests).toEqual([{ model: 'model-from-env', system: '寺廟定裝版的視角圖：測試', user: '寺廟：板橋慈惠宮' }]);
+    // 用工具強制 Claude 回固定格式（2026-11-03 實測：真的 Claude 會在 JSON 前後加說明文字）
+    expect(fake.requests).toEqual([
+      {
+        model: 'model-from-env',
+        system: '寺廟定裝版的視角圖：測試',
+        user: '寺廟：板橋慈惠宮',
+        tools: ['submit_final_prompt'],
+        toolChoice: { type: 'tool', name: 'submit_final_prompt' },
+      },
+    ]);
   });
 
   it('重寫時把說明接在使用者內容後面', async () => {
@@ -42,6 +51,14 @@ describe('Claude 撰寫者', () => {
 
   it('回應包在 ```json 程式碼區塊裡也能解析', async () => {
     expect(await writer().write(request('測試：用程式碼區塊包起來', 'x'))).toEqual({ prompt: 'fenced prompt', notes: '包在程式碼區塊裡' });
+  });
+
+  it('Claude 用工具回傳時，取工具的輸入當最終指令', async () => {
+    expect(await writer().write(request('測試：用工具回傳最終指令', 'x'))).toEqual({ prompt: 'tool prompt', notes: '用工具回傳' });
+  });
+
+  it('工具的輸入不合法（沒有 prompt）時丟出 ClaudeOutputError', async () => {
+    await expect(writer().write(request('測試：工具輸入不合法', 'x'))).rejects.toBeInstanceOf(ClaudeOutputError);
   });
 
   it('回應不是合法的最終指令時丟出 ClaudeOutputError', async () => {
@@ -63,6 +80,11 @@ describe('Claude 撰寫者', () => {
 describe('解析 Claude 回的文字', () => {
   it('合法的 JSON', () => {
     expect(parseWrittenPrompt(' {"prompt":"p","notes":"n"} ')).toEqual({ prompt: 'p', notes: 'n' });
+  });
+
+  it('JSON 前後有說明文字也能解析（2026-11-03 實測）', () => {
+    expect(parseWrittenPrompt('這是最終指令：\n```json\n{"prompt":"p","notes":"n"}\n```\n希望有幫助')).toEqual({ prompt: 'p', notes: 'n' });
+    expect(parseWrittenPrompt('好的，以下是結果 {"prompt":"p"} 請參考')).toEqual({ prompt: 'p' });
   });
 
   it('沒有 prompt 或 prompt 是空字串時不合法，錯誤訊息不含原文', () => {

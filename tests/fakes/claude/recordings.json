@@ -105,6 +105,33 @@
       "text": "{\"prompt\": \"Reference plate for one fixed view of a real temple, 16:9, empty of people. {{user}}\", \"notes\": \"錄製的回應：依照片寫出建築外觀與光線\"}"
     },
     {
+      "match": "測試：用工具回傳最終指令",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_write_{{n}}",
+          "name": "submit_final_prompt",
+          "input": {
+            "prompt": "tool prompt",
+            "notes": "用工具回傳"
+          }
+        }
+      ]
+    },
+    {
+      "match": "測試：工具輸入不合法",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_write_bad_{{n}}",
+          "name": "submit_final_prompt",
+          "input": {
+            "notes": "沒有 prompt"
+          }
+        }
+      ]
+    },
+    {
       "match": "測試：回傳不合法的內容",
       "text": "這不是 JSON，只是一段說明文字"
     },
