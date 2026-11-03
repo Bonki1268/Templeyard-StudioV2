@@ -13,7 +13,8 @@
     "test:live": "vitest run --config vitest.live.config.ts",
     "typecheck": "pnpm -r --if-present typecheck && tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
-    "db:import": "pnpm --filter @templeyard/server db:import"
+    "db:import": "pnpm --filter @templeyard/server db:import",
+    "probe:comfy": "node scripts/probe-comfy.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

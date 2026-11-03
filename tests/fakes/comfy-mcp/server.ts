@@ -14,6 +14,7 @@ import path from 'node:path';
 // - get_output 回短連結與 storage 連結，短連結可以下載
 // 任務結果由指令裡的標記決定：[fail] 失敗、[cancel] 取消、[never] 一直在跑、[slow] 第 40 次查詢才完成、其他第 2 次查詢時完成
 // - fake_upload_file：假的上傳工具（真的上傳方式待實測，07「下一輪測試」第 1 項），回 { file_ref }，記下收到的檔案 sha256
+// - tools/list：列出假伺服器認得的工具（探測腳本的本機驗證用）
 // - GET /__calls：情境測試查詢收到的呼叫與上傳（只有假伺服器有）
 // - 產出依任務種類：影片（partner_generate 的 type 是 video，或範本名稱有 t2v／i2v）回 12 秒 1280×720、30 fps、有聲音的 MP4；
 //   音訊（範本名稱有 audio）回 40 秒的 WAV；其他回 1×1 PNG。影片與音訊在啟動時用本機 FFmpeg 產生一次（不花錢）
@@ -195,6 +196,13 @@ export async function startFakeComfyMcp(options: { port?: number } = {}): Promis
     if (body.method === 'notifications/initialized') {
       calls.push({ method: body.method, sessionId });
       res.writeHead(202).end();
+      return;
+    }
+    // 探測腳本（scripts/probe-comfy.mjs）用：列出假伺服器認得的工具；參數格式是假的，真的格式要實測
+    if (body.method === 'tools/list') {
+      calls.push({ method: 'tools/list', sessionId });
+      const names = ['partner_generate', 'run_template', 'get_job_status', 'get_output', 'fake_upload_file'];
+      reply(res, body.id, { tools: names.map((name) => ({ name, description: `假的 ${name}`, inputSchema: { type: 'object', properties: {} } })) });
       return;
     }
     if (body.method === 'tools/call') {

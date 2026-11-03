@@ -7,6 +7,8 @@
 data/app.db
 data/app.db-*
 data/assets/
+# Comfy Cloud 探測結果（pnpm probe:comfy）
+data/probe/
 
 # 依賴與建置
 node_modules/
