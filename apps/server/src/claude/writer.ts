@@ -48,6 +48,9 @@ function validWrittenPrompt(value: unknown): WrittenPrompt {
   return result.data;
 }
 
+/** 改用一般文字時接在系統指令最後：節點指令本身沒有寫輸出格式（2026-11-03 實測） */
+const JSON_ONLY = '只回一個 JSON 物件，不要任何其他文字：{"prompt": "直接送給生成模型的最終指令", "notes": "給使用者看的說明"}';
+
 /** Claude API 錯誤本文裡的 error.message */
 function apiErrorMessage(error: InstanceType<typeof Anthropic.APIError>): string {
   const body = error.error as { error?: { message?: unknown } } | undefined;
@@ -87,7 +90,7 @@ export function createClaudePromptWriter(options: ClaudeWriterOptions): PromptWr
         } catch (error: unknown) {
           // 有的模型不接受強制工具呼叫（2026-11-03 實測 HTTP 400）：改用一般文字再送一次
           if (!(error instanceof Anthropic.BadRequestError)) throw error;
-          response = await client.messages.create(base);
+          response = await client.messages.create({ ...base, system: `${request.system}\n\n${JSON_ONLY}` });
         }
       } catch (error: unknown) {
         if (error instanceof Anthropic.AuthenticationError) throw new Error('Claude API 的金鑰不正確，請檢查 ANTHROPIC_API_KEY');
