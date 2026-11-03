@@ -19,9 +19,20 @@
       "aspect_ratio": "16:9",
       "prompt": "A photorealistic 16:9 still of a traditional Taiwanese temple courtyard at early morning, empty of people. Use the first reference image for the overall temple front and the second for the entrance hall details. Soft warm light, no text, no watermark.",
       "medias": [
-        { "role": "reference_image", "name": "{{saved.front.name}}", "subfolder": "{{saved.front.subfolder}}", "type": "input" },
-        { "role": "reference_image", "name": "{{saved.hall.name}}", "subfolder": "{{saved.hall.subfolder}}", "type": "input" }
-      ]
+        {
+          "role": "reference_image",
+          "name": "{{saved.front.name}}",
+          "subfolder": "{{saved.front.subfolder}}",
+          "type": "input"
+        },
+        {
+          "role": "reference_image",
+          "name": "{{saved.hall.name}}",
+          "subfolder": "{{saved.hall.subfolder}}",
+          "type": "input"
+        }
+      ],
+      "client_os": "darwin"
     }
   },
   {
@@ -31,7 +42,9 @@
     "args": {
       "name": "api_google_gemini_omni_flash_1_1_i2v",
       "input_overrides": {
-        "11": { "image": "{{saved.front.loader}}" },
+        "11": {
+          "image": "{{saved.front.loader}}"
+        },
         "7": {
           "model.prompt": "A 4-second, 16:9 clip. Use @Image1 as the first frame and keep the temple exactly unchanged. The camera slowly pushes in toward the temple entrance; incense smoke drifts across the courtyard. Ambient sound only: a distant temple bell and soft wind. No background music, no subtitles, no text on screen.",
           "model.resolution": "720p",
@@ -47,8 +60,12 @@
     "args": {
       "name": "api_seedance2_0_flf2v",
       "input_overrides": {
-        "3": { "image": "{{saved.front.loader}}" },
-        "4": { "image": "{{saved.hall.loader}}" },
+        "3": {
+          "image": "{{saved.front.loader}}"
+        },
+        "4": {
+          "image": "{{saved.hall.loader}}"
+        },
         "1": {
           "model.prompt": "The camera glides from the temple front to the entrance hall in one smooth move, keeping both buildings unchanged. Ambient sound only, no background music, no text on screen.",
           "model.duration": 4,
