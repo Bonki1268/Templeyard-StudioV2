@@ -171,8 +171,8 @@ Then('網址是新影片的建立影片頁', async ({ page, request, state }) =>
 });
 
 Then(/^「(.+)」可以選$/, async ({ page }, label: string) => {
-  // 建立影片頁的模型是以 legend 命名的單選群組
-  const options = page.getByRole('group', { name: label, exact: true }).getByRole('radio');
+  // 建立影片頁的模型是以 legend 命名的群組，每個模型是一個可以按的選項按鈕（aria-pressed）
+  const options = page.getByRole('group', { name: label, exact: true }).getByRole('button');
   await expect(options.first()).toBeEnabled({ timeout: 20_000 });
 });
 
