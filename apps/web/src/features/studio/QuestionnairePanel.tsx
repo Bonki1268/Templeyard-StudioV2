@@ -10,12 +10,14 @@ import {
   type QuestionnaireAnswer,
 } from '@templeyard/shared';
 import { useId, useState } from 'react';
-import { putQuestionnaire } from '../../api/client';
+import { generatePlan, putQuestionnaire } from '../../api/client';
 import { Button } from '../../components/Button';
 import { OptionGroup } from '../../components/OptionGroup';
 import { Tag, type TagTone } from '../../components/Tag';
 import { TextField } from '../../components/TextField';
 import { useAiAssist } from '../assist/useAiAssist';
+import { planKey } from '../plan/PlanPanel';
+import { videoDetailKey } from '../videos/useVideoDetail';
 import { chooseOption, draftFrom, draftSource, toAnswerInput, togglePhoto, typeCustom, type DraftAnswer } from './questionnaireForm';
 import styles from './StudioPanels.module.css';
 import { chatKey, questionnaireKey } from './useStudioChat';
@@ -109,25 +111,39 @@ function PhotoQuestion({ question, original, draft, photos, onChange }: Question
   );
 }
 
-type QuestionnairePanelProps = { videoId: string; questionnaire: Questionnaire; photos: Photo[] };
+type QuestionnairePanelProps = {
+  videoId: string;
+  questionnaire: Questionnaire;
+  photos: Photo[];
+  /** 已經有分鏡方案時，送出問卷不會重新產生 */
+  hasPlan: boolean;
+  /** 方案產生好了（第一次送出問卷）：切到方案面板 */
+  onPlanReady: () => void;
+};
 
 /** 設定問卷：每題點選項或自己寫，留白由系統決定；按「建立分鏡方案」送出 */
-export function QuestionnairePanel({ videoId, questionnaire, photos }: QuestionnairePanelProps) {
+export function QuestionnairePanel({ videoId, questionnaire, photos, hasPlan, onPlanReady }: QuestionnairePanelProps) {
   const titleId = useId();
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, DraftAnswer>>(() =>
     Object.fromEntries(questionnaire.answers.map((answer) => [answer.questionId, draftFrom(answer)])),
   );
+  // 送出問卷；第一次送出（還沒有方案）時接著請 Agent 產生分鏡方案第 1 版
   const submit = useMutation({
-    mutationFn: () =>
-      putQuestionnaire(
+    mutationFn: async () => {
+      await putQuestionnaire(
         videoId,
         questionnaire.answers.map((answer) => toAnswerInput(answer.questionId, drafts[answer.questionId] ?? draftFrom(answer))),
-      ),
-    onSuccess: async () => {
+      );
+      if (!hasPlan) await generatePlan(videoId);
+    },
+    onSettled: async (_data, error) => {
+      if (!error && !hasPlan) onPlanReady();
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: chatKey(videoId) }),
         queryClient.invalidateQueries({ queryKey: questionnaireKey(videoId) }),
+        queryClient.invalidateQueries({ queryKey: planKey(videoId) }),
+        queryClient.invalidateQueries({ queryKey: videoDetailKey(videoId) }),
       ]);
     },
   });
@@ -159,12 +175,12 @@ export function QuestionnairePanel({ videoId, questionnaire, photos }: Questionn
       })}
       {submit.isError && (
         <p className={styles.error} role="alert">
-          送出問卷失敗：{submit.error.message}
+          {hasPlan ? '送出問卷失敗' : '送出問卷或產生分鏡方案失敗'}：{submit.error.message}
         </p>
       )}
-      {(submit.isSuccess || (questionnaire.submittedAt && !submit.isPending)) && (
+      {submit.isPending && (
         <p className={styles.notice} role="status">
-          已送出問卷。分鏡方案將在之後的版本開放。
+          {hasPlan ? '正在送出問卷…' : '正在送出問卷，Agent 接著排分鏡方案…'}
         </p>
       )}
       <div className={styles.actions}>

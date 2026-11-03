@@ -48,6 +48,8 @@ export function useStudioChat(videoId: string) {
         queryClient.invalidateQueries({ queryKey: chatKey(videoId) }),
         queryClient.invalidateQueries({ queryKey: questionnaireKey(videoId) }),
         queryClient.invalidateQueries({ queryKey: videoDetailKey(videoId) }),
+        // Agent 可能修改了分鏡方案
+        queryClient.invalidateQueries({ queryKey: ['plan', videoId] }),
       ]);
       setLive(null);
       setLiveUser(null);

@@ -69,5 +69,16 @@ export function buildAgentSystem(context: AgentContext): string {
     '- 不能自行觸發付費生成：任何會花錢的生成，都要使用者在畫面上看過費用並同意。',
   ];
   if (context.questionnaireSubmitted) lines.push('- 問卷已送出，不能重新產生問卷；使用者想改答案時，請他在問卷面板修改後再送出。');
+  if (context.plan) {
+    lines.push(
+      '',
+      `## 目前的分鏡方案（第 ${context.plan.version} 版）`,
+      ...context.plan.shots.map(
+        (shot) =>
+          `- 第 ${shot.seq} 格（${shot.durationSec} 秒，${shot.shotSize}，視角 ${shot.viewKey}）：${shot.description}${shot.dialogue ? `；台詞「${shot.dialogue}」` : ''}`,
+      ),
+      '使用者要修改方案時，呼叫 revise_plan，依序號（seq）只改要改的欄位；修改後簡短說明改了哪幾格。每次修改都會產生新的方案版本，使用者可以回到前一版。',
+    );
+  }
   return lines.join('\n');
 }

@@ -3,6 +3,8 @@ import {
   assetResponseSchema,
   assistResponseSchema,
   chatListResponseSchema,
+  planResponseSchema,
+  planVersionResponseSchema,
   questionnaireResponseSchema,
   submitQuestionnaireResponseSchema,
   budgetResponseSchema,
@@ -22,6 +24,9 @@ import {
   type AssistRequest,
   type ChatEvent,
   type ChatMessage,
+  type CreatePlanVersionInput,
+  type Plan,
+  type PlanResponse,
   type Questionnaire,
   type Budget,
   type CostCheck,
@@ -67,9 +72,10 @@ async function readJson(response: Response): Promise<unknown> {
 async function request(path: string, init?: RequestInit): Promise<unknown> {
   let response: Response;
   try {
+    // 沒有內容的 POST 不標 JSON：Fastify 會拒絕標了 JSON 卻是空的內容
     response = await fetch(path, {
       ...init,
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      headers: { ...(init?.body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...init?.headers },
     });
   } catch {
     throw new ApiRequestError('連不上本機後端，請確認 pnpm dev 有在執行', 0);
@@ -262,4 +268,22 @@ export async function postAssist(input: AssistRequest): Promise<AssistLog> {
 
 export async function adoptAssist(id: string): Promise<AssistLog> {
   return assistResponseSchema.parse(await request(`/api/assist/${id}/adopt`, { method: 'POST' })).log;
+}
+
+// ── 分鏡方案（第 7 階段） ──
+
+export async function fetchPlan(videoId: string): Promise<PlanResponse> {
+  return planResponseSchema.parse(await request(`/api/videos/${videoId}/plan`));
+}
+
+export async function fetchPlanVersion(videoId: string, version: number): Promise<Plan> {
+  return planVersionResponseSchema.parse(await request(`/api/videos/${videoId}/plan/versions/${version}`)).plan;
+}
+
+export async function generatePlan(videoId: string): Promise<Plan> {
+  return planVersionResponseSchema.parse(await request(`/api/videos/${videoId}/plan/generate`, { method: 'POST' })).plan;
+}
+
+export async function postPlanVersion(videoId: string, input: CreatePlanVersionInput): Promise<Plan> {
+  return planVersionResponseSchema.parse(await request(`/api/videos/${videoId}/plan/versions`, { method: 'POST', body: JSON.stringify(input) })).plan;
 }

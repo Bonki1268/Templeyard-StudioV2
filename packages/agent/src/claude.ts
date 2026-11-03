@@ -63,6 +63,7 @@ export function createClaudeModel(options: ClaudeModelOptions): ClaudeModel {
                 })),
               }
             : {}),
+          ...(request.toolChoice ? { tool_choice: request.toolChoice } : {}),
         });
       } catch (error: unknown) {
         // SDK 的錯誤訊息不含金鑰；只保留狀態碼，避免把回應內容塞進紀錄

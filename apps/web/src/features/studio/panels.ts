@@ -12,11 +12,14 @@ export type StudioPanel = (typeof STUDIO_PANELS)[number]['key'];
 
 export const PANEL_NOT_REACHED = '還沒到這一步';
 
-export type StudioProgress = { hasQuestionnaire: boolean };
+export type StudioProgress = { hasQuestionnaire: boolean; hasPlan?: boolean };
 
-/** 到達過的面板：創作首頁一定可以；Agent 開啟問卷後可以看問卷；分鏡方案之後的面板在之後的階段才會到達 */
+/** 到達過的面板：創作首頁一定可以；Agent 開啟問卷後可以看問卷；有分鏡方案後可以看方案；精緻圖之後在之後的階段才會到達 */
 export function reachablePanels(progress: StudioProgress): StudioPanel[] {
-  return progress.hasQuestionnaire ? ['home', 'questionnaire'] : ['home'];
+  const panels: StudioPanel[] = ['home'];
+  if (progress.hasQuestionnaire) panels.push('questionnaire');
+  if (progress.hasPlan) panels.push('plan');
+  return panels;
 }
 
 /** 要顯示的面板：網址指定而且到達過就用它；否則顯示最後到達的面板 */

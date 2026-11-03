@@ -13,10 +13,12 @@ import type { AppDatabase } from './db/client.js';
 import { createGenerationService, type SucceededHandler } from './generations/service.js';
 import { resolveDataDir } from './paths.js';
 import { createAssistService } from './assist/service.js';
+import { createPlanService } from './plans/service.js';
 import { registerAssetRoutes } from './routes/assets.js';
 import { registerAssistRoutes } from './routes/assist.js';
 import { registerCostRoutes } from './routes/costs.js';
 import { registerPhotoRoutes } from './routes/photos.js';
+import { registerPlanRoutes } from './routes/plans.js';
 import { registerSeriesRoutes } from './routes/series.js';
 import { registerStudioRoutes } from './routes/studio.js';
 import { registerTempleBoardRoutes } from './routes/templeBoards.js';
@@ -134,8 +136,10 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   const text = deps.text ?? null;
   const unavailable = deps.textUnavailableMessage ? { unavailableMessage: deps.textUnavailableMessage } : {};
   const questionnaires = createQuestionnaireService({ db: deps.db, clock });
-  const chat = createChatService({ db: deps.db, clock, workflows, consents, questionnaires, model: text?.agent ?? null, ...unavailable });
+  const plans = createPlanService({ db: deps.db, clock, workflows, prompts, model: text?.agent ?? null, ...unavailable });
+  const chat = createChatService({ db: deps.db, clock, workflows, consents, questionnaires, plans, model: text?.agent ?? null, ...unavailable });
   registerStudioRoutes(app, chat, questionnaires);
+  registerPlanRoutes(app, plans);
   registerAssistRoutes(app, createAssistService({ db: deps.db, clock, prompts, model: text?.assist ?? null, ...unavailable }));
 
   // 啟動時以 prompt_id 取回已送出、還沒完成的任務（F21），不重新送出

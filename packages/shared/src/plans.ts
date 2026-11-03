@@ -228,23 +228,29 @@ export type PlanCheck = {
 };
 
 /** 台詞要念的字數：只算文字與數字，不算標點與空白 */
-export function countSpeechChars(_text: string): number {
-  throw new Error('尚未實作');
+export function countSpeechChars(text: string): number {
+  return [...text].filter((char) => /[\p{L}\p{N}]/u.test(char)).length;
 }
 
 /** 對白估時：字數 ÷ 語速＋開口前與說完後的停頓，無條件進位到 0.1 秒；沒有要念的字時為 null */
-export function estimateDialogueSec(_text: string): number | null {
-  throw new Error('尚未實作');
+export function estimateDialogueSec(text: string): number | null {
+  const chars = countSpeechChars(text);
+  if (chars === 0) return null;
+  const seconds = chars / SPEECH_RATE_CHARS_PER_SEC + DIALOGUE_PAUSE_BEFORE_SEC + DIALOGUE_PAUSE_AFTER_SEC;
+  // 先四捨五入到 0.000001 再進位，避免浮點誤差把 3.25 進位成 3.3 以外的值
+  return Math.ceil(Math.round(seconds * 1e6) / 1e5) / 10;
 }
 
 /** 「missing:後殿」→「後殿」；不是缺少的視角時為 null */
-export function missingViewName(_viewKey: string): string | null {
-  throw new Error('尚未實作');
+export function missingViewName(viewKey: string): string | null {
+  return viewKey.startsWith('missing:') ? viewKey.slice('missing:'.length).trim() || null : null;
 }
 
 /** 目標長度：問卷的「長度」（例如「20 秒」）優先，否則系列的影片秒數；都不超過 30 秒 */
-export function planTargetSec(_lengthChoice: string | null, _seriesDurationSec: number): number {
-  throw new Error('尚未實作');
+export function planTargetSec(lengthChoice: string | null, seriesDurationSec: number): number {
+  const fromQuestionnaire = lengthChoice ? /^(\d+)\s*秒$/.exec(lengthChoice.trim()) : null;
+  const target = fromQuestionnaire ? Number(fromQuestionnaire[1]) : seriesDurationSec;
+  return Math.min(target, MAX_VIDEO_SEC);
 }
 
 /**
@@ -254,52 +260,149 @@ export function planTargetSec(_lengthChoice: string | null, _seriesDurationSec: 
  * - 對白估時超過這一格的秒數：對白放不下
  * - 每格要有畫面內容與場景視角；缺少視角要先補
  */
-export function checkPlan(_shots: readonly Pick<Shot, 'shotKey' | 'seq' | 'durationSec' | 'description' | 'viewKey' | 'dialogue'>[], _rules: PlanRules): PlanCheck {
-  throw new Error('尚未實作');
+export function checkPlan(
+  shots: readonly Pick<Shot, 'shotKey' | 'seq' | 'durationSec' | 'description' | 'viewKey' | 'dialogue'>[],
+  rules: PlanRules,
+): PlanCheck {
+  const totalSec = shots.reduce((sum, shot) => sum + shot.durationSec, 0);
+  const targetSec = Math.min(rules.targetSec, MAX_VIDEO_SEC);
+  const blocking: string[] = [];
+  if (totalSec > targetSec) blocking.push(`總長度 ${totalSec} 秒，超過目標長度 ${targetSec} 秒`);
+  const checks: Record<string, ShotCheck> = {};
+  for (const shot of shots) {
+    const label = `第 ${shot.seq} 格`;
+    const estimate = estimateDialogueSec(shot.dialogue);
+    const overflow = estimate !== null && estimate > shot.durationSec;
+    const missingView = missingViewName(shot.viewKey);
+    const min = rules.minGenerationSec;
+    const short = min !== null && shot.durationSec >= 1 && shot.durationSec < min;
+    checks[shot.shotKey] = {
+      dialogueEstimateSec: estimate,
+      dialogueOverflow: overflow,
+      shortWarning: short
+        ? `短於 ${rules.videoModelLabel} 最短生成長度 ${min} 秒：會生成 ${min} 秒再裁切，裁掉的 ${min - shot.durationSec} 秒照樣計費`
+        : null,
+      missingView,
+    };
+    if (shot.durationSec < 1) blocking.push(`${label}：每格至少 1 秒`);
+    if (!shot.description.trim()) blocking.push(`${label}：還沒有畫面內容`);
+    if (missingView) blocking.push(`${label}：缺少視角「${missingView}」`);
+    else if (!shot.viewKey.trim()) blocking.push(`${label}：還沒有選場景視角`);
+    if (overflow) blocking.push(`${label}：對白放不下`);
+  }
+  return { totalSec, targetSec, blocking, shots: checks };
 }
 
 /** 「0:07」 */
-export function formatClock(_sec: number): string {
-  throw new Error('尚未實作');
+export function formatClock(sec: number): string {
+  const whole = Math.round(sec);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
 }
 
 /** 卡片標題：「3｜0:07–0:10（3 秒）」 */
-export function shotTitle(_shot: Pick<Shot, 'seq' | 'startSec' | 'durationSec'>): string {
-  throw new Error('尚未實作');
+export function shotTitle(shot: Pick<Shot, 'seq' | 'startSec' | 'durationSec'>): string {
+  return `${shot.seq}｜${formatClock(shot.startSec)}–${formatClock(shot.startSec + shot.durationSec)}（${shot.durationSec} 秒）`;
 }
 
 /** 依順序重算序號與開始秒數 */
-export function withTimeline<T extends { durationSec: number }>(_shots: readonly T[]): (T & { seq: number; startSec: number })[] {
-  throw new Error('尚未實作');
+export function withTimeline<T extends { durationSec: number }>(shots: readonly T[]): (T & { seq: number; startSec: number })[] {
+  let start = 0;
+  return shots.map((shot, index) => {
+    const placed = { ...shot, seq: index + 1, startSec: start };
+    start += shot.durationSec;
+    return placed;
+  });
 }
 
 /**
  * 拖曳時間軸第 boundary 個邊界（第 boundary+1 格與下一格之間）：前一格加 delta 秒、後一格減 delta 秒；
  * 任一格不能短於 1 秒，超過時停在 1 秒
  */
-export function moveBoundary(_durations: readonly number[], _boundary: number, _deltaSec: number): number[] {
-  throw new Error('尚未實作');
+export function moveBoundary(durations: readonly number[], boundary: number, deltaSec: number): number[] {
+  const next = [...durations];
+  const before = next[boundary];
+  const after = next[boundary + 1];
+  if (before === undefined || after === undefined) return next;
+  const delta = Math.max(1 - before, Math.min(after - 1, deltaSec));
+  next[boundary] = before + delta;
+  next[boundary + 1] = after - delta;
+  return next;
 }
 
 /** Agent 產生的方案轉成卡片：秒數四捨五入到整數（至少 1 秒），依序號排序 */
-export function shotsFromOutput(_output: PlanOutput): ShotDraft[] {
-  throw new Error('尚未實作');
+export function shotsFromOutput(output: PlanOutput): ShotDraft[] {
+  return [...output.shots]
+    .sort((a, b) => a.seq - b.seq)
+    .map((shot) =>
+      shotInputSchema.parse({
+        durationSec: Math.min(MAX_VIDEO_SEC, Math.max(1, Math.round(shot.durationSec))),
+        shotSize: shot.shotSize,
+        cameraMove: shot.cameraMove,
+        cameraSpeed: shot.cameraSpeed ?? '',
+        cameraAngle: shot.cameraAngle ?? '',
+        description: shot.description,
+        actionStart: shot.actionStart,
+        actionEnd: shot.actionEnd ?? '',
+        viewKey: shot.viewKey,
+        lighting: shot.lighting ?? '',
+        characters: shot.characters ?? [],
+        dialogue: shot.dialogue ?? '',
+        speaker: shot.speaker ?? '',
+        subtitle: shot.subtitle,
+        keyframeTimes: (shot.keyframeSuggestions ?? []).slice(0, 4),
+        factSources: shot.factSources ?? [],
+      }),
+    );
 }
 
 /** 對話修改：依序號套用修改；沒有這一格時丟出 PlanInputError「方案沒有第 N 格」 */
-export function applyRevision(_shots: readonly ShotDraft[], _changes: RevisePlanInput['changes']): ShotDraft[] {
-  throw new Error('尚未實作');
+export function applyRevision(shots: readonly ShotDraft[], changes: RevisePlanInput['changes']): ShotDraft[] {
+  const next = shots.map((shot) => ({ ...shot }));
+  for (const { seq, ...patch } of changes) {
+    const target = next[seq - 1];
+    if (!target) throw new PlanInputError(`方案沒有第 ${seq} 格`);
+    const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));
+    next[seq - 1] = { ...target, ...defined };
+  }
+  return next;
+}
+
+/** 比對內容用：去掉序號、開始秒數與估時 */
+function contentOf(shot: Shot): string {
+  const { seq: _seq, startSec: _start, dialogueEstimateSec: _estimate, ...rest } = shot;
+  // 欄位順序不影響比對（資料庫讀出來與畫面送來的順序可能不同）
+  const entries = Object.entries(rest).sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify(entries);
 }
 
 /**
  * 兩版之間改了哪幾格：內容不同或新增的格子；摘要例如「改了第 1、3 格」「刪除了 1 格」「調整了順序」，
  * 依新版本的序號；沒有改動時是「沒有改動」
  */
-export function diffShots(_previous: readonly Shot[], _next: readonly Shot[]): PlanDiff {
-  throw new Error('尚未實作');
+export function diffShots(previous: readonly Shot[], next: readonly Shot[]): PlanDiff {
+  const before = new Map(previous.map((shot) => [shot.shotKey, shot]));
+  const changed = next.filter((shot) => {
+    const old = before.get(shot.shotKey);
+    return !old || contentOf(old) !== contentOf(shot);
+  });
+  const nextKeys = new Set(next.map((shot) => shot.shotKey));
+  const removed = previous.filter((shot) => !nextKeys.has(shot.shotKey)).length;
+  const parts: string[] = [];
+  if (changed.length > 0) parts.push(`改了第 ${changed.map((shot) => shot.seq).join('、')} 格`);
+  if (removed > 0) parts.push(`刪除了 ${removed} 格`);
+  if (parts.length === 0) {
+    const kept = previous.map((shot) => shot.shotKey).filter((key) => nextKeys.has(key));
+    const order = next.map((shot) => shot.shotKey).filter((key) => before.has(key));
+    parts.push(kept.join() === order.join() ? '沒有改動' : '調整了順序');
+  }
+  return { changedShotKeys: changed.map((shot) => shot.shotKey), summary: parts.join('；') };
 }
 
+const SOURCE_LABELS: Record<PlanSource, string> = { agent: 'Agent 產生', user_edit: '手動修改', chat_edit: '對話修改', revert: '回到舊版' };
+
 /** 版本選單的文字：「第 2 版（手動修改）」「第 3 版（回到第 1 版）」 */
-export function planVersionLabel(_version: Pick<PlanVersionSummary, 'version' | 'source' | 'diff'>): string {
-  throw new Error('尚未實作');
+export function planVersionLabel(version: Pick<PlanVersionSummary, 'version' | 'source' | 'diff'>): string {
+  const source =
+    version.source === 'revert' && version.diff.revertedFrom !== undefined ? `回到第 ${version.diff.revertedFrom} 版` : SOURCE_LABELS[version.source];
+  return `第 ${version.version} 版（${source}）`;
 }

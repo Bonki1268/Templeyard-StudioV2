@@ -82,6 +82,7 @@ export function createChatService(deps: {
       series: { name: seriesRow.name, visualStyle: seriesRow.visualStyle, durationSec: seriesRow.durationSec, direction: seriesRow.direction },
       models: { image: imageModelLabel(video.imageModel), video: videoModelLabel(video.videoModel) },
       questionnaireSubmitted: Boolean(findQuestionnaire(db, video.id)?.submittedAt),
+      plan: deps.plans?.current(video.id) ?? null,
     });
   }
 
@@ -113,7 +114,7 @@ export function createChatService(deps: {
       });
       onEvent({ type: 'user', message: userMessage });
 
-      const tools = createAgentTools({ db, videoId, questionnaires: deps.questionnaires, workflows: deps.workflows });
+      const tools = createAgentTools({ db, videoId, questionnaires: deps.questionnaires, workflows: deps.workflows, ...(deps.plans ? { plans: deps.plans } : {}) });
       // 付費工具要有這一輪的同意憑證；第 6 階段的對話不帶憑證，所以付費工具一律不執行
       const registry = createToolRegistry(tools, { verifyConsent: () => false });
       try {

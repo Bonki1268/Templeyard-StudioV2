@@ -1,5 +1,5 @@
 import { defineTool, type AgentTool } from '@templeyard/agent';
-import { costItemSchema, generateQuestionnaireInputSchema, templeSearchQuerySchema, type WorkflowConfig } from '@templeyard/shared';
+import { costItemSchema, generateQuestionnaireInputSchema, revisePlanInputSchema, templeSearchQuerySchema, type WorkflowConfig } from '@templeyard/shared';
 import { z } from 'zod';
 import { UnknownModelError, estimateCost } from '../costs/estimate.js';
 import type { AppDatabase } from '../db/client.js';
@@ -119,5 +119,27 @@ export function createAgentTools(deps: {
     },
   });
 
-  return [searchTemplesTool, readSeriesTool, generateQuestionnaireTool, estimateCostTool];
+  const tools = [searchTemplesTool, readSeriesTool, generateQuestionnaireTool, estimateCostTool];
+  const plans = deps.plans;
+  if (!plans || !plans.current(videoId)) return tools;
+
+  const revisePlanTool = defineTool({
+    name: REVISE_PLAN_TOOL,
+    label: '修改方案',
+    subject: '方案修改',
+    description:
+      '修改這支影片目前的分鏡方案：changes 依序號（seq）列出要改的格子與欄位，只寫要改的欄位。每次修改都會產生新的方案版本。',
+    inputSchema: revisePlanInputSchema,
+    paid: false,
+    run: async (input) => {
+      try {
+        const { plan, diff } = plans.revise(videoId, input.changes);
+        return { ok: true, content: `已存成第 ${plan.version} 版：${diff.summary}`, summary: diff.summary };
+      } catch (error: unknown) {
+        if (error instanceof StudioError) return { ok: false, content: error.message, summary: error.message };
+        throw error;
+      }
+    },
+  });
+  return [...tools, revisePlanTool];
 }

@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { imageModelLabel, videoModelLabel, type VideoDetail } from '@templeyard/shared';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { fetchQuestionnaire, fetchVideoBudget } from '../api/client';
+import { fetchPlan, fetchQuestionnaire, fetchVideoBudget } from '../api/client';
+import { PlanPanel, planKey } from '../features/plan/PlanPanel';
 import { useSeriesList } from '../features/series/useSeriesList';
 import { ChatColumn } from '../features/studio/ChatColumn';
 import { HomePanel } from '../features/studio/HomePanel';
@@ -55,9 +56,11 @@ function Workspace({ detail }: { detail: VideoDetail }) {
   const series = useSeriesList().data?.find((item) => item.id === detail.video.seriesId);
   const budget = useQuery({ queryKey: ['budget', videoId], queryFn: () => fetchVideoBudget(videoId) });
   const questionnaire = useQuery({ queryKey: questionnaireKey(videoId), queryFn: () => fetchQuestionnaire(videoId) });
+  const plan = useQuery({ queryKey: planKey(videoId), queryFn: () => fetchPlan(videoId) });
   const chat = useStudioChat(videoId);
+  const [savedVersion, setSavedVersion] = useState<number | null>(null);
 
-  const progress = { hasQuestionnaire: Boolean(questionnaire.data) };
+  const progress = { hasQuestionnaire: Boolean(questionnaire.data), hasPlan: Boolean(plan.data?.plan) };
   const reachable = reachablePanels(progress);
   const panel = resolvePanel(searchParams.get('panel'), progress);
 
@@ -131,11 +134,16 @@ function Workspace({ detail }: { detail: VideoDetail }) {
           {panel === 'home' && <HomePanel videoId={videoId} templeName={detail.temple.name} sending={chat.sending} onSend={(content) => void send(content)} />}
           {panel === 'questionnaire' && questionnaire.data && (
             <QuestionnairePanel
-              key={`${questionnaire.data.id}-${JSON.stringify(questionnaire.data.answers)}`}
+              key={`${questionnaire.data.id}-${JSON.stringify(questionnaire.data.answers.map(({ source: _source, ...rest }) => rest))}`}
               videoId={videoId}
               questionnaire={questionnaire.data}
               photos={detail.photos}
+              hasPlan={progress.hasPlan}
+              onPlanReady={() => setSearchParams({ panel: 'plan' })}
             />
+          )}
+          {panel === 'plan' && plan.data?.plan && (
+            <PlanPanel key={plan.data.plan.id} savedVersion={savedVersion} onSaved={setSavedVersion} videoId={videoId} data={{ ...plan.data, plan: plan.data.plan }} seriesVisualStyle={series?.visualStyle ?? ''} />
           )}
         </div>
       </main>
