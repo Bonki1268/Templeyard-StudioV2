@@ -5,7 +5,7 @@ import { Link, useParams, useSearchParams } from 'react-router';
 import { fetchClips, fetchFrames, fetchPlan, fetchQuestionnaire, fetchVideoBudget } from '../api/client';
 import { FinalPanel, clipsKey } from '../features/final/FinalPanel';
 import { FramesPanel, GeneratingPanel, framesKey } from '../features/frames/FramesPanel';
-import { useFrameNotification } from '../features/frames/useFrameNotification';
+import { useFinalNotification, useFrameNotification } from '../features/frames/useFrameNotification';
 import { PlanPanel, planKey } from '../features/plan/PlanPanel';
 import { useSeriesList } from '../features/series/useSeriesList';
 import { ChatColumn } from '../features/studio/ChatColumn';
@@ -97,7 +97,12 @@ function Workspace({ detail }: { detail: VideoDetail }) {
   }
   const [savedVersion, setSavedVersion] = useState<number | null>(null);
 
+  const [expectingFinal, setExpectingFinal] = useState(false);
+  const stopExpectingFinal = useCallback(() => setExpectingFinal(false), []);
+  useFinalNotification(expectingFinal, clips.data?.generating, Boolean(clips.data?.final), stopExpectingFinal);
+
   async function clipsStarted() {
+    setExpectingFinal(true);
     setSearchParams({ panel: 'final' });
     await queryClient.invalidateQueries({ queryKey: clipsKey(videoId) });
   }

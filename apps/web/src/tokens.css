@@ -13,6 +13,8 @@
   --color-ai-text: #6e5418;
   --color-ai-surface: #fbf6ea;
   --color-warning-surface: #fbf0d6;
+  /* 「需重新確認」的警告色外框；和底色、背景的對比 ≥ 3:1 */
+  --color-warning-border: #9a6700;
   --color-success: #245a40;
   --color-success-surface: #e6f0ea;
   --color-error: #9e1f18;

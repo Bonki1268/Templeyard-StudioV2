@@ -233,7 +233,8 @@
               "4",
               "image"
             ]
-          ]
+          ],
+          "required": true
         }
       }
     },

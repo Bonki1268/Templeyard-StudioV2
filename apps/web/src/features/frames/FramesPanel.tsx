@@ -6,6 +6,8 @@ import { ApiRequestError, confirmFrame, regenerateFrame, startClips } from '../.
 import { Button } from '../../components/Button';
 import { Tag, type TagTone } from '../../components/Tag';
 import { useCostConsent } from '../costs/useCostConsent';
+import { askNotificationPermission } from './notify';
+import { notificationApi } from './useFrameNotification';
 import styles from './FramesPanel.module.css';
 
 export function framesKey(videoId: string) {
@@ -115,6 +117,8 @@ export function FramesPanel({ videoId, imageModel, data, clips, onRegenerated, o
   // 先不帶憑證送出取得預估（影片秒數與背景音樂），需要同意時顯示費用確認
   async function generateClips() {
     setStartError(null);
+    // 瀏覽器只允許在使用者操作時詢問通知權限
+    void askNotificationPermission(notificationApi());
     try {
       const first = await startClips(videoId, undefined);
       if (first.status === 'started') {

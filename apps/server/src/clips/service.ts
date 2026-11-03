@@ -540,6 +540,13 @@ export function createClipService(deps: {
 
       const rows = listClips(db, videoId);
       const todo = plan.shots.filter((shot) => needsClip(currentRow(rows, shot.shotKey)));
+      // 一定要末格的模型（Seedance 首尾畫格範本）：沒有末格的格子送出前擋下，不讓範本用示範圖
+      if (model.frameInputs?.last?.required) {
+        const missing = todo.find((shot) => !shot.keyframesEnabled || !deps.frames.detail(videoId, shot.shotKey).last?.assetId);
+        if (missing) {
+          throw new StudioError(409, `還不能生成影片：第 ${missing.seq} 格沒有末格。${model.label} 每一格都要有末格，請在細修頁開啟中間關鍵畫格並產生末格`);
+        }
+      }
       const totalSec = plan.shots.reduce((sum, shot) => sum + shot.durationSec, 0);
       const music = !readyMusic(videoId) ? buildMusic(video, totalSec) : null;
       const items: CostItem[] = [];

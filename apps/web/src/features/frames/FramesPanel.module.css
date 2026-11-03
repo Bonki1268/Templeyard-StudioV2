@@ -123,9 +123,9 @@
   }
 }
 
-/* 需重新確認的格以警告色框標出（04 只有 --color-warning-surface 這個警告色） */
+/* 需重新確認的格以警告色框標出（04 的 --color-warning-border） */
 .cardWarning {
-  border: 3px solid var(--color-warning-surface);
+  border: 3px solid var(--color-warning-border);
   background: var(--color-warning-surface);
 }
 
