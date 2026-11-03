@@ -57,6 +57,24 @@ describe('Claude 撰寫者', () => {
     expect(await writer().write(request('測試：用工具回傳最終指令', 'x'))).toEqual({ prompt: 'tool prompt', notes: '用工具回傳' });
   });
 
+  it('模型不接受工具呼叫（HTTP 400）時，改用一般文字再送一次（2026-11-03 實測）', async () => {
+    expect(await writer().write(request('測試：模型不接受工具', 'x'))).toEqual({ prompt: 'plain prompt', notes: '改用文字回傳' });
+    expect(fake.requests).toHaveLength(2);
+    expect(fake.requests[0]?.toolChoice).toEqual({ type: 'tool', name: 'submit_final_prompt' });
+    expect(fake.requests[1]).not.toHaveProperty('toolChoice');
+    expect(fake.requests[1]).not.toHaveProperty('tools');
+  });
+
+  it('Claude API 回錯誤時，訊息附上 Claude 說的原因（不含金鑰）', async () => {
+    const error = await writer()
+      .write(request('沒有對應的錄製回應', 'x'))
+      .then(
+        () => null,
+        (e: unknown) => e,
+      );
+    expect((error as Error).message).toBe('Claude API 回應錯誤（HTTP 500）：假的 Claude 沒有符合的錄製回應');
+  });
+
   it('工具的輸入不合法（沒有 prompt）時丟出 ClaudeOutputError', async () => {
     await expect(writer().write(request('測試：工具輸入不合法', 'x'))).rejects.toBeInstanceOf(ClaudeOutputError);
   });

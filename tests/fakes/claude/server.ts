@@ -25,6 +25,8 @@ type Recording = {
   afterToolResult?: boolean;
   text?: string;
   content?: unknown[];
+  /** 請求帶 tool_choice 時回 HTTP 400（模擬不接受強制工具呼叫的模型） */
+  rejectTools?: boolean;
 };
 export type RecordedRequest = { model: string; system: string; user: string; tools?: string[]; toolChoice?: unknown };
 
@@ -126,6 +128,12 @@ export async function startFakeClaude(options: { port?: number } = {}): Promise<
     if (!recording) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ type: 'error', error: { type: 'api_error', message: '假的 Claude 沒有符合的錄製回應' } }));
+      return;
+    }
+    // rejectTools：模擬不接受強制工具呼叫的模型（2026-11-03 實測遇到 HTTP 400）
+    if (recording.rejectTools && body.tool_choice !== undefined) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'tool_choice is not supported for this model' } }));
       return;
     }
     count += 1;

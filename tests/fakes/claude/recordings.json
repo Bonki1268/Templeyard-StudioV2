@@ -132,6 +132,11 @@
       ]
     },
     {
+      "match": "測試：模型不接受工具",
+      "rejectTools": true,
+      "text": "以下是最終指令：\n```json\n{\"prompt\": \"plain prompt\", \"notes\": \"改用文字回傳\"}\n```"
+    },
+    {
       "match": "測試：回傳不合法的內容",
       "text": "這不是 JSON，只是一段說明文字"
     },
