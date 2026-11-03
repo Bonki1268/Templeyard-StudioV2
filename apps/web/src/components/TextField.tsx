@@ -16,6 +16,7 @@ export type TextFieldProps = {
   labelAccessory?: ReactNode;
   maxLength?: number;
   placeholder?: string;
+  disabled?: boolean;
 };
 
 export function TextField({
@@ -28,6 +29,7 @@ export function TextField({
   labelAccessory,
   maxLength,
   placeholder,
+  disabled,
 }: TextFieldProps) {
   const id = useId();
   const errorId = `${id}-error`;
@@ -37,6 +39,7 @@ export function TextField({
     value,
     maxLength,
     placeholder,
+    disabled,
     onBlur,
     'aria-invalid': error ? true : undefined,
     'aria-describedby': error ? errorId : undefined,

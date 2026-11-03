@@ -48,3 +48,30 @@ export const costLimitSchema = credits(COST_LIMIT_ERROR).nullable();
 export function creditsText(value: number | null): string {
   return value === null ? '[待實測]' : `${value.toLocaleString('en-US')} 點`;
 }
+
+// 費用預估與同意檢查的回應（前端解析 API 回應用；型別與上面的 CostCheck 相同）
+export const costLineSchema = z.object({
+  model: z.string(),
+  units: z.number(),
+  unitCredits: z.number().nullable(),
+  credits: z.number().nullable(),
+});
+export const costEstimateSchema = z.object({ credits: z.number().nullable(), lines: z.array(costLineSchema) });
+export const budgetSchema = z.object({
+  spent: z.number(),
+  reserved: z.number(),
+  limit: z.number().nullable(),
+  threshold: z.number().nullable(),
+});
+export const consentReasonSchema = z.object({ code: z.enum(CONSENT_REASON_CODES), message: z.string() });
+export const costCheckSchema = z.object({
+  estimate: costEstimateSchema,
+  budget: budgetSchema,
+  consent: z.object({ required: z.boolean(), reasons: z.array(consentReasonSchema) }),
+});
+/** POST /api/videos/:id/consents */
+export const consentResponseSchema = z.object({ consentToken: z.string(), expiresAt: z.string(), estimate: costEstimateSchema });
+/** GET /api/videos/:id/cost */
+export const budgetResponseSchema = z.object({ budget: budgetSchema });
+/** 送出生成時需要同意：409，附上預估與原因 */
+export const consentRequiredResponseSchema = z.object({ message: z.string(), check: costCheckSchema });

@@ -82,7 +82,7 @@ export type ReusableTempleBoard = z.infer<typeof reusableTempleBoardSchema>;
 /** POST /api/videos/:id/temple-board/generate */
 export const generateTempleBoardSchema = z.object({
   /** 缺少照片、要讓 AI 推測的視角 */
-  inferredViewKeys: z.array(viewKeySchema).max(STANDARD_VIEWS.length).default([]),
+  inferredViewKeys: z.array(viewKeySchema, { error: '定裝版的資料不正確' }).max(STANDARD_VIEWS.length).default([]),
   consentToken: z.string().min(1).optional(),
 });
 export type GenerateTempleBoardInput = z.input<typeof generateTempleBoardSchema>;
@@ -130,21 +130,37 @@ export const BOARD_CONFIRMED_MESSAGE = '這個版本已確認；要修改請先�
  * 已有照片的視角即使被選了 AI 推測，仍依照片。
  */
 export function planBoardViews(
-  _photos: readonly { id: string; viewKey: string | null }[],
-  _inferredViewKeys: readonly StandardViewKey[],
+  photos: readonly { id: string; viewKey: string | null }[],
+  inferredViewKeys: readonly StandardViewKey[],
 ): PlannedView[] {
-  throw new Error('尚未實作');
+  const inferred = new Set(inferredViewKeys);
+  const planned: PlannedView[] = [];
+  for (const view of STANDARD_VIEWS) {
+    const photoIds = photos.filter((photo) => photo.viewKey === view.key).map((photo) => photo.id);
+    if (photoIds.length > 0) planned.push({ key: view.key, name: view.name, source: 'photo', photoIds });
+    else if (inferred.has(view.key)) planned.push({ key: view.key, name: view.name, source: 'ai_inferred', photoIds: [] });
+  }
+  return planned;
 }
 
 /** 確認定裝版前還要處理的事（順序同視角）：生成中、失敗、AI 推測待確認、重生後需重新確認 */
 export function boardPendingItems(
-  _views: readonly Pick<TempleView, 'viewName' | 'source' | 'confirmed' | 'state'>[],
+  views: readonly Pick<TempleView, 'viewName' | 'source' | 'confirmed' | 'state'>[],
 ): string[] {
-  throw new Error('尚未實作');
+  if (views.length === 0) return [NO_VIEW_MESSAGE];
+  return views.flatMap((view) => {
+    if (view.state === 'generating') return [`「${view.viewName}」還在生成中`];
+    if (view.state === 'failed') return [`「${view.viewName}」生成失敗，請重生`];
+    if (view.confirmed) return [];
+    return view.source === 'ai_inferred'
+      ? [`「${view.viewName}」為 AI 推測，請先確認或補傳照片`]
+      : [`「${view.viewName}」重新產生了，請確認這張`];
+  });
 }
 
 /** 視角圖卡上的標籤：依照片／需重新確認／AI 推測・待確認／AI 推測・已確認 */
-export function viewTags(_view: Pick<TempleView, 'source' | 'confirmed' | 'state'>): string[] {
-  throw new Error('尚未實作');
+export function viewTags(view: Pick<TempleView, 'source' | 'confirmed' | 'state'>): string[] {
+  if (view.source === 'ai_inferred') return [view.confirmed ? 'AI 推測・已確認' : 'AI 推測・待確認'];
+  // 生成中或失敗時不提示確認：等產生完成再說
+  return view.confirmed || view.state !== 'ready' ? ['依照片'] : ['依照片', '需重新確認'];
 }
-

@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Route, Routes } from 'react-router';
 import { CreateVideoPage } from './pages/CreateVideoPage';
 import { SeriesHomePage } from './pages/SeriesHomePage';
+import { StudioPage } from './pages/StudioPage';
+import { TempleBoardPage } from './pages/TempleBoardPage';
 
 // 路由依 docs/03-App-Flow.md「路由表」
 export function App() {
@@ -14,6 +16,8 @@ export function App() {
       <Routes>
         <Route path="/" element={<SeriesHomePage />} />
         <Route path="/series/:sid/videos/new" element={<CreateVideoPage />} />
+        <Route path="/videos/:vid/temple-board" element={<TempleBoardPage />} />
+        <Route path="/videos/:vid/studio" element={<StudioPage />} />
       </Routes>
     </QueryClientProvider>
   );

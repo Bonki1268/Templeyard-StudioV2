@@ -22,8 +22,17 @@ import { photoCountText, planUploads, skippedMessage } from './uploadPlan';
 
 const ACCEPT = 'image/jpeg,image/png,image/webp';
 
-/** 3 上傳寺廟照片：在瀏覽器去識別後才上傳；可調整遮蔽、指定視角 */
-export function PhotoSection({ detail }: { detail: VideoDetail }) {
+export type PhotoSectionProps = {
+  detail: VideoDetail;
+  /** 缺少照片、要讓 AI 推測的視角（產生寺廟定裝版時一起送出） */
+  inferred: ReadonlySet<StandardViewKey>;
+  onToggleInferred: (viewKey: StandardViewKey) => void;
+  /** 已產生定裝版後不能再改 AI 推測的選擇 */
+  inferLocked: boolean;
+};
+
+/** 3 上傳寺廟照片：在瀏覽器去識別後才上傳；可調整遮蔽、指定視角，缺少的視角可以讓 AI 推測 */
+export function PhotoSection({ detail, inferred, onToggleInferred, inferLocked }: PhotoSectionProps) {
   const titleId = useId();
   const videoId = detail.video.id;
   const { photos } = detail;
@@ -139,7 +148,14 @@ export function PhotoSection({ detail }: { detail: VideoDetail }) {
         </p>
       )}
 
-      <ViewCoverageList photos={photos} canUpload={!busy && !full} onUploadFor={chooseFor} />
+      <ViewCoverageList
+        photos={photos}
+        canUpload={!busy && !full}
+        onUploadFor={chooseFor}
+        inferred={inferred}
+        onToggleInferred={onToggleInferred}
+        inferLocked={inferLocked}
+      />
 
       {editing && (
         <MaskEditor
@@ -216,15 +232,21 @@ function PhotoCard({
   );
 }
 
-/** 視角對照：每個標準視角「已有照片」或「缺少照片」；缺少的可以補傳 */
+/** 視角對照：每個標準視角「已有照片」或「缺少照片」；缺少的可以補傳，或讓 AI 推測 */
 function ViewCoverageList({
   photos,
   canUpload,
   onUploadFor,
+  inferred,
+  onToggleInferred,
+  inferLocked,
 }: {
   photos: readonly Photo[];
   canUpload: boolean;
   onUploadFor: (viewKey: StandardViewKey) => void;
+  inferred: ReadonlySet<StandardViewKey>;
+  onToggleInferred: (viewKey: StandardViewKey) => void;
+  inferLocked: boolean;
 }) {
   const titleId = useId();
   return (
@@ -232,19 +254,32 @@ function ViewCoverageList({
       <h3 id={titleId} className={styles.subtitle}>
         視角對照
       </h3>
-      <p className={styles.muted}>在每張照片的「拍到的視角」指定位置；缺少照片的視角可以補傳。</p>
+      <p className={styles.muted}>在每張照片的「拍到的視角」指定位置；缺少照片的視角可以補傳，或讓 AI 推測（推測的視角之後要確認）。</p>
       <ul className={styles.coverageList}>
-        {viewCoverage(photos).map((row) => (
-          <li key={row.key} className={styles.coverageRow}>
-            <span>{row.name}</span>
-            {row.status === 'has_photo' ? <Tag tone="success">已有照片</Tag> : <Tag tone="warning">缺少照片</Tag>}
-            {row.status === 'missing' && (
-              <Button className={styles.coverageAction} aria-label={`補傳：${row.name}`} disabled={!canUpload} onClick={() => onUploadFor(row.key)}>
-                補傳
-              </Button>
-            )}
-          </li>
-        ))}
+        {viewCoverage(photos).map((row) => {
+          const isInferred = row.status === 'missing' && inferred.has(row.key);
+          return (
+            <li key={row.key} className={styles.coverageRow}>
+              <span>{row.name}</span>
+              {row.status === 'has_photo' && <Tag tone="success">已有照片</Tag>}
+              {row.status === 'missing' && (isInferred ? <Tag tone="info">AI 推測</Tag> : <Tag tone="warning">缺少照片</Tag>)}
+              {row.status === 'missing' && (
+                <span className={styles.coverageAction}>
+                  <Button aria-label={`補傳：${row.name}`} disabled={!canUpload} onClick={() => onUploadFor(row.key)}>
+                    補傳
+                  </Button>
+                  <Button
+                    aria-label={isInferred ? `取消 AI 推測：${row.name}` : `讓 AI 推測：${row.name}`}
+                    disabled={inferLocked}
+                    onClick={() => onToggleInferred(row.key)}
+                  >
+                    {isInferred ? '取消 AI 推測' : '讓 AI 推測'}
+                  </Button>
+                </span>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

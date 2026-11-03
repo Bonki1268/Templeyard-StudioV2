@@ -1,4 +1,4 @@
-import type { CostEstimate } from '@templeyard/shared';
+import { VIEW_PENDING_ITEM, creditsText, type CostEstimate } from '@templeyard/shared';
 import { pendingMessage } from '../series/seriesForm';
 
 // 建立影片頁的步驟列與待處理項目（純函式）
@@ -16,24 +16,25 @@ export function currentStep(progress: CreateVideoProgress): CreateVideoStep {
   return '寺廟定裝版';
 }
 
-/** 產生寺廟定裝版之前還要做的事（第 5 階段：還要有要產生的視角，綠燈實作） */
+/** 產生寺廟定裝版之前還要做的事：選寺廟、上傳照片，再加上至少一個要產生的視角 */
 export function pendingItems(progress: CreateVideoProgress): string[] {
   const items: string[] = [];
   if (!progress.hasVideo) items.push('選擇寺廟');
   if (progress.photoCount === 0) items.push('上傳至少 1 張照片');
+  else if (progress.plannedViewCount === 0) items.push(VIEW_PENDING_ITEM);
   return items;
 }
 
-/** 產生寺廟定裝版在第 5 階段才開放（綠燈時拿掉） */
-export const TEMPLE_BOARD_NOT_YET = '產生寺廟定裝版將在之後的版本開放';
-
 /** 「產生寺廟定裝版」旁的費用預估；estimate 為 null 表示還在預估 */
-export function boardEstimateText(_viewCount: number, _modelLabel: string, _estimate: CostEstimate | null): string {
-  throw new Error('尚未實作');
+export function boardEstimateText(viewCount: number, modelLabel: string, estimate: CostEstimate | null): string {
+  const views = `預估：${viewCount} 張視角圖`;
+  if (!estimate) return `${views}，費用預估中…`;
+  if (estimate.credits === null) return `${views}，${modelLabel} 參考單價待實測`;
+  return `${views}，約 ${creditsText(estimate.credits)}`;
 }
 
-/** 底部操作列的說明：有待處理就列出來，沒有就顯示費用預估（綠燈實作：目前仍說明還沒開放） */
-export function bottomNote(progress: CreateVideoProgress, _estimateText: string): string {
+/** 底部操作列的說明：有待處理就列出來，沒有就顯示費用預估（花錢的按鈕旁邊一定有預估） */
+export function bottomNote(progress: CreateVideoProgress, estimateText: string): string {
   const items = pendingItems(progress);
-  return items.length > 0 ? pendingMessage(items) : TEMPLE_BOARD_NOT_YET;
+  return items.length > 0 ? pendingMessage(items) : estimateText;
 }

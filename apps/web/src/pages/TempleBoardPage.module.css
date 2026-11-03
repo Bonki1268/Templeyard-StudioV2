@@ -1,0 +1,119 @@
+.cost {
+  margin: 0 0 0 auto;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.versionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+}
+
+.versionRow p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.status {
+  min-height: 1.5em;
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.sectionTitle {
+  margin: 0 0 var(--space-4);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-5);
+  margin: 0 0 var(--space-8);
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  background: var(--color-surface-muted);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.placeholder {
+  color: var(--color-text-secondary);
+}
+
+.cardBody {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tags,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.edit {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.failure {
+  margin: 0;
+  color: var(--color-error);
+}
+
+.appearance {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+  max-width: 640px;
+}
+
+.appearance > div {
+  width: 100%;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+}

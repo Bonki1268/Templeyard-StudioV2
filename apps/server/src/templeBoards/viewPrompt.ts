@@ -20,6 +20,24 @@ export type ViewPromptInput = {
  *   其他視角的照片只負責建築外觀；AI 推測的視角開頭說明沒有這個視角的照片
  * - temple.appearanceLocks：以「; 」連接，逐字帶入
  */
-export function templeViewVariables(_input: ViewPromptInput): Record<string, unknown> {
-  throw new Error('尚未實作');
+export function templeViewVariables(input: ViewPromptInput): Record<string, unknown> {
+  const listed = input.references.map((reference, index) => {
+    const own = input.view.source === 'photo' && reference.viewName === input.view.name;
+    const role = own ? '地理、建築外觀' : '建築外觀';
+    return `Image ${index + 1}（${role}）：${reference.viewName ?? '沒有指定視角的照片'}`;
+  });
+  const photos = input.view.source === 'ai_inferred' ? ['沒有這個視角的照片', ...listed] : listed;
+  return {
+    temple: {
+      name: input.temple.name,
+      district: input.temple.district,
+      deity: input.temple.deity,
+      appearanceLocks: input.appearanceLocks.join('; '),
+      lighting: input.lighting,
+    },
+    view: { key: input.view.key, name: input.view.name, source: input.view.source === 'photo' ? '依照片' : 'AI 推測' },
+    photos: photos.join('；'),
+    series: { style: input.series.visualStyle },
+    instruction: input.instruction ?? '',
+  };
 }

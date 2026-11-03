@@ -11,13 +11,15 @@ export type OptionGroupProps<T extends string | number> = {
   onChange: (value: T) => void;
   /** 「或自己寫」：有傳才顯示；填寫時由上層取消選項 */
   other?: { value: string; onChange: (text: string) => void };
+  /** 整組不能選（例如已確認的定裝版） */
+  disabled?: boolean;
 };
 
 /** 單選的選項按鈕群組：fieldset＋legend，選取狀態以 aria-pressed 標示 */
-export function OptionGroup<T extends string | number>({ legend, options, value, onChange, other }: OptionGroupProps<T>) {
+export function OptionGroup<T extends string | number>({ legend, options, value, onChange, other, disabled = false }: OptionGroupProps<T>) {
   const otherId = useId();
   return (
-    <fieldset className={styles.group}>
+    <fieldset className={styles.group} disabled={disabled}>
       <legend className={styles.legend}>{legend}</legend>
       <div className={styles.options}>
         {options.map((option) => (

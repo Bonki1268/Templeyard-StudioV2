@@ -1,6 +1,11 @@
 import {
   apiErrorSchema,
   assetResponseSchema,
+  budgetResponseSchema,
+  consentRequiredResponseSchema,
+  consentResponseSchema,
+  costCheckSchema,
+  templeBoardResponseSchema,
   photoResponseSchema,
   seriesListResponseSchema,
   seriesResponseSchema,
@@ -8,6 +13,13 @@ import {
   videoDetailResponseSchema,
   videoResponseSchema,
   type Asset,
+  type Budget,
+  type CostCheck,
+  type CostItem,
+  type GenerateTempleBoardInput,
+  type RegenerateTempleViewInput,
+  type TempleBoard,
+  type UpdateTempleBoardInput,
   type CreatePhotoInput,
   type CreateSeriesInput,
   type ImageUpload,
@@ -117,4 +129,87 @@ export async function patchPhoto(videoId: string, photoId: string, input: Update
 /** 本機後端上的檔案網址 */
 export function assetUrl(assetId: string): string {
   return `/api/assets/${encodeURIComponent(assetId)}`;
+}
+
+// ── 費用（第 4 階段 API）與寺廟定裝版（第 5 階段） ──
+
+/** 需要同意卻沒有同意憑證：後端回 409 並附上預估 */
+export class ConsentRequiredError extends ApiRequestError {
+  constructor(readonly check: CostCheck) {
+    super('這次生成需要先同意費用', 409);
+    this.name = 'ConsentRequiredError';
+  }
+}
+
+export async function postCostEstimate(videoId: string, items: CostItem[]): Promise<CostCheck> {
+  const body = await request(`/api/videos/${videoId}/cost-estimate`, { method: 'POST', body: JSON.stringify({ items }) });
+  return costCheckSchema.parse(body);
+}
+
+export async function postConsent(videoId: string, items: CostItem[]): Promise<string> {
+  const body = await request(`/api/videos/${videoId}/consents`, { method: 'POST', body: JSON.stringify({ items }) });
+  return consentResponseSchema.parse(body).consentToken;
+}
+
+export async function fetchVideoBudget(videoId: string): Promise<Budget> {
+  const body = await request(`/api/videos/${videoId}/cost`);
+  return budgetResponseSchema.parse(body).budget;
+}
+
+/** 送出生成：409 且附上 check 時丟出 ConsentRequiredError */
+async function requestGeneration(path: string, payload: unknown): Promise<TempleBoard> {
+  const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(
+    () => {
+      throw new ApiRequestError('連不上本機後端，請確認 pnpm dev 有在執行', 0);
+    },
+  );
+  const body = await readJson(response);
+  if (response.status === 409) {
+    const consent = consentRequiredResponseSchema.safeParse(body);
+    if (consent.success) throw new ConsentRequiredError(consent.data.check);
+  }
+  if (!response.ok) {
+    const parsed = apiErrorSchema.safeParse(body);
+    throw parsed.success
+      ? new ApiRequestError(parsed.data.message, response.status, parsed.data.fieldErrors)
+      : new ApiRequestError(`後端回應錯誤（${response.status}）`, response.status);
+  }
+  return templeBoardResponseSchema.parse(body).board;
+}
+
+export async function fetchTempleBoard(videoId: string): Promise<TempleBoard> {
+  return templeBoardResponseSchema.parse(await request(`/api/videos/${videoId}/temple-board`)).board;
+}
+
+export function generateTempleBoard(videoId: string, input: GenerateTempleBoardInput): Promise<TempleBoard> {
+  return requestGeneration(`/api/videos/${videoId}/temple-board/generate`, input);
+}
+
+export function regenerateTempleView(videoId: string, viewKey: string, input: RegenerateTempleViewInput): Promise<TempleBoard> {
+  return requestGeneration(`/api/videos/${videoId}/temple-board/views/${viewKey}/regenerate`, input);
+}
+
+export async function confirmTempleView(videoId: string, viewKey: string): Promise<TempleBoard> {
+  const body = await request(`/api/videos/${videoId}/temple-board/views/${viewKey}/confirm`, { method: 'POST', body: '{}' });
+  return templeBoardResponseSchema.parse(body).board;
+}
+
+export async function patchTempleBoard(videoId: string, input: UpdateTempleBoardInput): Promise<TempleBoard> {
+  const body = await request(`/api/videos/${videoId}/temple-board`, { method: 'PATCH', body: JSON.stringify(input) });
+  return templeBoardResponseSchema.parse(body).board;
+}
+
+export async function confirmTempleBoard(videoId: string): Promise<Video> {
+  const body = await request(`/api/videos/${videoId}/temple-board/confirm`, { method: 'POST', body: '{}' });
+  return videoResponseSchema.parse(body).video;
+}
+
+export async function reuseTempleBoard(videoId: string): Promise<TempleBoard> {
+  const body = await request(`/api/videos/${videoId}/temple-board/reuse`, { method: 'POST', body: '{}' });
+  return templeBoardResponseSchema.parse(body).board;
+}
+
+export async function saveTempleBoardVersion(videoId: string): Promise<TempleBoard> {
+  const body = await request(`/api/videos/${videoId}/temple-board/versions`, { method: 'POST', body: '{}' });
+  return templeBoardResponseSchema.parse(body).board;
 }

@@ -47,8 +47,11 @@ export function createConsentStore(options: { now: () => Date; newToken: () => s
       consents.delete(token);
       return true;
     },
-    peek() {
-      throw new Error('尚未實作');
+    peek(token, videoId, items) {
+      if (!token) return false;
+      const consent = consents.get(token);
+      if (!consent) return false;
+      return consent.expiresAt >= options.now().getTime() && consent.key === itemsKey(videoId, items);
     },
   };
 }

@@ -1,4 +1,4 @@
-import type { AssetKind, CostCheck, CostItem, McpCall, WorkflowConfig } from '@templeyard/shared';
+import type { AssetKind, CostCheck, CostEstimate, CostItem, McpCall, WorkflowConfig } from '@templeyard/shared';
 import type { ComfyClient, Limiter, WaitResult } from '@templeyard/comfy-client';
 import { and, eq, inArray } from 'drizzle-orm';
 import { insertAsset } from '../assets/repository.js';
@@ -67,8 +67,16 @@ export type GenerationService = {
    * 只作廢一次同意憑證；需要同意時一筆都不送出、不留紀錄
    */
   submitBatch(requests: readonly Omit<GenerationRequest, 'consentToken'>[], consentToken: string | null | undefined): Promise<BatchOutcome>;
-  /** 和 submit 一樣的預估與同意檢查，但不送出、不作廢同意憑證 */
-  precheck(videoId: string, costItems: readonly CostItem[], consentToken: string | null | undefined): Precheck;
+  /**
+   * 和 submit 一樣的預估與同意檢查，但不送出、不作廢同意憑證。
+   * 之後要用 submitBatch 送出時，傳入每一筆的項目（requestItems），單筆同意門檻才會和 submitBatch 一樣看每一筆。
+   */
+  precheck(
+    videoId: string,
+    costItems: readonly CostItem[],
+    consentToken: string | null | undefined,
+    requestItems?: readonly CostItem[][],
+  ): Precheck;
   /** 等某筆生成結束（成功、失敗或逾時），回傳最後的紀錄 */
   whenSettled(generationId: string): Promise<GenerationRow>;
   /** 啟動時呼叫：已送出、生成中的紀錄以 prompt_id 繼續追蹤，不重新送出；還沒送出的標示失敗 */
@@ -81,9 +89,22 @@ const NOT_SUBMITTED_MESSAGE = '系統重新啟動時這筆生成還沒送出，�
 /** 每筆生成的輸出種類：成功時下載到這種資產（重啟後從輸入紀錄取回） */
 const OUTPUT_KIND_KEY = 'outputKind';
 
+/** 同一個模型的數量加總，順序依第一次出現（同意憑證比對的是使用者看到的項目） */
+function combineItems(items: readonly CostItem[]): CostItem[] {
+  const combined: CostItem[] = [];
+  for (const item of items) {
+    const existing = combined.find((c) => c.model === item.model);
+    if (existing) existing.units += item.units;
+    else combined.push({ ...item });
+  }
+  return combined;
+}
+
 /** 生成紀錄的 model 欄位：供應商的模型代號或範本名稱（05「generations」），例如 vertexai/nano-banana-pro */
-export function providerModelOf(_call: McpCall): string {
-  throw new Error('尚未實作');
+export function providerModelOf(call: McpCall): string {
+  const value = call.tool === 'run_template' ? call.args.name : call.args.model;
+  if (typeof value !== 'string' || value === '') throw new Error('MCP 呼叫裡沒有模型代號或範本名稱');
+  return value;
 }
 
 export function createGenerationService(deps: GenerationServiceDeps): GenerationService {
@@ -183,53 +204,92 @@ export function createGenerationService(deps: GenerationServiceDeps): Generation
     settled.set(id, promise);
   }
 
+  /** 預估並檢查門檻與上限（不作廢同意憑證） */
+  function checkFor(videoId: string, costItems: readonly CostItem[]): CostCheck {
+    const estimate = estimateCost([...costItems], deps.workflows);
+    const video = db.select({ costLimit: videos.costLimit }).from(videos).where(eq(videos.id, videoId)).get();
+    const budget = {
+      ...videoSpending(db, videoId),
+      limit: video?.costLimit ?? null,
+      threshold: getSettings(db).consentThresholdCredits,
+    };
+    return { estimate, budget, consent: checkConsent(estimate, budget, deps.workflows) };
+  }
+
+  /**
+   * 一批的檢查：單筆同意門檻看每一筆；本支影片上限與單價待實測看整批合計。
+   * 同意憑證對應整批合計的項目。
+   */
+  function batchCheck(videoId: string, requests: readonly { costItems: CostItem[] }[], items: readonly CostItem[]): CostCheck {
+    const combined = checkFor(videoId, items);
+    const reasons = combined.consent.reasons.filter((reason) => reason.code !== 'over_threshold');
+    const overThreshold = requests
+      .map((request) => checkFor(videoId, request.costItems).consent.reasons.find((reason) => reason.code === 'over_threshold'))
+      .find((reason) => reason !== undefined);
+    if (overThreshold) reasons.push(overThreshold);
+    return { ...combined, consent: { required: reasons.length > 0, reasons } };
+  }
+
+  /** 同意檢查已通過：寫入紀錄、預留費用、排進佇列；有空位時等送出完成才回傳 */
+  async function accept(request: Omit<GenerationRequest, 'consentToken'>, estimate: CostEstimate): Promise<string> {
+    const id = clock.newId();
+    db.insert(generations)
+      .values({
+        id,
+        videoId: request.videoId,
+        node: request.node,
+        target: request.target,
+        promptIdRef: request.promptRef?.id ?? null,
+        promptVersion: request.promptRef?.version ?? null,
+        mcpTool: request.call.tool,
+        model: providerModelOf(request.call),
+        callConfigVersion: deps.workflows.version,
+        status: 'awaiting_confirm',
+        input: { ...request.input, call: request.call, [OUTPUT_KIND_KEY]: request.outputKind },
+        userInstruction: request.userInstruction ?? null,
+        estimatedCost: estimate.credits,
+        reservedCost: estimate.credits ?? 0,
+        createdAt: nowIso(),
+      })
+      .run();
+    const submitted = new Promise<void>((resolve) => submittedSignals.set(id, resolve));
+    schedule(id, () => run(id, request.call));
+    // 有空位時等送出完成（prompt_id 已寫入或已失敗）才回應；排隊中的直接回應
+    if (deps.limiter.waiting === 0) await submitted;
+    return id;
+  }
+
   return {
     async submit(request) {
-      const estimate = estimateCost(request.costItems, deps.workflows);
-      const video = db.select({ costLimit: videos.costLimit }).from(videos).where(eq(videos.id, request.videoId)).get();
-      const budget = {
-        ...videoSpending(db, request.videoId),
-        limit: video?.costLimit ?? null,
-        threshold: getSettings(db).consentThresholdCredits,
-      };
-      const consent = checkConsent(estimate, budget, deps.workflows);
-      if (consent.required && !deps.consents.consume(request.consentToken, request.videoId, request.costItems)) {
-        return { status: 'consent_required', check: { estimate, budget, consent } };
+      const check = checkFor(request.videoId, request.costItems);
+      if (check.consent.required && !deps.consents.consume(request.consentToken, request.videoId, request.costItems)) {
+        return { status: 'consent_required', check };
       }
-
-      const id = clock.newId();
-      db.insert(generations)
-        .values({
-          id,
-          videoId: request.videoId,
-          node: request.node,
-          target: request.target,
-          promptIdRef: request.promptRef?.id ?? null,
-          promptVersion: request.promptRef?.version ?? null,
-          mcpTool: request.call.tool,
-          model: request.modelKey,
-          callConfigVersion: deps.workflows.version,
-          status: 'awaiting_confirm',
-          input: { ...request.input, call: request.call, [OUTPUT_KIND_KEY]: request.outputKind },
-          userInstruction: request.userInstruction ?? null,
-          estimatedCost: estimate.credits,
-          reservedCost: estimate.credits ?? 0,
-          createdAt: nowIso(),
-        })
-        .run();
-      const submitted = new Promise<void>((resolve) => submittedSignals.set(id, resolve));
-      schedule(id, () => run(id, request.call));
-      // 有空位時等送出完成（prompt_id 已寫入或已失敗）才回應；排隊中的直接回應
-      if (deps.limiter.waiting === 0) await submitted;
+      const id = await accept(request, check.estimate);
       return { status: 'accepted', generationId: id };
     },
 
-    async submitBatch() {
-      throw new Error('尚未實作');
+    async submitBatch(requests, consentToken) {
+      const first = requests[0];
+      if (!first) throw new Error('沒有要送出的生成');
+      const items = combineItems(requests.flatMap((request) => request.costItems));
+      const check = batchCheck(first.videoId, requests, items);
+      if (check.consent.required && !deps.consents.consume(consentToken, first.videoId, items)) {
+        return { status: 'consent_required', check };
+      }
+      const generationIds: string[] = [];
+      for (const request of requests) {
+        generationIds.push(await accept(request, estimateCost(request.costItems, deps.workflows)));
+      }
+      return { status: 'accepted', generationIds };
     },
 
-    precheck() {
-      throw new Error('尚未實作');
+    precheck(videoId, costItems, consentToken, requestItems) {
+      const check = requestItems
+        ? batchCheck(videoId, requestItems.map((items) => ({ costItems: items })), costItems)
+        : checkFor(videoId, costItems);
+      if (check.consent.required && !deps.consents.peek(consentToken, videoId, costItems)) return { ok: false, check };
+      return { ok: true };
     },
 
     whenSettled(generationId) {

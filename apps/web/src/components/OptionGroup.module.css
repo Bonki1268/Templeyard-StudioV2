@@ -37,6 +37,11 @@
   font-weight: 700;
 }
 
+.option:disabled {
+  cursor: not-allowed;
+  color: var(--color-text-muted);
+}
+
 .other {
   display: flex;
   align-items: center;

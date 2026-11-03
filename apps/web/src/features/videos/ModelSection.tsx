@@ -17,7 +17,7 @@ import { useUpdateVideoDetail } from './useVideoDetail';
 
 type ModelSectionProps = { detail: VideoDetail; series: Series | undefined };
 
-/** 2 選擇生成模型：帶入系列預設，可改；產生寺廟定裝版後鎖定（第 5 階段） */
+/** 2 選擇生成模型：帶入系列預設，可改；產生（或沿用）寺廟定裝版後鎖定 */
 export function ModelSection({ detail, series }: ModelSectionProps) {
   const titleId = useId();
   const { video } = detail;
@@ -40,7 +40,7 @@ export function ModelSection({ detail, series }: ModelSectionProps) {
         </h2>
         <p className={styles.lockNote}>
           <Lock size={16} strokeWidth={1.8} aria-hidden="true" />
-          按下「產生寺廟定裝版」後鎖定，這支影片不能再換模型
+          {locked ? '模型已在產生寺廟定裝版時鎖定，這支影片不能再換模型' : '按下「產生寺廟定裝版」後鎖定，這支影片不能再換模型'}
         </p>
       </div>
 

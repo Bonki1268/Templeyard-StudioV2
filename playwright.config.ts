@@ -38,6 +38,8 @@ export default defineConfig({
       env: {
         API_PORT: String(API_PORT),
         DATA_DIR: '.e2e-data',
+        // 不讀 .env.local：情境測試只用假的服務
+        TEMPLEYARD_NO_ENV_FILE: '1',
         COMFY_MCP_URL: `http://127.0.0.1:${FAKE_COMFY_PORT}/mcp`,
         COMFY_CLOUD_API_KEY: 'fake-comfy-key',
         COMFY_MAX_CONCURRENT: '3',
