@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Route, Routes } from 'react-router';
 import { CreateVideoPage } from './pages/CreateVideoPage';
 import { SeriesHomePage } from './pages/SeriesHomePage';
+import { SeriesSettingsPage } from './pages/SeriesSettingsPage';
 import { ShotDetailPage } from './pages/ShotDetailPage';
 import { StudioPage } from './pages/StudioPage';
 import { TempleBoardPage } from './pages/TempleBoardPage';
@@ -16,6 +17,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <Routes>
         <Route path="/" element={<SeriesHomePage />} />
+        <Route path="/series/:sid/settings" element={<SeriesSettingsPage />} />
         <Route path="/series/:sid/videos/new" element={<CreateVideoPage />} />
         <Route path="/videos/:vid/temple-board" element={<TempleBoardPage />} />
         <Route path="/videos/:vid/studio" element={<StudioPage />} />

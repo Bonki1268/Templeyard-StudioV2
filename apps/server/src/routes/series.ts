@@ -6,13 +6,21 @@ import {
 import type { FastifyInstance } from 'fastify';
 import type { AppDatabase } from '../db/client.js';
 import { toValidationError } from '../http/errors.js';
-import { createSeries, listSeries, updateSeries, type Clock } from '../series/repository.js';
+import { errorBody } from '../http/errorBody.js';
+import { createSeries, findSeries, listSeries, updateSeries, type Clock } from '../series/repository.js';
+import { listSeriesVideos } from '../series/videos.js';
 
 const INVALID_MESSAGE = '系列資料不正確';
 
 /** GET /api/series、POST /api/series、PATCH /api/series/:id */
 export function registerSeriesRoutes(app: FastifyInstance, db: AppDatabase, clock: Clock): void {
   app.get('/api/series', async () => ({ series: listSeries(db) }));
+
+  // 系列設定：這個系列的影片（最近更新的在前）與共同角色（使用者 2026-11-04 提出）
+  app.get<{ Params: { id: string } }>('/api/series/:id/videos', async (request, reply) => {
+    if (!findSeries(db, request.params.id)) return reply.status(404).send(errorBody('找不到這個系列'));
+    return listSeriesVideos(db, request.params.id);
+  });
 
   app.post('/api/series', async (request, reply) => {
     const parsed = createSeriesSchema.safeParse(request.body ?? {});

@@ -20,14 +20,25 @@ export type SeriesVideosResponse = z.infer<typeof seriesVideosResponseSchema>;
 
 /** 系列卡片上的寺廟標籤：用過的寺廟，不重複，依最近更新的順序 */
 export function templeTags(videos: readonly Pick<SeriesVideo, 'templeName'>[]): string[] {
-  void videos;
-  throw new Error('尚未實作');
+  return [...new Set(videos.map((video) => video.templeName))];
 }
 
 /** 影片階段的名稱（05「videos.stage」） */
+const STAGE_LABELS: Record<VideoStage, string> = {
+  creating: '建立中',
+  board_pending: '定裝版待確認',
+  chat: '創作對話',
+  questionnaire: '設定問卷',
+  plan: '分鏡方案',
+  frames_generating: '精緻圖生成中',
+  frames: '精緻圖',
+  video_generating: '影片生成中',
+  final: '成品',
+  done: '完成',
+};
+
 export function videoStageLabel(stage: VideoStage): string {
-  void stage;
-  throw new Error('尚未實作');
+  return STAGE_LABELS[stage];
 }
 
 /**
@@ -37,6 +48,8 @@ export function videoStageLabel(stage: VideoStage): string {
  * - 其他：創作工作區；有成品（final、done）時打開成品面板
  */
 export function videoEntryPath(video: Pick<SeriesVideo, 'id' | 'seriesId' | 'stage'>): string {
-  void video;
-  throw new Error('尚未實作');
+  if (video.stage === 'creating') return `/series/${video.seriesId}/videos/new?video=${video.id}`;
+  if (video.stage === 'board_pending') return `/videos/${video.id}/temple-board`;
+  if (video.stage === 'final' || video.stage === 'done') return `/videos/${video.id}/studio?panel=final`;
+  return `/videos/${video.id}/studio`;
 }

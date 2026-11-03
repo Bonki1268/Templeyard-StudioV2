@@ -5,6 +5,7 @@ import {
   characterResponseSchema,
   chatListResponseSchema,
   clipsResponseSchema,
+  seriesVideosResponseSchema,
   shotDetailSchema,
   framesResponseSchema,
   planResponseSchema,
@@ -35,6 +36,7 @@ import {
   type PlanResponse,
   type Questionnaire,
   type ClipsResponse,
+  type SeriesVideosResponse,
   type ShotDetail,
   type ShotPatch,
   type Budget,
@@ -423,4 +425,10 @@ export function finalDownloadUrl(videoId: string): string {
 
 export async function copyVideo(videoId: string): Promise<Video> {
   return videoResponseSchema.parse(await request(`/api/videos/${videoId}/copy`, { method: 'POST' })).video;
+}
+
+// ── 系列設定的影片列表（2026-11-04） ──
+
+export async function fetchSeriesVideos(seriesId: string): Promise<SeriesVideosResponse> {
+  return seriesVideosResponseSchema.parse(await request(`/api/series/${seriesId}/videos`));
 }
