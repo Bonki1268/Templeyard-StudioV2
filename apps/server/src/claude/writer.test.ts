@@ -63,6 +63,9 @@ describe('Claude 撰寫者', () => {
     expect(fake.requests[0]?.toolChoice).toEqual({ type: 'tool', name: 'submit_final_prompt' });
     expect(fake.requests[1]).not.toHaveProperty('toolChoice');
     expect(fake.requests[1]).not.toHaveProperty('tools');
+    // 改用文字時，系統指令最後明確要求只回 JSON（節點指令本身沒有寫輸出格式）
+    expect(fake.requests[1]?.system).toContain('測試：模型不接受工具');
+    expect(fake.requests[1]?.system).toContain('只回一個 JSON 物件，不要任何其他文字：{"prompt": "直接送給生成模型的最終指令", "notes": "給使用者看的說明"}');
   });
 
   it('Claude API 回錯誤時，訊息附上 Claude 說的原因（不含金鑰）', async () => {
