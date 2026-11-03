@@ -20,6 +20,8 @@ type ScenarioState = {
   aiSuggestion?: string;
   /** 透過 API 產生的 AI 輔助撰寫紀錄 */
   assistLogId?: string;
+  /** 確認精緻圖時記下每格首格的檔案編號（依序號） */
+  frameAssets?: Record<number, string | null>;
 };
 
 export const test = base.extend<{ state: ScenarioState }>({

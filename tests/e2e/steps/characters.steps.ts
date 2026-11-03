@@ -161,7 +161,9 @@ Then(/^第 (\d+) 格以紅色外框標示$/, async ({ page }, seq: string) => {
     document.body.appendChild(probe);
     const error = getComputedStyle(probe).color;
     probe.remove();
-    return { border: getComputedStyle(el).borderTopColor, error };
+    return { border: getComputedStyle(el).borderTopColor, error, text: getComputedStyle(document.body).color };
   });
+  // token 沒定義時探針會拿到繼承的文字顏色；先確認 --color-error 真的和文字顏色不同
+  expect(colors.error).not.toBe(colors.text);
   expect(colors.border).toBe(colors.error);
 });

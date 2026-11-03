@@ -8,7 +8,7 @@ import type { AddressInfo } from 'node:net';
 // - 付費工具第一次呼叫回一段要求確認的文字、不建立任務；帶 confirm: true 才回 prompt_id
 // - get_job_status 回 { result: { status, job_status, raw_status } }
 // - get_output 回短連結與 storage 連結，短連結可以下載
-// 任務結果由指令裡的標記決定：[fail] 失敗、[cancel] 取消、[never] 一直在跑、其他第 2 次查詢時完成
+// 任務結果由指令裡的標記決定：[fail] 失敗、[cancel] 取消、[never] 一直在跑、[slow] 第 40 次查詢才完成、其他第 2 次查詢時完成
 // - fake_upload_file：假的上傳工具（真的上傳方式待實測，07「下一輪測試」第 1 項），回 { file_ref }，記下收到的檔案 sha256
 // - GET /__calls：情境測試查詢收到的呼叫與上傳（只有假伺服器有）
 
@@ -86,7 +86,8 @@ export async function startFakeComfyMcp(options: { port?: number } = {}): Promis
       const job = jobs.get(String(args.prompt_id));
       if (!job) return text('找不到這個任務', true);
       job.polls += 1;
-      let status = job.polls >= 2 ? 'completed' : 'running';
+      const needed = job.prompt.includes('[slow]') ? 40 : 2;
+      let status = job.polls >= needed ? 'completed' : 'running';
       if (job.prompt.includes('[never]')) status = 'running';
       if (job.prompt.includes('[fail]') && job.polls >= 2) status = 'failed';
       if (job.prompt.includes('[cancel]') && job.polls >= 2) status = 'cancelled';

@@ -77,6 +77,8 @@ export function createCharacterService(deps: {
   prompts: ReadonlyMap<string, PromptFile>;
   generation: CharacterGeneration | null;
   unavailableMessage?: string;
+  /** 第 9 階段：確認過的角色另存新版本後通知（精緻圖依失效規則標示需重新確認） */
+  onVersionChanged?: (character: Character) => void;
 }): CharacterService {
   const { db, clock } = deps;
 

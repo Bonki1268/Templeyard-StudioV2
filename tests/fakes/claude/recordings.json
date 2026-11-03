@@ -292,6 +292,10 @@
       "text": "{\"name\": \"阿嬤\", \"description\": \"七十多歲的在地阿嬤，灰白短髮，穿灰色開襟毛衣（錄製的回應第 {{n}} 版）\", \"identityAnchors\": [\"short grey hair\"], \"look\": \"grey cotton cardigan\", \"continuityLocks\": [\"grey cotton cardigan\", \"silver hairpin\"]}"
     },
     {
+      "match": "寫實 16:9 精緻圖",
+      "text": "{\"prompt\": \"Refined frame. {{user}}\", \"notes\": \"錄製的回應：精緻圖\"}"
+    },
+    {
       "match": "廟埕影室的 AI 輔助撰寫",
       "matchUser": "測試：AI 建議格式錯誤",
       "text": "這不是 JSON"

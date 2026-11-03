@@ -90,6 +90,8 @@ export function createPlanService(deps: {
   model: ClaudeModel | null;
   /** 第 8 階段：方案的角色名稱與角色編號互轉 */
   characters?: CharacterService;
+  /** 第 9 階段：新增版本後通知（精緻圖依失效規則標示需重新確認） */
+  onVersionSaved?: (videoId: string, previous: readonly Shot[], next: Plan) => void;
   unavailableMessage?: string;
 }): PlanService {
   const { db, clock, workflows } = deps;

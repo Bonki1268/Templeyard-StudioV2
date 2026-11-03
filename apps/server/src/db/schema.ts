@@ -4,6 +4,7 @@ import type {
   AssetKind,
   ConfirmationPoint,
   DeidBox,
+  FrameKind,
   GenerationStatus,
   PlanDiff,
   PlanSource,
@@ -401,3 +402,28 @@ export const characterVersions = sqliteTable(
 );
 
 export type CharacterVersionRow = typeof characterVersions.$inferSelect;
+
+/** frames：精緻圖與關鍵畫格；based_on 記下產生時依據的版本（用來判斷失效） */
+export const frames = sqliteTable(
+  'frames',
+  {
+    id: text('id').primaryKey(),
+    videoId: text('video_id')
+      .notNull()
+      .references(() => videos.id),
+    shotKey: text('shot_key').notNull(),
+    kind: text('kind').$type<FrameKind>().notNull(),
+    atSec: real('at_sec'),
+    assetId: text('asset_id').references(() => assets.id),
+    generationId: text('generation_id').references(() => generations.id),
+    userUploaded: integer('user_uploaded', { mode: 'boolean' }).notNull().default(false),
+    editOfFrameId: text('edit_of_frame_id'),
+    selected: integer('selected', { mode: 'boolean' }).notNull().default(false),
+    basedOn: text('based_on', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+    needsReconfirm: integer('needs_reconfirm', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('frames_video_shot_idx').on(table.videoId, table.shotKey)],
+);
+
+export type FrameRow = typeof frames.$inferSelect;

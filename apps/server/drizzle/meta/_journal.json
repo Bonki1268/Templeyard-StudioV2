@@ -57,6 +57,13 @@
       "when": 1793678512874,
       "tag": "0007_characters",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793692735072,
+      "tag": "0008_frames",
+      "breakpoints": true
     }
   ]
 }
