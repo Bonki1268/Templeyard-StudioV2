@@ -173,4 +173,20 @@ describe('角色庫的 AI 幫我寫', () => {
     expect(description.suggestion.length).toBeGreaterThan(0);
     expect(locks).toMatchObject({ seriesId: 's1', videoId: null, field: 'character.locks' });
   });
+
+  it('新增角色還沒有角色編號：直接帶角色名稱，寫給 Claude 的內容有這個名稱', async () => {
+    const before = world.fake.requests.length;
+
+    await suggest({ field: 'character.description', seriesId: 's1', userInput: '戴斗笠', target: { characterName: '阿公' } });
+
+    expect(world.fake.requests[before]?.user).toContain('阿公');
+  });
+
+  it('角色編號找不到時，用帶進來的角色名稱', async () => {
+    const before = world.fake.requests.length;
+
+    await suggest({ field: 'character.description', videoId: 'v1', userInput: '戴斗笠', target: { characterId: 'nope', characterName: '阿公' } });
+
+    expect(world.fake.requests[before]?.user).toContain('阿公');
+  });
 });
