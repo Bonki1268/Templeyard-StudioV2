@@ -78,7 +78,8 @@ export const copyPolishOutputSchema = z.object({ polished: z.string().trim().min
 
 /** character-design 節點的輸出（prompt-studio/prompts/character-design.json） */
 export const characterDesignOutputSchema = z.object({
-  name: z.string(),
+  // 新增角色時可能沒有名稱，Claude 不一定回 name（2026-11-05 實際使用）
+  name: z.string().default(''),
   description: z.string().trim().min(1),
   identityAnchors: z.array(z.string()).default([]),
   look: z.string().default(''),

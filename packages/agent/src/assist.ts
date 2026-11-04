@@ -91,19 +91,30 @@ export class AssistOutputError extends Error {
 }
 
 /**
- * 解析 Claude 回的建議：允許前後空白與 ```json 程式碼區塊；
+ * 解析 Claude 回的建議：允許前後空白、```json 程式碼區塊與前後的說明文字；
  * generic 取 suggestion，copy-polish 取 polished；character-description 取 description，
  * character-locks 取 continuityLocks（一行一條）；格式不正確丟出 AssistOutputError「AI 建議的格式不正確，請再試一次」
  */
-export function parseAssistOutput(text: string, kind: AssistOutputKind): string {
+/** 找出文字裡的 JSON：整段、```json 程式碼區塊，或前後有說明文字時第一個 { 到最後一個 }（2026-11-05 實際使用） */
+function extractJson(text: string): unknown {
   const trimmed = text.trim();
-  const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/.exec(trimmed);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(fenced?.[1] ?? trimmed);
-  } catch {
-    throw new AssistOutputError(FORMAT_ERROR);
+  const fenced = /```(?:json)?\s*([\s\S]*?)\s*```/.exec(trimmed)?.[1];
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  const braces = start >= 0 && end > start ? trimmed.slice(start, end + 1) : undefined;
+  for (const candidate of [trimmed, fenced, braces]) {
+    if (candidate === undefined) continue;
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // 試下一種
+    }
   }
+  throw new AssistOutputError(FORMAT_ERROR);
+}
+
+export function parseAssistOutput(text: string, kind: AssistOutputKind): string {
+  const parsed = extractJson(text);
   if (kind === 'character-description' || kind === 'character-locks') {
     const result = characterDesignOutputSchema.safeParse(parsed);
     if (!result.success) throw new AssistOutputError(FORMAT_ERROR);

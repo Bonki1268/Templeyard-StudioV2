@@ -95,6 +95,15 @@ export function createAssistService(deps: {
     return { context, seriesId, videoId: video?.id ?? null };
   }
 
+  /**
+   * 節點的指令本身沒有寫輸出格式：接在系統指令最後，要求只回 JSON 並列出節點的輸出欄位
+   * （2026-11-05 實際使用：真的 Claude 回一般文字；和 998c454 寫生成指令的問題相同）
+   */
+  function withJsonOnly(system: string, output: PromptFile['output']): string {
+    if (output?.format !== 'json') return system;
+    return `${system}\n\n只回一個 JSON 物件，不要任何其他文字；欄位照這個 JSON Schema：\n${JSON.stringify(output.schema ?? {})}`;
+  }
+
   /** 有 Prompt Studio 節點的欄位用節點的指令；缺少必填變數時改用通用指令 */
   function requestFor(context: AssistContext): { system: string; user: string; kind: AssistOutputKind } {
     const node = context.field.node ? deps.prompts.get(context.field.node) : undefined;
@@ -102,7 +111,7 @@ export function createAssistService(deps: {
       const rendered = renderPrompt(node, characterDesignVariables(context));
       if (rendered.missing.length === 0) {
         return {
-          system: rendered.request.system,
+          system: withJsonOnly(rendered.request.system, node.output),
           user: rendered.request.messages.map((m) => m.content).join('\n\n'),
           kind: context.field.key === 'character.locks' ? 'character-locks' : 'character-description',
         };
@@ -112,7 +121,7 @@ export function createAssistService(deps: {
       const variables = { ...copyPolishVariables(context), story: context.userInput.trim() || (context.creativeInput ?? '') };
       const rendered = renderPrompt(node, variables);
       if (rendered.missing.length === 0) {
-        return { system: rendered.request.system, user: rendered.request.messages.map((m) => m.content).join('\n\n'), kind: 'copy-polish' };
+        return { system: withJsonOnly(rendered.request.system, node.output), user: rendered.request.messages.map((m) => m.content).join('\n\n'), kind: 'copy-polish' };
       }
     }
     return { ...buildAssistRequest(context), kind: 'generic' };
