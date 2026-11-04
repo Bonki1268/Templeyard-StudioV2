@@ -1,0 +1,322 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "影片階段",
+    "output": "video-stages.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "setup",
+        "label": "準備到方案",
+        "focus": [
+          "creating",
+          "boardPending",
+          "chat",
+          "questionnaire",
+          "plan"
+        ],
+        "note": "定裝版確認後才能進工作室；Agent 開問卷，送出後產生第 1 版方案。"
+      },
+      {
+        "id": "generate",
+        "label": "生成迴圈",
+        "focus": [
+          "plan",
+          "framesGenerating",
+          "frames",
+          "videoGenerating"
+        ],
+        "note": "精緻圖與影片都要先取得費用同意；影片失敗只回到精緻圖重做失敗的格子。"
+      },
+      {
+        "id": "finish",
+        "label": "成品與完成",
+        "focus": [
+          "videoGenerating",
+          "final",
+          "done"
+        ],
+        "note": "成品可以再改單格回到影片生成中；確認並下載後階段為 done。"
+      }
+    ],
+    "viewBox": [
+      1080,
+      640
+    ]
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "準備"
+    },
+    {
+      "id": "gen",
+      "label": "生成"
+    },
+    {
+      "id": "terminal",
+      "label": "成品"
+    }
+  ],
+  "states": [
+    {
+      "id": "creating",
+      "type": "start",
+      "label": "建立中",
+      "sublabel": "creating",
+      "lane": "main",
+      "col": 0,
+      "step": "01",
+      "width": 100
+    },
+    {
+      "id": "boardPending",
+      "type": "waiting",
+      "label": "定裝版待確認",
+      "sublabel": "board_pending",
+      "lane": "main",
+      "col": 1,
+      "step": "02",
+      "tag": "模型鎖定",
+      "width": 100
+    },
+    {
+      "id": "chat",
+      "type": "active",
+      "label": "對話",
+      "sublabel": "chat",
+      "lane": "main",
+      "col": 2,
+      "step": "03",
+      "width": 100
+    },
+    {
+      "id": "questionnaire",
+      "type": "active",
+      "label": "問卷",
+      "sublabel": "questionnaire",
+      "lane": "main",
+      "col": 3,
+      "step": "04",
+      "width": 100
+    },
+    {
+      "id": "plan",
+      "type": "decision",
+      "label": "方案",
+      "sublabel": "plan",
+      "lane": "main",
+      "col": 4,
+      "step": "05",
+      "width": 100
+    },
+    {
+      "id": "videoGenerating",
+      "type": "active",
+      "label": "影片生成中",
+      "sublabel": "video_generating",
+      "lane": "gen",
+      "col": 0,
+      "step": "08",
+      "tag": "付費",
+      "width": 100
+    },
+    {
+      "id": "frames",
+      "type": "waiting",
+      "label": "精緻圖",
+      "sublabel": "frames",
+      "lane": "gen",
+      "col": 1,
+      "step": "07",
+      "width": 100
+    },
+    {
+      "id": "framesGenerating",
+      "type": "active",
+      "label": "精緻圖生成中",
+      "sublabel": "frames_generating",
+      "lane": "gen",
+      "col": 2,
+      "step": "06",
+      "tag": "付費",
+      "width": 100
+    },
+    {
+      "id": "final",
+      "type": "decision",
+      "label": "成品",
+      "sublabel": "final",
+      "lane": "terminal",
+      "col": 0,
+      "step": "09",
+      "width": 100
+    },
+    {
+      "id": "done",
+      "type": "success",
+      "label": "完成",
+      "sublabel": "done",
+      "lane": "terminal",
+      "col": 1,
+      "step": "10",
+      "width": 100
+    }
+  ],
+  "transitions": [
+    {
+      "id": "make-board",
+      "from": "creating",
+      "to": "boardPending",
+      "label": "產生定裝版",
+      "labelAt": [
+        171,
+        112
+      ]
+    },
+    {
+      "id": "confirm-board",
+      "from": "boardPending",
+      "to": "chat",
+      "label": "確認",
+      "labelAt": [
+        325,
+        112
+      ]
+    },
+    {
+      "id": "open-questionnaire",
+      "from": "chat",
+      "to": "questionnaire",
+      "label": "開問卷",
+      "labelAt": [
+        479,
+        112
+      ]
+    },
+    {
+      "id": "submit-questionnaire",
+      "from": "questionnaire",
+      "to": "plan",
+      "label": "送出",
+      "labelAt": [
+        633,
+        112
+      ]
+    },
+    {
+      "id": "generate-frames",
+      "from": "plan",
+      "to": "framesGenerating",
+      "label": "生成",
+      "variant": "emphasis",
+      "labelAt": [
+        740,
+        232
+      ]
+    },
+    {
+      "id": "frames-done",
+      "from": "framesGenerating",
+      "to": "frames",
+      "label": "完成",
+      "labelAt": [
+        633,
+        352
+      ]
+    },
+    {
+      "id": "back-to-plan",
+      "from": "frames",
+      "to": "plan",
+      "label": "改方案",
+      "variant": "dashed"
+    },
+    {
+      "id": "generate-video",
+      "from": "frames",
+      "to": "videoGenerating",
+      "label": "生成影片",
+      "variant": "emphasis",
+      "labelAt": [
+        479,
+        352
+      ]
+    },
+    {
+      "id": "video-failed",
+      "from": "videoGenerating",
+      "to": "frames",
+      "label": "有格失敗",
+      "variant": "security",
+      "labelAt": [
+        479,
+        238
+      ],
+      "fromSide": "top",
+      "toSide": "top",
+      "route": "top-channel",
+      "channelY": 250
+    },
+    {
+      "id": "compose",
+      "from": "videoGenerating",
+      "to": "final",
+      "label": "合成",
+      "labelAt": [
+        425,
+        393
+      ]
+    },
+    {
+      "id": "revise-shot",
+      "from": "final",
+      "to": "videoGenerating",
+      "label": "改單格",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "left",
+      "route": "left-channel",
+      "channelX": 320,
+      "labelAt": [
+        296,
+        393
+      ]
+    },
+    {
+      "id": "download",
+      "from": "final",
+      "to": "done",
+      "label": "確認下載",
+      "variant": "emphasis",
+      "labelAt": [
+        479,
+        522
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "階段寫在哪",
+      "items": [
+        "videos.stage（packages/shared/src/videos.ts）；轉換在 templeBoards、studio/questionnaire、plans、frames、clips 的 service.ts"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "圖上省略",
+      "items": [
+        "勾選「一次到底」時，精緻圖生成完直接進入影片生成中（03「影片的階段」）"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "失敗與重做",
+      "items": [
+        "影片有格失敗或合成失敗 → 回精緻圖，只重做失敗的格子"
+      ]
+    }
+  ]
+}

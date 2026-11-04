@@ -1,0 +1,432 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "廟埕影室 系統架構",
+    "output": "system.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1280,
+      660
+    ],
+    "repository": {
+      "url": "https://github.com/Bonki1268/Templeyard-StudioV2",
+      "revision": "206f8db8b1338da1d5ce059413b7d2d3c010cec3",
+      "link_mode": "local-only"
+    },
+    "views": [
+      {
+        "id": "agent-path",
+        "label": "創作 Agent 對話",
+        "focus": [
+          "web",
+          "api",
+          "studio",
+          "agent",
+          "claude"
+        ],
+        "note": "聊天欄送出訊息，後端以 SSE 串流回覆；Agent 透過工具修改分鏡方案。"
+      },
+      {
+        "id": "generation-path",
+        "label": "付費生成",
+        "focus": [
+          "web",
+          "api",
+          "gen",
+          "comfyclient",
+          "comfy",
+          "ffmpeg"
+        ],
+        "note": "每次生成先預估費用並取得同意憑證，只送 cloud_ok 資產上雲，最後在本機合成成品。"
+      },
+      {
+        "id": "privacy",
+        "label": "原圖不上雲",
+        "focus": [
+          "deid",
+          "web",
+          "api",
+          "store",
+          "gen"
+        ],
+        "note": "瀏覽器先遮臉；原圖只存本機（cloud_ok = 0），型別上無法交給雲端函式。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "deid",
+      "type": "security",
+      "label": "去識別",
+      "sublabel": "MediaPipe 瀏覽器端",
+      "tag": "原圖不上雲",
+      "pos": [
+        40,
+        110
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "sources": [
+        {
+          "path": "apps/web/src/features/deid/render.ts",
+          "label": "遮蔽輸出"
+        },
+        {
+          "path": "apps/web/src/features/photos/processPhoto.ts",
+          "label": "上傳流程"
+        }
+      ]
+    },
+    {
+      "id": "web",
+      "type": "frontend",
+      "label": "製作介面",
+      "sublabel": "React · apps/web",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "sources": [
+        {
+          "path": "apps/web/src/App.tsx",
+          "label": "路由"
+        },
+        {
+          "path": "apps/web/src/api/client.ts",
+          "label": "API 連線"
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "API 入口",
+      "sublabel": "Fastify · 127.0.0.1",
+      "pos": [
+        300,
+        300
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "sources": [
+        {
+          "path": "apps/server/src/app.ts",
+          "label": "組裝與註冊"
+        },
+        {
+          "path": "apps/server/src/routes/studio.ts",
+          "label": "路由範例"
+        }
+      ]
+    },
+    {
+      "id": "studio",
+      "type": "backend",
+      "label": "創作 Agent",
+      "sublabel": "server/studio",
+      "pos": [
+        300,
+        110
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "sources": [
+        {
+          "path": "apps/server/src/studio/chat.ts",
+          "label": "對話"
+        },
+        {
+          "path": "apps/server/src/studio/agentTools.ts",
+          "label": "工具"
+        }
+      ]
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "Agent 核心",
+      "sublabel": "packages/agent",
+      "pos": [
+        560,
+        110
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "sources": [
+        {
+          "path": "packages/agent/src/loop.ts",
+          "label": "工具迴圈"
+        },
+        {
+          "path": "packages/agent/src/claude.ts",
+          "label": "Claude 轉接"
+        }
+      ]
+    },
+    {
+      "id": "claude",
+      "type": "external",
+      "label": "Claude API",
+      "sublabel": "文字 AI",
+      "brand": "anthropic",
+      "pos": [
+        820,
+        110
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "gen",
+      "type": "backend",
+      "label": "生成與合成",
+      "sublabel": "frames · clips",
+      "tag": "費用同意",
+      "pos": [
+        560,
+        300
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "sources": [
+        {
+          "path": "apps/server/src/generations/service.ts",
+          "label": "生成入口"
+        },
+        {
+          "path": "apps/server/src/frames/service.ts",
+          "label": "精緻圖"
+        },
+        {
+          "path": "apps/server/src/clips/service.ts",
+          "label": "影片"
+        }
+      ]
+    },
+    {
+      "id": "comfyclient",
+      "type": "backend",
+      "label": "Comfy 連線",
+      "sublabel": "packages/comfy-client",
+      "pos": [
+        820,
+        300
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "sources": [
+        {
+          "path": "packages/comfy-client/src/rpc.ts",
+          "label": "MCP session"
+        },
+        {
+          "path": "packages/comfy-client/src/cloud-assets.ts",
+          "label": "上傳（待實測）"
+        }
+      ]
+    },
+    {
+      "id": "comfy",
+      "type": "cloud",
+      "label": "Comfy Cloud",
+      "sublabel": "圖片與影片生成",
+      "tag": "付費",
+      "pos": [
+        1080,
+        300
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "SQLite + 檔案",
+      "sublabel": "data/app.db · data/assets",
+      "pos": [
+        300,
+        490
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "sources": [
+        {
+          "path": "apps/server/src/db/schema.ts",
+          "label": "資料表"
+        },
+        {
+          "path": "apps/server/src/assets/repository.ts",
+          "label": "cloud_ok 規則"
+        }
+      ]
+    },
+    {
+      "id": "ffmpeg",
+      "type": "external",
+      "label": "FFmpeg",
+      "sublabel": "本機合成成品",
+      "pos": [
+        560,
+        490
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "sources": [
+        {
+          "path": "apps/server/src/compose/ffmpeg.ts",
+          "label": "合成"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "本機（個人電腦）",
+      "wraps": [
+        "deid",
+        "web",
+        "api",
+        "studio",
+        "agent",
+        "gen",
+        "comfyclient",
+        "store",
+        "ffmpeg"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "deid-web",
+      "from": "deid",
+      "to": "web",
+      "label": "遮臉後",
+      "variant": "security",
+      "labelAt": [
+        115,
+        237
+      ]
+    },
+    {
+      "id": "web-api",
+      "from": "web",
+      "to": "api",
+      "label": "HTTP·SSE",
+      "variant": "emphasis"
+    },
+    {
+      "id": "api-studio",
+      "from": "api",
+      "to": "studio",
+      "label": "對話"
+    },
+    {
+      "id": "studio-agent",
+      "from": "studio",
+      "to": "agent",
+      "label": "工具"
+    },
+    {
+      "id": "agent-claude",
+      "from": "agent",
+      "to": "claude",
+      "label": "訊息"
+    },
+    {
+      "id": "api-gen",
+      "from": "api",
+      "to": "gen",
+      "label": "同意憑證",
+      "variant": "emphasis"
+    },
+    {
+      "id": "gen-comfyclient",
+      "from": "gen",
+      "to": "comfyclient",
+      "label": "cloud_ok",
+      "variant": "security"
+    },
+    {
+      "id": "comfyclient-comfy",
+      "from": "comfyclient",
+      "to": "comfy",
+      "label": "MCP",
+      "variant": "emphasis"
+    },
+    {
+      "id": "api-store",
+      "from": "api",
+      "to": "store",
+      "label": "Drizzle",
+      "labelAt": [
+        375,
+        427
+      ]
+    },
+    {
+      "id": "gen-ffmpeg",
+      "from": "gen",
+      "to": "ffmpeg",
+      "label": "合成",
+      "variant": "dashed",
+      "labelAt": [
+        635,
+        427
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "共用規則",
+      "items": [
+        "Zod schema 與業務規則在 packages/shared",
+        "前後端與測試都從這裡引用"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "生成指令",
+      "items": [
+        "prompt-studio/prompts 每節點一個 JSON",
+        "packages/prompts 組裝，Claude 撰寫最終指令",
+        "模型與節點設定在 workflows/models.json"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "安全與費用",
+      "items": [
+        "送雲端的函式只收 cloud_ok 資產",
+        "付費生成前預估並取得同意憑證",
+        "測試一律用 tests/fakes 的假服務"
+      ]
+    }
+  ]
+}

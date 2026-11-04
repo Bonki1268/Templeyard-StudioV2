@@ -1,0 +1,268 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "付費生成順序（以精緻圖為例）",
+    "output": "generation.html",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      668
+    ],
+    "views": [
+      {
+        "id": "consent",
+        "label": "費用同意",
+        "focus": [
+          "web",
+          "api"
+        ],
+        "note": "先預估；超過門檻或預算時要使用者同意，換到一次性的同意憑證。"
+      },
+      {
+        "id": "compose",
+        "label": "組指令與上傳",
+        "focus": [
+          "gen",
+          "claude",
+          "comfyc"
+        ],
+        "note": "Claude 依節點指令寫最終指令並補上連續性鎖；參考圖只送 cloud_ok 資產。"
+      },
+      {
+        "id": "submit-track",
+        "label": "送出與收回",
+        "focus": [
+          "gen",
+          "store",
+          "comfyc",
+          "comfy",
+          "api",
+          "web"
+        ],
+        "note": "核銷憑證後才送出；拿到 prompt_id 就先回應，背景追蹤到完成再存回本機。"
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "web",
+      "type": "frontend",
+      "label": "製作介面",
+      "sublabel": "useCostConsent"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "API 入口",
+      "sublabel": "routes/frames.ts"
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "SQLite + 檔案",
+      "sublabel": "generations · assets"
+    },
+    {
+      "id": "gen",
+      "type": "backend",
+      "label": "生成服務",
+      "sublabel": "frames → generations"
+    },
+    {
+      "id": "claude",
+      "type": "external",
+      "label": "Claude API",
+      "sublabel": "PromptWriter",
+      "brand": "anthropic"
+    },
+    {
+      "id": "comfyc",
+      "type": "backend",
+      "label": "Comfy 連線",
+      "sublabel": "comfy-client"
+    },
+    {
+      "id": "comfy",
+      "type": "cloud",
+      "label": "Comfy Cloud",
+      "sublabel": "MCP"
+    }
+  ],
+  "messages": [
+    {
+      "from": "web",
+      "to": "api",
+      "y": 164,
+      "label": "POST cost-estimate",
+      "variant": "emphasis"
+    },
+    {
+      "from": "api",
+      "to": "web",
+      "y": 192,
+      "label": "預估點數 + 是否要同意",
+      "variant": "return"
+    },
+    {
+      "from": "web",
+      "to": "api",
+      "y": 220,
+      "label": "POST consents → consentToken",
+      "variant": "security"
+    },
+    {
+      "from": "web",
+      "to": "api",
+      "y": 248,
+      "label": "POST generate/frames",
+      "variant": "emphasis"
+    },
+    {
+      "from": "api",
+      "to": "gen",
+      "y": 276,
+      "label": "每格建立請求"
+    },
+    {
+      "from": "gen",
+      "to": "claude",
+      "y": 304,
+      "label": "撰寫最終指令"
+    },
+    {
+      "from": "claude",
+      "to": "gen",
+      "y": 332,
+      "label": "最終指令（補上連續性鎖）",
+      "variant": "return"
+    },
+    {
+      "from": "gen",
+      "to": "comfyc",
+      "y": 360,
+      "label": "上傳 cloud_ok 參考圖",
+      "variant": "security"
+    },
+    {
+      "from": "gen",
+      "to": "store",
+      "y": 388,
+      "label": "核銷憑證、預留點數"
+    },
+    {
+      "from": "gen",
+      "to": "comfyc",
+      "y": 416,
+      "label": "submit",
+      "variant": "emphasis"
+    },
+    {
+      "from": "comfyc",
+      "to": "comfy",
+      "y": 444,
+      "label": "tools/call → prompt_id",
+      "variant": "emphasis"
+    },
+    {
+      "from": "api",
+      "to": "web",
+      "y": 472,
+      "label": "accepted · frames_generating",
+      "variant": "return"
+    },
+    {
+      "from": "comfy",
+      "to": "comfyc",
+      "y": 500,
+      "label": "completed（get_job_status 輪詢）",
+      "variant": "return"
+    },
+    {
+      "from": "comfyc",
+      "to": "gen",
+      "y": 528,
+      "label": "下載輸出檔案",
+      "variant": "return"
+    },
+    {
+      "from": "gen",
+      "to": "store",
+      "y": 556,
+      "label": "存 data/assets · succeeded",
+      "variant": "emphasis"
+    },
+    {
+      "from": "api",
+      "to": "web",
+      "y": 584,
+      "label": "GET frames 顯示 · 瀏覽器通知",
+      "variant": "dashed"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "api",
+      "from": 158,
+      "to": 226,
+      "type": "backend"
+    },
+    {
+      "participant": "api",
+      "from": 242,
+      "to": 478,
+      "type": "backend"
+    },
+    {
+      "participant": "gen",
+      "from": 270,
+      "to": 562,
+      "type": "backend"
+    },
+    {
+      "participant": "claude",
+      "from": 298,
+      "to": 338,
+      "type": "external"
+    },
+    {
+      "participant": "comfyc",
+      "from": 354,
+      "to": 534,
+      "type": "backend"
+    },
+    {
+      "participant": "comfy",
+      "from": 438,
+      "to": 506,
+      "type": "cloud"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "費用與隱私",
+      "items": [
+        "無同意憑證 → 409，不送出",
+        "參考圖只收 cloud_ok 資產"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Comfy 細節",
+      "items": [
+        "要求確認時以 confirm:true 重送",
+        "session 過期（404）自動重連"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "程式位置",
+      "items": [
+        "frames/ → generations/service.ts",
+        "comfy-client/src/rpc.ts"
+      ]
+    }
+  ]
+}
