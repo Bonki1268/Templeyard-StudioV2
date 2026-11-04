@@ -43,7 +43,6 @@ erDiagram
 | id | text PK | |
 | name | text | 系列名稱 |
 | visual_style | text | 整體視覺風格 |
-| duration_sec | integer | 影片秒數（≤ 30） |
 | direction | text | 歷史故事／節慶宣傳／景點導覽／人物代言／自訂 |
 | default_image_model | text | 預設圖片模型 |
 | default_video_model | text | 預設影片模型 |
@@ -73,7 +72,7 @@ erDiagram
 
 | 表 | 欄位 | 說明 |
 | --- | --- | --- |
-| characters | id, series_id (nullable), video_id (nullable), name, is_series, current_version_id | 系列角色有 series_id；影片專屬角色有 video_id |
+| characters | id, series_id (nullable), video_id (nullable), name, is_series, current_version_id | 系列角色有 series_id；影片專屬角色有 video_id。系列設定的角色庫建立的角色：series_id 有值、video_id 為 null、is_series = 1 |
 | character_versions | id, character_id, version, description, continuity_locks (json：字串陣列), sheet_asset_id, look_asset_id, image_model, confirmed_at | 確認後鎖定，後續生成都使用此版本 |
 
 ### `temple_boards`、`temple_board_versions`、`temple_views` 寺廟定裝版
@@ -233,6 +232,7 @@ erDiagram
 - `videos.models_locked_at` 有值後，拒絕更新 `image_model`、`video_model`。
 - 任何送往 Comfy Cloud 的檔案，必須是 `assets.cloud_ok = 1` 的資產。
 - 付費生成前檢查 `cost_limit` 與單筆門檻，超過時回傳「需要同意」，不送出。
+- 系列角色庫的生成不屬於任何影片（`generations.video_id` 為 null）：沒有影片上限，只套用單筆門檻；同意憑證綁定系列（使用者 2026-11-05 提出）。
 - `temples` 只讀；Agent 沒有寫入寺廟資料的端點。
 - 刪除一律軟刪除或改為「被取代」，版本與確認紀錄不刪除。
 
@@ -245,6 +245,8 @@ erDiagram
 | `GET /api/health` | 健康檢查 |
 | `GET/POST /api/series`、`PATCH /api/series/:id` | 系列 |
 | `GET /api/series/:id/videos` | 系列設定：這個系列的影片（寺廟、階段、更新時間、縮圖）與共同角色 |
+| `GET/POST /api/series/:id/characters` | 系列設定的角色庫：列出系列角色、新增系列角色（名稱、外觀描述、連續性鎖） |
+| `POST /api/series/:id/cost-estimate`、`POST /api/series/:id/consents` | 角色庫生成的費用預估、取得同意憑證（綁定系列） |
 | `GET/PATCH /api/settings` | 系統設定（單筆同意門檻） |
 | `GET /api/temples?q=` | 寺廟搜尋 |
 | `POST /api/videos`、`GET/PATCH /api/videos/:id` | 建立影片、影片詳細資料、選模型 |
@@ -257,7 +259,7 @@ erDiagram
 | `GET/POST /api/videos/:id/chat` | 對話紀錄、與 Agent 對話（SSE） |
 | `GET/PUT /api/videos/:id/questionnaire` | 問卷 |
 | `GET /api/videos/:id/plan`、`POST .../plan/generate`、`POST .../plan/versions`、`GET .../plan/versions/:version` | 方案與版本 |
-| `GET /api/videos/:id/characters`、`PATCH /api/characters/:cid`、`POST /api/characters/:cid/generate`、`.../confirm`、`.../series` | 角色、定裝圖、加入系列 |
+| `GET /api/videos/:id/characters`、`PATCH /api/characters/:cid`、`POST /api/characters/:cid/generate`、`.../confirm`、`.../series` | 角色、定裝圖、加入系列。`generate` 的 body 有 `videoId` 時用影片的圖片模型；沒有 `videoId` 時只限系列角色，用系列的預設圖片模型 |
 | `GET /api/videos/:id/frames`、`POST .../generate/frames` | 精緻圖 |
 | `POST /api/videos/:id/shots/:shotKey/regenerate`、`.../frames/confirm` | 單格重生、確認這一格 |
 | `GET/PATCH /api/videos/:id/shots/:shotKey` | 分鏡細修的資料、儲存這一格 |
