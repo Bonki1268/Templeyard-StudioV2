@@ -140,6 +140,39 @@
 3. **寺廟定裝版每個視角只用一張照片當參考。** 用的是這個視角自己的照片，沒有接上拼接；需要多張照片時再接。
 4. **參考圖拼接圖存成 `frame` 類型的資產。** 05 沒有「參考圖拼接」的類型，已經列進第 4 節第 3 項，等你決定。
 
+## 5-2. 系列設定與角色庫（使用者 2026-11-05 提出）
+
+**需求**
+1. 系列卡片只顯示幾個標籤，不顯示整段視覺風格。
+2. 可以修改系列設定。
+3. 系列設定加上角色庫，可以新增、修改系列角色，也能產生定裝圖。
+4. 建立系列不選秒數，秒數在做影片時（問卷「長度」）選。
+
+| 提交 | 內容 |
+| --- | --- |
+| docs 5ed7640 | 01 F1、03（系列首頁、系列設定）、05（series、characters、API、後端規則）、規格書 |
+| test 4d3ba32、8de480f | 情境 `features/stage-13-acceptance/series-settings.feature`（12 個）；改寫 stage-02 系列、stage-06 問卷的情境；單元測試。資料表移除 `series.duration_sec`（migration 0011）。8de480f 修正紅燈時寫錯的 2 處（見下方） |
+| feat 50c7578 | 實作 |
+
+- [x] 系列卡片：方向、用過的寺廟（最多 3 個，其餘「+N」）、共同角色（`seriesCardTags`）
+- [x] 系列設定頁「修改系列設定」：名稱、視覺風格（AI 幫我寫）、方向、預設模型
+- [x] 角色庫：`GET/POST /api/series/:id/characters`；角色卡沿用方案的角色卡；產生定裝圖用系列的預設圖片模型
+- [x] 角色庫的生成不屬於任何影片：`POST /api/series/:id/cost-estimate`、`.../consents`；沒有影片上限，只看單筆門檻
+- [x] 建立系列不選秒數；「長度」只看系列問卷預設值，沒有就留白，目標長度 30 秒；Agent 與 AI 幫我寫的指令不再寫系列秒數
+
+**測試**
+- 紅燈：單元測試 110 個失敗、新情境 12 個與受影響的舊情境全部失敗，原因都是還沒實作（系列建立仍要求秒數、空函式）。
+- 綠燈：`pnpm test` 1271 個、`pnpm test:e2e` 331 個全部通過；`pnpm typecheck`、`pnpm lint` 通過；`verify-tests-untouched.mjs 8de480f` 通過。
+- 停止一次：紅燈時寫錯 2 處測試（問卷預設值表格誤刪「長度」；一個測試的參數型別不對），使用者同意後回到紅燈修正（8de480f）。
+
+**自己取的名稱**：`seriesCardTags`、`MAX_CARD_TEMPLE_TAGS`、`createSeriesCharacterSchema`、`seriesConsentScope`、`seriesSpending`、`CostScope`、`listForSeries`、`createForSeries`、`listSeriesCharacters`、`SeriesFields`、`SeriesEditForm`、`SeriesCharacterLibrary`、`seriesFormFrom`、`toUpdateSeriesInput`。沒有新增套件。
+
+**其他**
+- `eslint.config.js` 忽略 `floorplan/`（Floorplan 外掛產生的本機地圖，不進 git）。
+
+**等你決定**
+- 系列的視覺風格在生成時即時讀取，修改後進行中的影片也會用新風格；規格寫「只影響之後新增的影片」。要不要在建立影片時另存一份系列設定？
+
 ## 6. 稽核結果
 
 （實測完、文件更新後再請稽核者填寫）
