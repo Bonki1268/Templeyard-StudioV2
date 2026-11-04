@@ -102,6 +102,15 @@ describe('解析 AI 建議', () => {
     expect(parseAssistOutput('```json\n{"suggestion": "包起來的建議"}\n```', 'generic')).toBe('包起來的建議');
   });
 
+  // 2026-11-05 使用者回報：真的 Claude 會在 JSON 前後加說明文字
+  it.each([
+    ['前面有說明', '以下是建議：\n{"suggestion": "一段建議"}'],
+    ['前後都有說明', '好的，這是我的建議。\n{"suggestion": "一段建議"}\n希望對你有幫助！'],
+    ['說明中間夾著程式碼區塊', '這是建議：\n```json\n{"suggestion": "一段建議"}\n```\n如需調整請告訴我。'],
+  ])('JSON %s：取出其中的 JSON 物件', (_label, text) => {
+    expect(parseAssistOutput(text, 'generic')).toBe('一段建議');
+  });
+
   it.each([
     ['不是 JSON', '這不是 JSON', 'generic'],
     ['少了 suggestion', '{"text": "x"}', 'generic'],
@@ -129,6 +138,11 @@ describe('角色的外觀描述與連續性鎖（character-design 節點）', ()
   it('外觀描述取 description；連續性鎖取 continuityLocks，一行一條', () => {
     expect(parseAssistOutput(output, 'character-description')).toBe('七十多歲的阿嬤，灰白短髮');
     expect(parseAssistOutput(output, 'character-locks')).toBe('grey cotton cardigan\nsilver hairpin');
+  });
+
+  // 2026-11-05 使用者回報：新增角色時沒有名稱，Claude 不一定回 name
+  it('沒有 name 也可以取外觀描述', () => {
+    expect(parseAssistOutput('{"description":"戴斗笠的阿公","continuityLocks":["straw hat"]}', 'character-description')).toBe('戴斗笠的阿公');
   });
 
   it('沒有連續性鎖時格式不正確', () => {

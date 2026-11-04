@@ -164,6 +164,22 @@ describe('角色的外觀描述與連續性鎖', () => {
 
 
 // 使用者 2026-11-05 提出：系列設定的角色庫也能用 AI 幫我寫（沒有影片，只有系列）
+// 2026-11-05 使用者回報：節點的指令本身沒有寫輸出格式，真的 Claude 會回一般文字
+describe('用 Prompt Studio 節點撰寫時要求只回 JSON', () => {
+  it.each([
+    ['character.description', 'character-design', ['description', 'continuityLocks']],
+    ['questionnaire.story', 'copy-polish', ['polished']],
+  ] as const)('%s（%s 節點）：系統指令最後要求只回一個 JSON 物件，並列出輸出欄位', async (field, _node, keys) => {
+    const before = world.fake.requests.length;
+
+    await suggest({ field, videoId: 'v1', userInput: '媽祖救漁民' });
+
+    const system = world.fake.requests[before]?.system ?? '';
+    expect(system).toContain('只回一個 JSON 物件');
+    for (const key of keys) expect(system).toContain(`"${key}"`);
+  });
+});
+
 describe('角色庫的 AI 幫我寫', () => {
   it('只指定系列也可以寫角色的外觀描述與連續性鎖；紀錄屬於系列，不屬於任何影片', async () => {
     const description = await suggest({ field: 'character.description', seriesId: 's1', userInput: '戴斗笠的阿公' });
