@@ -23,7 +23,6 @@ function fixedClock(): Clock {
 const validInput: CreateSeriesInput = {
   name: '新北廟宇故事',
   visualStyle: '寫實電影感、清晨暖光、淺景深',
-  durationSec: 30,
   direction: '歷史故事',
   defaultImageModel: 'nano-banana-pro',
   defaultVideoModel: 'gemini-omni-1.1-flash',
@@ -63,6 +62,22 @@ describe('建立系列 POST /api/series', () => {
     });
   });
 
+  // 使用者 2026-11-05 提出：系列不再設定影片秒數，秒數在每支影片的問卷「長度」選
+  it('建立系列不用秒數；系列資料沒有秒數', async () => {
+    const response = await create();
+
+    expect(response.statusCode).toBe(201);
+    expect((response.json() as { series: Record<string, unknown> }).series).not.toHaveProperty('durationSec');
+  });
+
+  it('多傳了秒數也不會存', async () => {
+    const response = await currentApp().inject({ method: 'POST', url: '/api/series', payload: { ...validInput, durationSec: 20 } });
+
+    expect(response.statusCode).toBe(201);
+    const list = await currentApp().inject({ method: 'GET', url: '/api/series' });
+    expect((list.json() as { series: Record<string, unknown>[] }).series[0]).not.toHaveProperty('durationSec');
+  });
+
   it('文字欄位去掉前後空白再存', async () => {
     const response = await create({ name: '  廟會節慶  ', direction: ' 節慶宣傳 ' });
 
@@ -81,9 +96,6 @@ describe('建立系列 POST /api/series', () => {
     [{ name: '' }, 'name', '請填寫系列名稱'],
     [{ name: '   ' }, 'name', '請填寫系列名稱'],
     [{ visualStyle: '' }, 'visualStyle', '請填寫整體視覺風格'],
-    [{ durationSec: 31 }, 'durationSec', '影片秒數要在 1～30 秒之間'],
-    [{ durationSec: 0 }, 'durationSec', '影片秒數要在 1～30 秒之間'],
-    [{ durationSec: 12.5 }, 'durationSec', '影片秒數要在 1～30 秒之間'],
     [{ direction: '' }, 'direction', '請選擇或填寫影片方向'],
     [{ defaultImageModel: 'midjourney' }, 'defaultImageModel', '請從清單選擇圖片模型'],
     [{ defaultVideoModel: 'sora' }, 'defaultVideoModel', '請從清單選擇影片模型'],
@@ -144,15 +156,14 @@ describe('修改系列 PATCH /api/series/:id', () => {
     const response = await currentApp().inject({
       method: 'PATCH',
       url: '/api/series/series-1',
-      payload: { name: '新北廟宇故事 第二季', durationSec: 20 },
+      payload: { name: '新北廟宇故事 第二季', visualStyle: '水墨淡彩、留白' },
     });
 
     expect(response.statusCode).toBe(200);
     expect(seriesResponseSchema.parse(response.json()).series).toMatchObject({
       id: 'series-1',
       name: '新北廟宇故事 第二季',
-      durationSec: 20,
-      visualStyle: validInput.visualStyle,
+      visualStyle: '水墨淡彩、留白',
       direction: validInput.direction,
       createdAt: '2026-11-02T09:00:00.000Z',
       updatedAt: '2026-11-02T09:01:00.000Z',
@@ -185,11 +196,11 @@ describe('修改系列 PATCH /api/series/:id', () => {
     const response = await currentApp().inject({
       method: 'PATCH',
       url: '/api/series/series-1',
-      payload: { durationSec: 45 },
+      payload: { visualStyle: '  ' },
     });
 
     expect(response.statusCode).toBe(400);
-    expect(apiErrorSchema.parse(response.json()).fieldErrors?.durationSec).toBe('影片秒數要在 1～30 秒之間');
+    expect(apiErrorSchema.parse(response.json()).fieldErrors?.visualStyle).toBe('請填寫整體視覺風格');
   });
 
   it('沒有要修改的欄位時回應 400', async () => {

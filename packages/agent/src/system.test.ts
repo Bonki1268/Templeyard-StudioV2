@@ -5,7 +5,7 @@ import { AGENT_ROLE, buildAgentSystem, type AgentContext } from './system.js';
 const context: AgentContext = {
   temple: { name: '板橋慈惠宮', district: '板橋區', deity: '天上聖母', builtYear: 1853 },
   userTempleNotes: '清代由漳州移民建廟',
-  series: { name: '新北廟宇巡禮', visualStyle: '寫實電影感、清晨暖光', durationSec: 30, direction: '歷史故事' },
+  series: { name: '新北廟宇巡禮', visualStyle: '寫實電影感、清晨暖光', direction: '歷史故事' },
   models: { image: 'Nano Banana Pro', video: 'Gemini Omni 1.1 Flash' },
   questionnaireSubmitted: false,
 };
@@ -37,9 +37,14 @@ describe('創作 Agent 的系統指令', () => {
 
   it('列出系列設定與這支影片的模型', () => {
     const system = buildAgentSystem(context);
-    for (const text of ['新北廟宇巡禮', '寫實電影感、清晨暖光', '30 秒', '歷史故事', 'Nano Banana Pro', 'Gemini Omni 1.1 Flash']) {
+    for (const text of ['新北廟宇巡禮', '寫實電影感、清晨暖光', '歷史故事', 'Nano Banana Pro', 'Gemini Omni 1.1 Flash']) {
       expect(system).toContain(text);
     }
+  });
+
+  // 使用者 2026-11-05 提出：系列不再設定影片秒數，長度由問卷決定
+  it('系列設定不列影片秒數', () => {
+    expect(buildAgentSystem(context)).not.toContain('影片秒數');
   });
 
   it('列出問卷題庫：每題的代號、題目與選項，並說明每支影片不同的題目', () => {

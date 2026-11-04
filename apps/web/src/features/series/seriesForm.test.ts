@@ -1,12 +1,13 @@
-import { DEFAULT_IMAGE_MODEL, DEFAULT_VIDEO_MODEL } from '@templeyard/shared';
+import { DEFAULT_IMAGE_MODEL, DEFAULT_VIDEO_MODEL, type Series } from '@templeyard/shared';
 import { describe, expect, it } from 'vitest';
 import {
   initialSeriesForm,
   pendingItems,
   pendingMessage,
   resolveDirection,
-  seriesMeta,
+  seriesFormFrom,
   toCreateSeriesInput,
+  toUpdateSeriesInput,
   type SeriesFormState,
 } from './seriesForm';
 
@@ -20,12 +21,27 @@ function filledForm(): SeriesFormState {
   };
 }
 
+function savedSeries(overrides: Partial<Series> = {}): Series {
+  return {
+    id: 's1',
+    name: '新北廟宇故事',
+    visualStyle: '寫實電影感',
+    direction: '歷史故事',
+    defaultImageModel: 'nano-banana-pro',
+    defaultVideoModel: 'seedance-2.0',
+    questionnaireDefaults: null,
+    createdAt: '2026-11-05T00:00:00.000Z',
+    updatedAt: '2026-11-05T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
 describe('建立系列表單', () => {
-  it('初始值：秒數 30、帶入系列預設模型、其他留白', () => {
+  // 使用者 2026-11-05 提出：建立系列不選秒數
+  it('初始值：帶入系列預設模型、其他留白，沒有秒數', () => {
     expect(initialSeriesForm()).toEqual({
       name: '',
       visualStyle: '',
-      durationSec: 30,
       directionOption: null,
       directionOther: '',
       defaultImageModel: DEFAULT_IMAGE_MODEL,
@@ -68,19 +84,55 @@ describe('影片方向', () => {
   });
 });
 
-describe('送出的資料與卡片顯示', () => {
-  it('轉成建立系列的 API 資料，文字去掉前後空白', () => {
-    expect(toCreateSeriesInput({ ...filledForm(), name: ' 新北廟宇故事 ', durationSec: 20 })).toEqual({
+describe('送出的資料', () => {
+  it('轉成建立系列的 API 資料，文字去掉前後空白，沒有秒數', () => {
+    expect(toCreateSeriesInput({ ...filledForm(), name: ' 新北廟宇故事 ' })).toEqual({
       name: '新北廟宇故事',
       visualStyle: '寫實電影感',
-      durationSec: 20,
       direction: '歷史故事',
       defaultImageModel: DEFAULT_IMAGE_MODEL,
       defaultVideoModel: DEFAULT_VIDEO_MODEL,
     });
   });
+});
 
-  it('卡片說明列是「秒數 · 方向」', () => {
-    expect(seriesMeta({ durationSec: 20, direction: '節慶宣傳' })).toBe('20 秒 · 節慶宣傳');
+// 使用者 2026-11-05 提出：系列設定可以修改
+describe('修改系列設定的表單', () => {
+  it('從系列帶入目前的設定；方向是選項之一時選取該選項', () => {
+    expect(seriesFormFrom(savedSeries())).toEqual({
+      name: '新北廟宇故事',
+      visualStyle: '寫實電影感',
+      directionOption: '歷史故事',
+      directionOther: '',
+      defaultImageModel: 'nano-banana-pro',
+      defaultVideoModel: 'seedance-2.0',
+    });
+  });
+
+  it('方向是自己寫的：放在「或自己寫」，不選取任何選項', () => {
+    const form = seriesFormFrom(savedSeries({ direction: '廟口美食' }));
+    expect(form.directionOption).toBeNull();
+    expect(form.directionOther).toBe('廟口美食');
+  });
+
+  it('系列的預設模型已經不在清單：改用目前的預設模型', () => {
+    const form = seriesFormFrom(savedSeries({ defaultImageModel: 'retired-model', defaultVideoModel: 'retired-video' }));
+    expect(form.defaultImageModel).toBe(DEFAULT_IMAGE_MODEL);
+    expect(form.defaultVideoModel).toBe(DEFAULT_VIDEO_MODEL);
+  });
+
+  it('帶入後沒有待處理', () => {
+    expect(pendingItems(seriesFormFrom(savedSeries()))).toEqual([]);
+  });
+
+  it('轉成修改系列的 API 資料，文字去掉前後空白', () => {
+    const form = { ...seriesFormFrom(savedSeries()), visualStyle: ' 水墨淡彩 ', directionOption: null, directionOther: '景點導覽 ' };
+    expect(toUpdateSeriesInput(form)).toEqual({
+      name: '新北廟宇故事',
+      visualStyle: '水墨淡彩',
+      direction: '景點導覽',
+      defaultImageModel: 'nano-banana-pro',
+      defaultVideoModel: 'seedance-2.0',
+    });
   });
 });

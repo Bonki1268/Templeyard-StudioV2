@@ -5,6 +5,7 @@ import {
   type CreateSeriesInput,
   type ImageModelKey,
   type Series,
+  type UpdateSeriesInput,
   type VideoModelKey,
 } from '@templeyard/shared';
 
@@ -60,6 +61,16 @@ export function toCreateSeriesInput(state: SeriesFormState): CreateSeriesInput {
     defaultImageModel: state.defaultImageModel,
     defaultVideoModel: state.defaultVideoModel,
   };
+}
+
+/** 修改系列設定的表單初始值：帶入系列目前的設定（使用者 2026-11-05 提出） */
+export function seriesFormFrom(_series: Series): SeriesFormState {
+  return initialSeriesForm();
+}
+
+/** 修改系列設定送出的資料 */
+export function toUpdateSeriesInput(_state: SeriesFormState): UpdateSeriesInput {
+  return {};
 }
 
 /** 系列卡片的說明列，例如「20 秒 · 節慶宣傳」 */

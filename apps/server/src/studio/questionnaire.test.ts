@@ -46,7 +46,8 @@ describe('開啟問卷', () => {
     expect(questionnaire.submittedAt).toBeNull();
     expect(questionnaire.answers.map((a) => a.questionId)).toEqual(ALL);
     expect(questionnaire.answers[0]).toEqual({ questionId: 'story', custom: '講媽祖顯靈救漁民的故事', source: 'user' });
-    expect(questionnaire.answers.find((a) => a.questionId === 'length')).toMatchObject({ choice: '30 秒', source: 'series_default' });
+    // 使用者 2026-11-05 提出：系列不再設定秒數；沒有系列問卷預設值時「長度」留白，由系統選擇
+    expect(questionnaire.answers.find((a) => a.questionId === 'length')).toEqual({ questionId: 'length', source: 'system' });
     expect(world.db.select().from(videos).where(eq(videos.id, 'v1')).get()?.stage).toBe('questionnaire');
     expect(service.get('v1')).toEqual(questionnaire);
   });

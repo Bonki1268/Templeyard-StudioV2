@@ -73,14 +73,24 @@ describe('對白估時（暫以每秒約 4 字，含開口前與說完後各 0.5
 });
 
 describe('目標長度', () => {
-  it('問卷的「長度」優先，否則用系列的影片秒數', () => {
-    expect(planTargetSec('20 秒', 30)).toBe(20);
-    expect(planTargetSec(null, 15)).toBe(15);
-    expect(planTargetSec('看情況', 30)).toBe(30);
+  // 使用者 2026-11-05 提出：系列不再設定秒數，只看問卷的「長度」
+  it.each([
+    ['20 秒', 20],
+    ['15 秒', 15],
+    ['30 秒', 30],
+  ] as const)('問卷的「長度」選「%s」：目標 %i 秒', (choice, sec) => {
+    expect(planTargetSec(choice)).toBe(sec);
+  });
+
+  it.each([
+    ['問卷沒有選長度', null],
+    ['自己寫的看不懂', '看情況'],
+  ] as const)('%s：由系統決定，用上限 30 秒', (_name, choice) => {
+    expect(planTargetSec(choice)).toBe(30);
   });
 
   it('不超過 30 秒', () => {
-    expect(planTargetSec(null, 45)).toBe(30);
+    expect(planTargetSec('45 秒')).toBe(30);
   });
 });
 

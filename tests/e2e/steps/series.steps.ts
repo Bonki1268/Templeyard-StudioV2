@@ -26,7 +26,6 @@ function requireName(state: { seriesName?: string }): string {
 const validInput: CreateSeriesInput = {
   name: '',
   visualStyle: '寫實電影感、清晨暖光、淺景深',
-  durationSec: 30,
   direction: '歷史故事',
   defaultImageModel: 'nano-banana-pro',
   defaultVideoModel: 'gemini-omni-1.1-flash',
@@ -123,7 +122,6 @@ Then('系列列表出現改名後的系列', async ({ page, state }) => {
 const invalidCases: Record<string, Partial<Record<keyof CreateSeriesInput, unknown>>> = {
   系列名稱是空白: { name: '' },
   整體視覺風格是空白: { visualStyle: '' },
-  '影片秒數是 31': { durationSec: 31 },
   影片方向是空白: { direction: '' },
   預設圖片模型不存在: { defaultImageModel: 'not-a-model' },
   預設影片模型不存在: { defaultVideoModel: 'not-a-model' },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { templeTags, videoEntryPath, videoStageLabel } from './seriesVideos.js';
+import { seriesCardTags, templeTags, videoEntryPath, videoStageLabel } from './seriesVideos.js';
 import { VIDEO_STAGES } from './videos.js';
 
 describe('影片階段的名稱', () => {
@@ -50,5 +50,21 @@ describe('系列卡片上的寺廟標籤', () => {
 
   it('沒有影片：沒有標籤', () => {
     expect(templeTags([])).toEqual([]);
+  });
+});
+
+// 使用者 2026-11-05 提出：卡片只顯示幾個標籤，不顯示整段視覺風格
+describe('系列卡片的標籤', () => {
+  const videos = (...names: string[]) => names.map((templeName) => ({ templeName }));
+
+  it.each([
+    ['沒有影片、沒有角色：只有方向', [], [], ['歷史故事']],
+    ['寺廟 2 個：全部顯示', ['板橋慈惠宮', '新莊地藏庵'], [], ['歷史故事', '板橋慈惠宮', '新莊地藏庵']],
+    ['寺廟 3 個：全部顯示', ['甲宮', '乙宮', '丙宮'], [], ['歷史故事', '甲宮', '乙宮', '丙宮']],
+    ['寺廟 5 個：顯示前 3 個與「+2」', ['甲宮', '乙宮', '丙宮', '丁宮', '戊宮'], [], ['歷史故事', '甲宮', '乙宮', '丙宮', '+2']],
+    ['同一間廟做了兩支：只算一個', ['甲宮', '甲宮', '乙宮'], [], ['歷史故事', '甲宮', '乙宮']],
+    ['有共同角色：放在寺廟後面，標示「角色：」', ['甲宮'], ['阿嬤', '小明'], ['歷史故事', '甲宮', '角色：阿嬤', '角色：小明']],
+  ] as const)('%s', (_name, temples, characters, expected) => {
+    expect(seriesCardTags({ direction: '歷史故事', videos: videos(...temples), characters: [...characters] })).toEqual(expected);
   });
 });

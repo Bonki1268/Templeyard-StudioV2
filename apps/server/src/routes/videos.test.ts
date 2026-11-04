@@ -34,7 +34,6 @@ function fixedClock(): Clock {
 const seriesInput: CreateSeriesInput = {
   name: '新北廟宇故事',
   visualStyle: '寫實電影感',
-  durationSec: 30,
   direction: '歷史故事',
   defaultImageModel: 'nano-banana-pro',
   defaultVideoModel: 'seedance-2.0',

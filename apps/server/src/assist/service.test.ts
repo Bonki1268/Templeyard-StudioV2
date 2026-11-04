@@ -162,3 +162,15 @@ describe('角色的外觀描述與連續性鎖', () => {
   });
 });
 
+
+// 使用者 2026-11-05 提出：系列設定的角色庫也能用 AI 幫我寫（沒有影片，只有系列）
+describe('角色庫的 AI 幫我寫', () => {
+  it('只指定系列也可以寫角色的外觀描述與連續性鎖；紀錄屬於系列，不屬於任何影片', async () => {
+    const description = await suggest({ field: 'character.description', seriesId: 's1', userInput: '戴斗笠的阿公' });
+    const locks = await suggest({ field: 'character.locks', seriesId: 's1', userInput: '戴斗笠的阿公' });
+
+    expect(description).toMatchObject({ seriesId: 's1', videoId: null, field: 'character.description' });
+    expect(description.suggestion.length).toBeGreaterThan(0);
+    expect(locks).toMatchObject({ seriesId: 's1', videoId: null, field: 'character.locks' });
+  });
+});

@@ -11,7 +11,6 @@ import {
 } from './questionnaire.js';
 
 const ALL = QUESTIONNAIRE_QUESTIONS.map((q) => q.id);
-const series = { durationSec: 30 };
 
 function tool(questionIds: string[] = ALL, prefill: unknown[] = []) {
   return generateQuestionnaireInputSchema.parse({ questionIds, prefill });
@@ -54,18 +53,17 @@ describe('預填問卷', () => {
     const answers = prefillAnswers({
       tool: tool(ALL, [{ questionId: 'story', custom: '講媽祖顯靈救漁民的故事' }]),
       seriesDefaults: null,
-      series,
     });
     expect(answerOf(answers, 'story')).toEqual({ questionId: 'story', custom: '講媽祖顯靈救漁民的故事', source: 'user' });
   });
 
   it('只留 Agent 挑的題目，依題庫順序', () => {
-    const answers = prefillAnswers({ tool: tool(['tone', 'story', 'goal']), seriesDefaults: null, series });
+    const answers = prefillAnswers({ tool: tool(['tone', 'story', 'goal']), seriesDefaults: null });
     expect(answers.map((a) => a.questionId)).toEqual(['story', 'goal', 'tone']);
   });
 
   it('沒有預填來源的題目留白，標示「系統將會選擇」', () => {
-    const answers = prefillAnswers({ tool: tool(), seriesDefaults: null, series });
+    const answers = prefillAnswers({ tool: tool(), seriesDefaults: null });
     expect(answerOf(answers, 'audience')).toEqual({ questionId: 'audience', source: 'system' });
   });
 
@@ -73,43 +71,42 @@ describe('預填問卷', () => {
     const answers = prefillAnswers({
       tool: tool(ALL, [{ questionId: 'tone', choice: '懸疑' }]),
       seriesDefaults: { tone: { choice: '溫暖' }, audience: { choice: '外地遊客' } },
-      series,
     });
     expect(answerOf(answers, 'tone')).toMatchObject({ choice: '懸疑', source: 'user' });
     expect(answerOf(answers, 'audience')).toMatchObject({ choice: '外地遊客', source: 'series_default' });
   });
 
   it('系列問卷預設值的「自己寫」也會帶入', () => {
-    const answers = prefillAnswers({ tool: tool(), seriesDefaults: { goal: { custom: '讓年輕人認識媽祖' } }, series });
+    const answers = prefillAnswers({ tool: tool(), seriesDefaults: { goal: { custom: '讓年輕人認識媽祖' } } });
     expect(answerOf(answers, 'goal')).toEqual({ questionId: 'goal', custom: '讓年輕人認識媽祖', source: 'series_default' });
   });
 
   it('每支影片不同的題目不使用系列問卷預設值', () => {
-    const answers = prefillAnswers({ tool: tool(), seriesDefaults: { story: { custom: '上一支影片的故事' } }, series });
+    const answers = prefillAnswers({ tool: tool(), seriesDefaults: { story: { custom: '上一支影片的故事' } } });
     expect(answerOf(answers, 'story')).toEqual({ questionId: 'story', source: 'system' });
   });
 
-  it('系列設定的影片秒數對應「長度」，標示「系列預設」', () => {
-    const answers = prefillAnswers({ tool: tool(), seriesDefaults: null, series: { durationSec: 20 } });
-    expect(answerOf(answers, 'length')).toEqual({ questionId: 'length', choice: '20 秒', source: 'series_default' });
+  // 使用者 2026-11-05 提出：系列不再設定秒數，「長度」只看系列問卷預設值，沒有就留白由系統選擇
+  it('沒有系列問卷預設值時，「長度」留白，標示由系統選擇', () => {
+    const answers = prefillAnswers({ tool: tool(), seriesDefaults: null });
+    expect(answerOf(answers, 'length')).toEqual({ questionId: 'length', source: 'system' });
   });
 
-  it('系列問卷預設值的長度優先於系列設定', () => {
-    const answers = prefillAnswers({ tool: tool(), seriesDefaults: { length: { choice: '15 秒' } }, series: { durationSec: 30 } });
-    expect(answerOf(answers, 'length')).toMatchObject({ choice: '15 秒', source: 'series_default' });
+  it('系列問卷預設值有長度時帶入，標示「系列預設」', () => {
+    const answers = prefillAnswers({ tool: tool(), seriesDefaults: { length: { choice: '15 秒' } } });
+    expect(answerOf(answers, 'length')).toEqual({ questionId: 'length', choice: '15 秒', source: 'series_default' });
   });
 
   it('Agent 預填的選項不在題目的選項裡時不採用，往下一個來源找', () => {
     const answers = prefillAnswers({
       tool: tool(ALL, [{ questionId: 'tone', choice: '搞笑' }]),
       seriesDefaults: { tone: { choice: '溫暖' } },
-      series,
     });
     expect(answerOf(answers, 'tone')).toMatchObject({ choice: '溫暖', source: 'series_default' });
   });
 
   it('Agent 的預填空白時當成沒有預填', () => {
-    const answers = prefillAnswers({ tool: tool(ALL, [{ questionId: 'story', custom: '   ' }]), seriesDefaults: null, series });
+    const answers = prefillAnswers({ tool: tool(ALL, [{ questionId: 'story', custom: '   ' }]), seriesDefaults: null });
     expect(answerOf(answers, 'story')).toEqual({ questionId: 'story', source: 'system' });
   });
 });

@@ -55,6 +55,14 @@ export const updateCharacterSchema = z.object({
 });
 export type UpdateCharacterInput = z.input<typeof updateCharacterSchema>;
 
+/** POST /api/series/:id/characters：系列角色庫新增角色（使用者 2026-11-05 提出） */
+export const createSeriesCharacterSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  continuityLocks: z.array(z.string()).default([]),
+});
+export type CreateSeriesCharacterInput = z.input<typeof createSeriesCharacterSchema>;
+
 export const generateCharacterSchema = z.object({ consentToken: z.string().optional() });
 
 /** 角色沒確認時，「生成」旁列出的原因 */

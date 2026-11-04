@@ -56,7 +56,6 @@ function insertBase() {
       id: 's1',
       name: '新北廟宇故事',
       visualStyle: '寫實',
-      durationSec: 30,
       direction: '歷史故事',
       defaultImageModel: 'nano-banana-pro',
       defaultVideoModel: 'gemini-omni-1.1-flash',

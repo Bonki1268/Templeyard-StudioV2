@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { seriesConsentScope } from '../costs/consents.js';
 import { generations, series } from '../db/schema.js';
 import { StudioError } from '../studio/errors.js';
 import { addVideo, createWorld, type World } from '../templeBoards/__fixtures__/world.js';
@@ -207,9 +208,108 @@ describe('確認與設為系列角色', () => {
     characters.setSeries(id);
     world.db
       .insert(series)
-      .values({ id: 's2', name: '另一個系列', visualStyle: '寫實', durationSec: 30, direction: '歷史故事', defaultImageModel: 'nano-banana-pro', defaultVideoModel: 'gemini-omni-1.1-flash', createdAt: 'x', updatedAt: 'x' })
+      .values({ id: 's2', name: '另一個系列', visualStyle: '寫實', direction: '歷史故事', defaultImageModel: 'nano-banana-pro', defaultVideoModel: 'gemini-omni-1.1-flash', createdAt: 'x', updatedAt: 'x' })
       .run();
     addVideo(world, { id: 'v3', seriesId: 's2' });
     expect(characters.listForVideo('v3')).toEqual([]);
+  });
+});
+
+// 使用者 2026-11-05 提出：系列設定的角色庫（新增、修改、產生定裝圖）
+describe('系列角色庫', () => {
+  const grandpa = { name: '阿公', description: '戴斗笠、白鬍子', continuityLocks: ['straw hat'] };
+
+  function seriesConsent(units = 2) {
+    return world.consents.issue(seriesConsentScope('s1'), [{ model: 'nano-banana-pro', units }]).token;
+  }
+
+  it('新增系列角色：屬於系列、不屬於任何影片，第 1 版用系列的預設圖片模型，等待產生定裝圖', () => {
+    const created = characters.createForSeries('s1', grandpa);
+
+    expect(created).toMatchObject({
+      name: '阿公',
+      isSeries: true,
+      seriesId: 's1',
+      videoId: null,
+      state: 'draft',
+      version: { version: 1, description: '戴斗笠、白鬍子', continuityLocks: ['straw hat'], imageModel: 'nano-banana-pro', sheetAssetId: null, lookAssetId: null },
+    });
+  });
+
+  it('同系列已經有同名的系列角色：409', async () => {
+    characters.createForSeries('s1', grandpa);
+    await expectStudioError(() => characters.createForSeries('s1', { ...grandpa, description: '另一個' }), 409, '這個系列已經有角色「阿公」');
+  });
+
+  it('從影片設為系列角色的同名角色也算', async () => {
+    const id = grandma();
+    await generated(id);
+    characters.confirm(id);
+    characters.setSeries(id);
+    await expectStudioError(() => characters.createForSeries('s1', { name: '阿嬤', description: '另一個阿嬤' }), 409, '這個系列已經有角色「阿嬤」');
+  });
+
+  it('系列不存在：404', async () => {
+    await expectStudioError(() => characters.createForSeries('nope', grandpa), 404, '找不到這個系列');
+  });
+
+  it('角色庫只列出這個系列的系列角色：不含影片專屬角色與其他系列的角色', async () => {
+    grandma();
+    const created = characters.createForSeries('s1', grandpa);
+    world.db
+      .insert(series)
+      .values({ id: 's2', name: '另一個系列', visualStyle: '寫實', direction: '歷史故事', defaultImageModel: 'nano-banana-pro', defaultVideoModel: 'gemini-omni-1.1-flash', createdAt: 'x', updatedAt: 'x' })
+      .run();
+    characters.createForSeries('s2', { name: '小明', description: '國中生' });
+
+    expect(characters.listForSeries('s1').map((c) => c.id)).toEqual([created.id]);
+  });
+
+  it('同系列的影片可以沿用角色庫的角色；方案裡同名的角色對應到它', () => {
+    const created = characters.createForSeries('s1', grandpa);
+
+    expect(characters.listForVideo('v1').map((c) => c.id)).toEqual([created.id]);
+    expect(characters.resolve('v1', [{ name: '阿公' }]).get('阿公')).toBe(created.id);
+  });
+
+  it('沒有指定影片時，用系列的預設圖片模型產生三視圖與定裝圖；生成紀錄不屬於任何影片', async () => {
+    const created = characters.createForSeries('s1', grandpa);
+
+    const outcome = await characters.generate(created.id, null, seriesConsent());
+    expect(outcome.status).toBe('accepted');
+    await settleAll();
+
+    const rows = world.db.select().from(generations).all();
+    expect(rows.map((r) => [r.node, r.videoId, r.model !== '']).sort()).toEqual([
+      [CHARACTER_LOOK_NODE, null, true],
+      [CHARACTER_SHEET_NODE, null, true],
+    ]);
+    expect(characters.listForSeries('s1')[0]).toMatchObject({ state: 'pending_confirm' });
+    expect(characters.confirm(created.id).state).toBe('confirmed');
+  });
+
+  it('沒有指定影片時，影片的同意憑證不能用', async () => {
+    const created = characters.createForSeries('s1', grandpa);
+
+    const outcome = await characters.generate(created.id, null, consent('v1'));
+
+    expect(outcome.status).toBe('consent_required');
+    expect(world.db.select().from(generations).all()).toEqual([]);
+  });
+
+  it('沒有指定影片時，影片專屬角色不能產生：400', async () => {
+    const id = grandma();
+    await expectStudioError(() => characters.generate(id, null, seriesConsent()), 400, '請指定是哪一支影片');
+  });
+
+  it('修改已確認的系列角色：另存新版本，要重新產生定裝圖', async () => {
+    const created = characters.createForSeries('s1', grandpa);
+    await characters.generate(created.id, null, seriesConsent());
+    await settleAll();
+    characters.confirm(created.id);
+
+    const changed = characters.update(created.id, { description: '戴斗笠、白鬍子、拄拐杖', continuityLocks: ['straw hat', 'wooden cane'] });
+
+    expect(changed).toMatchObject({ isSeries: true, state: 'draft', version: { version: 2, sheetAssetId: null, lookAssetId: null } });
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { characterBlockers, characterTags, parseLocks, updateCharacterSchema } from './characters.js';
+import { characterBlockers, characterTags, createSeriesCharacterSchema, parseLocks, updateCharacterSchema } from './characters.js';
 
 describe('角色還沒確認時不能生成', () => {
   it('列出沒確認的角色；已確認的不列', () => {
@@ -39,5 +39,27 @@ describe('角色的標籤', () => {
     [{ isSeries: false, state: 'failed' as const }, ['生成失敗']],
   ])('%o → %o', (character, tags) => {
     expect(characterTags(character)).toEqual(tags);
+  });
+});
+
+// 使用者 2026-11-05 提出：系列設定的角色庫可以新增系列角色
+describe('新增系列角色的資料', () => {
+  it('名稱與外觀描述去掉前後空白；連續性鎖沒填時是空的', () => {
+    expect(createSeriesCharacterSchema.parse({ name: ' 阿嬤 ', description: ' 七十歲、短白髮 ' })).toEqual({
+      name: '阿嬤',
+      description: '七十歲、短白髮',
+      continuityLocks: [],
+    });
+  });
+
+  it.each([
+    ['角色名稱是空白', { name: '  ', description: '短髮' }, 'name', '請填寫角色名稱'],
+    ['角色名稱超過 20 字', { name: '名'.repeat(21), description: '短髮' }, 'name', '角色名稱最多 20 字'],
+    ['外觀描述是空白', { name: '阿嬤', description: '' }, 'description', '請填寫角色的外觀描述'],
+    ['連續性鎖超過 10 條', { name: '阿嬤', description: '短髮', continuityLocks: Array.from({ length: 11 }, (_, i) => `lock ${i}`) }, 'continuityLocks', '連續性鎖最多 10 條'],
+  ] as const)('%s', (_name, input, field, message) => {
+    const result = createSeriesCharacterSchema.safeParse(input);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.find((issue) => issue.path[0] === field)?.message).toBe(message);
   });
 });

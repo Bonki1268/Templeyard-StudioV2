@@ -11,6 +11,11 @@ export type ConsentStore = {
   peek(token: string | null | undefined, videoId: string, items: readonly CostItem[]): boolean;
 };
 
+/** 系列角色庫的生成不屬於任何影片：同意憑證綁定系列（使用者 2026-11-05 提出） */
+export function seriesConsentScope(_seriesId: string): string {
+  return '';
+}
+
 const DEFAULT_TTL_MS = 10 * 60 * 1000;
 
 /** 項目的比對鍵：順序不同視為不同（使用者看到的就是這個順序） */

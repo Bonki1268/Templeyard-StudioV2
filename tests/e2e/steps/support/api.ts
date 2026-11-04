@@ -55,7 +55,6 @@ export async function createSeriesViaApi(
     data: {
       name: uniqueName('影片系列'),
       visualStyle: '寫實電影感、清晨暖光',
-      durationSec: 30,
       direction: '歷史故事',
       defaultImageModel: 'nano-banana-pro',
       defaultVideoModel: 'gemini-omni-1.1-flash',

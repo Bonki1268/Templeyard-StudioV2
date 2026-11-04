@@ -56,10 +56,10 @@ describe('Agent 的工具', () => {
     expect(parsed).toMatchObject({
       name: '新北廟宇故事',
       visualStyle: '溫暖寫實、黃昏暖色調',
-      durationSec: 30,
       direction: '歷史故事',
       questionnaireDefaults: { tone: { choice: '溫暖' } },
-    });
+    });    // 使用者 2026-11-05 提出：系列不再設定影片秒數
+    expect(parsed).not.toHaveProperty('durationSec');
   });
 
   it('開啟問卷：建立這支影片的問卷，摘要寫題數', async () => {

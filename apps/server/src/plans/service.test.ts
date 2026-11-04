@@ -142,6 +142,12 @@ describe('讀取方案', () => {
     expect(plans.get('v1').rules.targetSec).toBe(20);
   });
 
+  // 使用者 2026-11-05 提出：系列不再設定秒數；問卷沒有選長度時由系統決定，用上限 30 秒
+  it('問卷沒有選長度：目標 30 秒', async () => {
+    submitQuestionnaire('v1', '講媽祖的故事', [{ questionId: 'length' }]);
+    expect(plans.get('v1').rules.targetSec).toBe(30);
+  });
+
   it('還沒有方案時 plan 是 null', () => {
     expect(plans.get('v1').plan).toBeNull();
   });

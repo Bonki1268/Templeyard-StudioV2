@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FAKE_API_KEY, startFakeComfyMcp, type FakeComfyMcp } from '../../../../tests/fakes/comfy-mcp/server.js';
 import { findAsset } from '../assets/repository.js';
 import { createAssetStore } from '../assets/store.js';
-import { createConsentStore, type ConsentStore } from '../costs/consents.js';
+import { createConsentStore, seriesConsentScope, type ConsentStore } from '../costs/consents.js';
 import { updateSettings } from '../costs/repository.js';
 import { openDatabase, type AppDatabase } from '../db/client.js';
 import { generations, series, temples, videos, type GenerationRow } from '../db/schema.js';
@@ -115,7 +115,6 @@ beforeEach(async () => {
       id: 's1',
       name: '系列',
       visualStyle: '寫實',
-      durationSec: 30,
       direction: '歷史故事',
       defaultImageModel: 'nano-banana-pro',
       defaultVideoModel: 'gemini-omni-1.1-flash',
@@ -422,5 +421,53 @@ describe('生成紀錄的模型欄位', () => {
 
   it('呼叫裡沒有模型代號或範本名稱時丟出錯誤', () => {
     expect(() => providerModelOf({ tool: 'partner_generate', args: {} })).toThrow('MCP 呼叫裡沒有模型代號或範本名稱');
+  });
+});
+
+// 使用者 2026-11-05 提出：系列角色庫的生成不屬於任何影片
+describe('系列的生成（角色庫）', () => {
+  const seriesRequest = (patch: Partial<GenerationRequest> = {}) => request('阿嬤', { videoId: null, seriesId: 's1', ...patch });
+
+  it('系列沒有影片上限：門檻內不需要同意，生成紀錄不屬於任何影片', async () => {
+    const generation = service();
+
+    const outcome = await generation.submit(seriesRequest());
+
+    expect(outcome.status).toBe('accepted');
+    if (outcome.status !== 'accepted') return;
+    expect(row(outcome.generationId).videoId).toBeNull();
+    await generation.whenSettled(outcome.generationId);
+  });
+
+  it('超過單筆門檻要同意；預算的上限是 null', () => {
+    updateSettings(db, { consentThresholdCredits: 100 });
+    const check = service().precheck({ seriesId: 's1' }, [{ model: 'gemini-omni-1.1-flash', units: 4 }], null);
+
+    expect(check.ok).toBe(false);
+    if (check.ok) return;
+    expect(check.check.consent.reasons.map((r) => r.code)).toEqual(['over_threshold']);
+    expect(check.check.budget.limit).toBeNull();
+  });
+
+  it('系列的同意憑證可以用；影片的同意憑證不行', async () => {
+    updateSettings(db, { consentThresholdCredits: 100 });
+    const items = [{ model: 'gemini-omni-1.1-flash', units: 4 }];
+    const generation = service();
+
+    const withVideoToken = await generation.submit(seriesRequest({ consentToken: consents.issue('video-1', items).token }));
+    const withSeriesToken = await generation.submit(seriesRequest({ consentToken: consents.issue(seriesConsentScope('s1'), items).token }));
+
+    expect(withVideoToken.status).toBe('consent_required');
+    expect(withSeriesToken.status).toBe('accepted');
+    if (withSeriesToken.status === 'accepted') await generation.whenSettled(withSeriesToken.generationId);
+  });
+
+  it('影片的生成不能用系列的同意憑證', async () => {
+    updateSettings(db, { consentThresholdCredits: 100 });
+    const items = [{ model: 'gemini-omni-1.1-flash', units: 4 }];
+
+    const outcome = await service().submit(request('廟埕', { consentToken: consents.issue(seriesConsentScope('s1'), items).token }));
+
+    expect(outcome.status).toBe('consent_required');
   });
 });

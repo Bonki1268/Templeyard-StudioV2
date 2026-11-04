@@ -36,7 +36,6 @@ async function createVideo(): Promise<string> {
     payload: {
       name: '系列',
       visualStyle: '寫實',
-      durationSec: 30,
       direction: '歷史故事',
       defaultImageModel: 'nano-banana-pro',
       defaultVideoModel: 'gemini-omni-1.1-flash',
@@ -175,5 +174,57 @@ describe('這支影片的費用 GET /api/videos/:id/cost', () => {
     const response = await currentApp().inject({ url: `/api/videos/${videoId}/cost` });
 
     expect(response.json()).toEqual({ budget: { spent: 0, reserved: 0, limit: 3000, threshold: 300 } });
+  });
+});
+
+// 使用者 2026-11-05 提出：系列角色庫的生成不屬於任何影片，費用預估與同意憑證綁定系列
+async function createSeries(): Promise<string> {
+  const response = await currentApp().inject({
+    method: 'POST',
+    url: '/api/series',
+    payload: { name: '系列', visualStyle: '寫實', direction: '歷史故事', defaultImageModel: 'nano-banana-pro', defaultVideoModel: 'gemini-omni-1.1-flash' },
+  });
+  return seriesResponseSchema.parse(response.json()).series.id;
+}
+
+describe('系列的費用預估與同意 /api/series/:id/cost-estimate、/consents', () => {
+  it('門檻內：不需要同意；系列沒有影片上限', async () => {
+    await setThreshold(200);
+    const seriesId = await createSeries();
+
+    const response = await currentApp().inject({ method: 'POST', url: `/api/series/${seriesId}/cost-estimate`, payload: { items: gemini4 } });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      estimate: { credits: 124, lines: [{ model: 'gemini-omni-1.1-flash', units: 4, unitCredits: 31, credits: 124 }] },
+      budget: { spent: 0, reserved: 0, limit: null, threshold: 200 },
+      consent: { required: false, reasons: [] },
+      message: '',
+    });
+  });
+
+  it('超過單筆門檻：需要同意', async () => {
+    await setThreshold(100);
+    const seriesId = await createSeries();
+
+    const response = await currentApp().inject({ method: 'POST', url: `/api/series/${seriesId}/cost-estimate`, payload: { items: gemini4 } });
+
+    expect(response.json()).toMatchObject({ consent: { required: true, reasons: [{ code: 'over_threshold' }] } });
+  });
+
+  it('同意後發同意憑證', async () => {
+    const seriesId = await createSeries();
+
+    const response = await currentApp().inject({ method: 'POST', url: `/api/series/${seriesId}/consents`, payload: { items: gemini4 } });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({ consentToken: expect.any(String), estimate: { credits: 124 } });
+  });
+
+  it.each(['cost-estimate', 'consents'])('系列不存在時 %s 回應 404', async (action) => {
+    const response = await currentApp().inject({ method: 'POST', url: `/api/series/no-such-series/${action}`, payload: { items: gemini4 } });
+
+    expect(response.statusCode).toBe(404);
+    expect(apiErrorSchema.parse(response.json()).message).toBe('找不到這個系列');
   });
 });

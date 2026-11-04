@@ -21,7 +21,7 @@ const base: AssistContext = {
   userInput: '媽祖救漁民',
   temple: { name: '板橋慈惠宮', district: '板橋區', deity: '天上聖母', builtYear: 1853 },
   userTempleNotes: '清代由漳州移民建廟',
-  series: { visualStyle: '寫實電影感、清晨暖光', direction: '歷史故事', durationSec: 30 },
+  series: { visualStyle: '寫實電影感、清晨暖光', direction: '歷史故事' },
   creativeInput: null,
   viewName: null,
   questionTitle: null,
@@ -41,6 +41,11 @@ describe('通用的輔助撰寫請求', () => {
     for (const text of ['創作需求', '媽祖救漁民', '板橋慈惠宮', '天上聖母', '清代由漳州移民建廟', '寫實電影感、清晨暖光', '歷史故事']) {
       expect(user).toContain(text);
     }
+  });
+
+  // 使用者 2026-11-05 提出：系列不再設定影片秒數
+  it('系列設定不列影片秒數', () => {
+    expect(buildAssistRequest(base).user).not.toContain('影片秒數');
   });
 
   it('使用者留白時，請 AI 依資料寫一版', () => {

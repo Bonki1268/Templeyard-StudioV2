@@ -78,6 +78,13 @@
       "when": 1793696814265,
       "tag": "0010_shot_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1793815079251,
+      "tag": "0011_drop_series_duration",
+      "breakpoints": true
     }
   ]
 }

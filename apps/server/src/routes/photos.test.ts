@@ -77,7 +77,6 @@ async function createSeries(name = '新北廟宇故事'): Promise<string> {
     payload: {
       name,
       visualStyle: '寫實電影感',
-      durationSec: 30,
       direction: '歷史故事',
       defaultImageModel: 'nano-banana-pro',
       defaultVideoModel: 'gemini-omni-1.1-flash',

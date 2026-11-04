@@ -140,7 +140,6 @@ export async function createWorld(options: { writerResponses?: WrittenPrompt[]; 
       id: 's1',
       name: '新北廟宇故事',
       visualStyle: '溫暖寫實、黃昏暖色調',
-      durationSec: 30,
       direction: '歷史故事',
       defaultImageModel: 'nano-banana-pro',
       defaultVideoModel: 'gemini-omni-1.1-flash',

@@ -23,6 +23,13 @@ export function templeTags(videos: readonly Pick<SeriesVideo, 'templeName'>[]): 
   return [...new Set(videos.map((video) => video.templeName))];
 }
 
+/**
+ * 系列卡片的標籤（使用者 2026-11-05 提出）：影片方向、用過的寺廟（最多 3 個，其餘「+N」）、共同角色（「角色：名稱」）
+ */
+export function seriesCardTags(_input: { direction: string; videos: readonly Pick<SeriesVideo, 'templeName'>[]; characters: readonly string[] }): string[] {
+  return [];
+}
+
 /** 影片階段的名稱（05「videos.stage」） */
 const STAGE_LABELS: Record<VideoStage, string> = {
   creating: '建立中',

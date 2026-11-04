@@ -2,6 +2,7 @@ import { CallBuildError, buildMcpCall, composeFinalPrompt, renderPrompt, type Pr
 import {
   updateCharacterSchema,
   type Character,
+  type CreateSeriesCharacterInput,
   type CostCheck,
   type McpCall,
   type PromptFile,
@@ -47,6 +48,10 @@ export type CharacterService = {
   resolve(videoId: string, wanted: readonly { name: string; description?: string; continuityLocks?: readonly string[] }[]): Map<string, string>;
   /** 角色編號轉成名稱；找不到的編號原樣回傳（第 7 階段存的是名稱） */
   namesOf(ids: readonly string[]): string[];
+  /** 系列角色庫：這個系列的系列角色（使用者 2026-11-05 提出）；系列不存在：StudioError 404 */
+  listForSeries(seriesId: string): Character[];
+  /** 系列角色庫新增角色：第 1 版用系列的預設圖片模型；同系列已有同名的系列角色：StudioError 409；系列不存在：StudioError 404 */
+  createForSeries(seriesId: string, input: CreateSeriesCharacterInput): Character;
   /** 修改外觀描述與連續性鎖：目前版本已確認時另存新版本（要重新產生定裝圖）；找不到：StudioError 404 */
   update(characterId: string, input: UpdateCharacterInput): Character;
   /**
@@ -235,6 +240,14 @@ export function createCharacterService(deps: {
         result.set(name, id);
       }
       return result;
+    },
+
+    listForSeries() {
+      throw new Error('還沒實作');
+    },
+
+    createForSeries() {
+      throw new Error('還沒實作');
     },
 
     namesOf(ids) {
