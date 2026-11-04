@@ -46,7 +46,15 @@ export const assistRequestSchema = z.object({
   /** 使用者已經打的內容；可以留白 */
   userInput: z.string().max(MAX_ASSIST_INPUT_LENGTH, `內容最多 ${MAX_ASSIST_INPUT_LENGTH} 字`).default(''),
   /** 欄位所在的位置：定裝版的哪個視角、問卷的哪一題 */
-  target: z.object({ viewKey: z.string().optional(), questionId: z.string().optional(), characterId: z.string().optional() }).default({}),
+  target: z
+    .object({
+      viewKey: z.string().optional(),
+      questionId: z.string().optional(),
+      characterId: z.string().optional(),
+      /** 角色庫「新增角色」：角色還沒建立，直接帶輸入的名稱（使用者 2026-11-05 提出） */
+      characterName: z.string().trim().max(20).optional(),
+    })
+    .default({}),
 });
 export type AssistRequest = z.input<typeof assistRequestSchema>;
 

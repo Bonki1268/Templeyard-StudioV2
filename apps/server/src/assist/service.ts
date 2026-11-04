@@ -88,7 +88,8 @@ export function createAssistService(deps: {
       creativeInput: video?.creativeInput ?? null,
       viewName: viewKey ? viewName(viewKey) : null,
       questionTitle: questionId ? (findQuestion(questionId)?.title ?? null) : null,
-      characterName: input.target.characterId ? (findCharacterName(db, input.target.characterId) ?? null) : null,
+      // 有角色編號時用它找名稱；新增角色還沒有編號（或找不到）時用帶進來的名稱
+      characterName: (input.target.characterId ? findCharacterName(db, input.target.characterId) : null) ?? (input.target.characterName || null),
       seriesName: seriesRow?.name ?? null,
     };
     return { context, seriesId, videoId: video?.id ?? null };

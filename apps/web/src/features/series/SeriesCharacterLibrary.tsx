@@ -4,6 +4,7 @@ import { useId, useState, type FormEvent } from 'react';
 import { ApiRequestError, fetchSeriesCharacters, postSeriesCharacter } from '../../api/client';
 import { Button } from '../../components/Button';
 import { TextField } from '../../components/TextField';
+import { useAiAssist } from '../assist/useAiAssist';
 import { CharacterCard } from '../plan/CharacterCard';
 import planStyles from '../plan/PlanPanel.module.css';
 import styles from './SeriesCharacterLibrary.module.css';
@@ -46,6 +47,24 @@ export function SeriesCharacterLibrary({ seriesId }: { seriesId: string }) {
     },
     onError: (error) => setFieldErrors(error instanceof ApiRequestError ? error.fieldErrors : {}),
   });
+  // AI 幫我寫：角色還沒建立，帶輸入的名稱與目前的描述（使用者 2026-11-05 提出）
+  const newTarget = name.trim() ? { characterName: name.trim() } : {};
+  const descriptionAssist = useAiAssist({
+    field: 'character.description',
+    fieldLabel: '新角色的外觀描述',
+    seriesId,
+    target: newTarget,
+    userInput: () => description,
+    onAdopt: setDescription,
+  });
+  const locksAssist = useAiAssist({
+    field: 'character.locks',
+    fieldLabel: '新角色的連續性鎖',
+    seriesId,
+    target: newTarget,
+    userInput: () => description,
+    onAdopt: setLocks,
+  });
   const canCreate = Boolean(name.trim() && description.trim()) && !create.isPending;
   const createError = create.isError && Object.keys(fieldErrors).length === 0 ? create.error.message : undefined;
 
@@ -82,7 +101,16 @@ export function SeriesCharacterLibrary({ seriesId }: { seriesId: string }) {
 
       <form className={styles.form} aria-label="新增系列角色" onSubmit={submit} noValidate>
         <TextField label="新角色名稱" value={name} maxLength={20} onChange={setName} error={fieldErrors.name} />
-        <TextField label="新角色的外觀描述" multiline value={description} maxLength={500} onChange={setDescription} error={fieldErrors.description} />
+        <TextField
+          label="新角色的外觀描述"
+          multiline
+          value={description}
+          maxLength={500}
+          onChange={setDescription}
+          error={fieldErrors.description}
+          labelAccessory={descriptionAssist.button}
+        />
+        {descriptionAssist.panel}
         <TextField
           label="新角色的連續性鎖"
           multiline
@@ -90,7 +118,9 @@ export function SeriesCharacterLibrary({ seriesId }: { seriesId: string }) {
           placeholder="一行一條英文片語，例如 crimson silk embroidered vest"
           onChange={setLocks}
           error={fieldErrors.continuityLocks}
+          labelAccessory={locksAssist.button}
         />
+        {locksAssist.panel}
         {createError && (
           <p className={styles.error} role="alert">
             {createError}
