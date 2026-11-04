@@ -1,11 +1,13 @@
 import { CallBuildError, buildMcpCall, composeFinalPrompt, renderPrompt, type PromptWriter } from '@templeyard/prompts';
 import {
+  createSeriesCharacterSchema,
   updateCharacterSchema,
   type Character,
   type CreateSeriesCharacterInput,
   type CostCheck,
   type McpCall,
   type PromptFile,
+  type Series,
   type UpdateCharacterInput,
   type Video,
   type WorkflowConfig,
@@ -25,6 +27,7 @@ import {
   insertCharacterVersion,
   latestCharacterGeneration,
   listCharactersFor,
+  listSeriesCharacters,
   updateCharacter,
   updateCharacterVersion,
 } from './repository.js';
@@ -57,8 +60,10 @@ export type CharacterService = {
   /**
    * 產生三視圖與定裝圖（同一批，兩張；只用文字，不用參考圖）：
    * 沒有同意憑證或憑證不符：consent_required；沒有設定生成服務：StudioError 503；外觀描述空白：StudioError 400
+   * videoId 為 null（系列角色庫）：只限系列角色，用系列的預設圖片模型，費用與同意憑證算在系列；
+   * 影片專屬角色沒有指定影片：StudioError 400「請指定是哪一支影片」
    */
-  generate(characterId: string, videoId: string, consentToken: string | null | undefined): Promise<CharacterOutcome>;
+  generate(characterId: string, videoId: string | null, consentToken: string | null | undefined): Promise<CharacterOutcome>;
   /** 確認：三視圖與定裝圖都產生完成才可以；否則 StudioError 409「「名稱」的定裝圖還沒產生完成」 */
   confirm(characterId: string): Character;
   /** 設為系列角色：要先確認；系列角色同系列的影片都能沿用 */
@@ -66,6 +71,8 @@ export type CharacterService = {
   /** 生成完成：接上三視圖或定裝圖 */
   handleGenerated: SucceededHandler;
 };
+
+type GenerateContext = { videoId: string | null; seriesId: string; imageModel: string; templeBoardVersionId: string | null };
 
 type CharacterTarget = { characterVersionId: string; part: 'sheet' | 'look' };
 
@@ -91,6 +98,12 @@ export function createCharacterService(deps: {
     const video = findVideo(db, videoId);
     if (!video) throw new StudioError(404, VIDEO_NOT_FOUND);
     return video;
+  }
+
+  function requireSeries(seriesId: string): Series {
+    const found = findSeries(db, seriesId);
+    if (!found) throw new StudioError(404, '找不到這個系列');
+    return found;
   }
 
   function requireCharacter(id: string) {
@@ -147,6 +160,20 @@ export function createCharacterService(deps: {
     });
   }
 
+  /**
+   * 產生定裝圖的情境：有指定影片時用影片的圖片模型與寺廟定裝版；
+   * 沒有指定影片（系列角色庫，使用者 2026-11-05 提出）時只限系列角色，用系列的預設圖片模型，不帶寺廟
+   */
+  function generateContext(character: CharacterRow, videoId: string | null): GenerateContext {
+    if (videoId) {
+      const video = requireVideo(videoId);
+      return { videoId: video.id, seriesId: video.seriesId, imageModel: video.imageModel, templeBoardVersionId: video.templeBoardVersionId };
+    }
+    if (!character.isSeries || !character.seriesId) throw new StudioError(400, '請指定是哪一支影片');
+    const seriesRow = requireSeries(character.seriesId);
+    return { videoId: null, seriesId: seriesRow.id, imageModel: seriesRow.defaultImageModel, templeBoardVersionId: null };
+  }
+
   function prompt(node: string): PromptFile {
     const file = deps.prompts.get(node);
     if (!file) throw new Error(`找不到生成指令：${node}`);
@@ -156,12 +183,13 @@ export function createCharacterService(deps: {
   /** 一張圖的生成請求：撰寫最終指令（檢查連續性鎖）→ 組出 MCP 呼叫（只用文字，不用參考圖） */
   async function buildRequest(
     generation: CharacterGeneration,
-    input: { video: Video; character: CharacterRow; version: CharacterVersionRow; part: 'sheet' | 'look' },
+    input: { context: GenerateContext; character: CharacterRow; version: CharacterVersionRow; part: 'sheet' | 'look' },
   ): Promise<Omit<GenerationRequest, 'consentToken'>> {
     const node = input.part === 'sheet' ? CHARACTER_SHEET_NODE : CHARACTER_LOOK_NODE;
     const file = prompt(node);
-    const seriesRow = findSeries(db, input.video.seriesId);
-    const boardVersion = input.video.templeBoardVersionId ? findBoardVersion(db, input.video.templeBoardVersionId) : null;
+    const { context } = input;
+    const seriesRow = findSeries(db, context.seriesId);
+    const boardVersion = context.templeBoardVersionId ? findBoardVersion(db, context.templeBoardVersionId) : null;
     const firstView = boardVersion ? listViews(db, boardVersion.id)[0] : undefined;
     const locks = input.version.continuityLocks;
     const variables: Record<string, unknown> = {
@@ -177,7 +205,7 @@ export function createCharacterService(deps: {
       series: { style: seriesRow?.visualStyle ?? '' },
       instruction: '',
     };
-    const { request } = renderPrompt(file, variables, { model: input.video.imageModel });
+    const { request } = renderPrompt(file, variables, { model: context.imageModel });
     let composed;
     try {
       composed = await composeFinalPrompt({ request, locks, writer: generation.writer });
@@ -187,20 +215,21 @@ export function createCharacterService(deps: {
     let call: McpCall;
     try {
       const values = { output: { prompt: composed.prompt }, target: { aspectRatio: file.target.aspectRatio ?? '16:9' } };
-      call = buildMcpCall({ modelKey: input.video.imageModel, config: deps.workflows, bindings: file.bindings ?? {}, values, seed: 0 });
+      call = buildMcpCall({ modelKey: context.imageModel, config: deps.workflows, bindings: file.bindings ?? {}, values, seed: 0 });
     } catch (error: unknown) {
       if (error instanceof CallBuildError) throw new StudioError(503, error.message);
       throw error;
     }
     const target: CharacterTarget = { characterVersionId: input.version.id, part: input.part };
     return {
-      videoId: input.video.id,
+      videoId: context.videoId,
+      seriesId: context.seriesId,
       node,
       target,
       promptRef: { id: file.id, version: file.version },
-      modelKey: input.video.imageModel,
+      modelKey: context.imageModel,
       call,
-      costItems: [{ model: input.video.imageModel, units: 1 }],
+      costItems: [{ model: context.imageModel, units: 1 }],
       input: { prompt: composed.prompt, notes: composed.notes ?? null, characterId: input.character.id },
       outputKind: 'character_sheet',
     };
@@ -242,12 +271,38 @@ export function createCharacterService(deps: {
       return result;
     },
 
-    listForSeries() {
-      throw new Error('還沒實作');
+    listForSeries(seriesId) {
+      requireSeries(seriesId);
+      return listSeriesCharacters(db, seriesId).flatMap((row) => {
+        const version = row.currentVersionId ? findCharacterVersion(db, row.currentVersionId) : null;
+        return version ? [toCharacter(row, version)] : [];
+      });
     },
 
-    createForSeries() {
-      throw new Error('還沒實作');
+    createForSeries(seriesId, rawInput) {
+      const seriesRow = requireSeries(seriesId);
+      const input = createSeriesCharacterSchema.parse(rawInput);
+      if (listSeriesCharacters(db, seriesId).some((row) => row.name === input.name)) {
+        throw new StudioError(409, `這個系列已經有角色「${input.name}」`);
+      }
+      const id = clock.newId();
+      const versionId = clock.newId();
+      db.transaction(() => {
+        insertCharacter(db, { id, seriesId, videoId: null, name: input.name, isSeries: true, currentVersionId: null });
+        insertCharacterVersion(db, {
+          id: versionId,
+          characterId: id,
+          version: 1,
+          description: input.description,
+          continuityLocks: input.continuityLocks,
+          sheetAssetId: null,
+          lookAssetId: null,
+          imageModel: seriesRow.defaultImageModel,
+          confirmedAt: null,
+        });
+        updateCharacter(db, id, { currentVersionId: versionId });
+      });
+      return load(id);
     },
 
     namesOf(ids) {
@@ -283,20 +338,22 @@ export function createCharacterService(deps: {
 
     async generate(characterId, videoId, consentToken) {
       const { row, version } = requireCharacter(characterId);
-      const video = requireVideo(videoId);
+      const context = generateContext(row, videoId);
       if (!version.description.trim()) throw new StudioError(400, '請填寫角色的外觀描述');
       if (version.confirmedAt) throw new StudioError(409, `「${row.name}」已經確認；要修改請先改外觀描述`);
       const generation = deps.generation;
       if (!generation) throw new StudioError(503, deps.unavailableMessage ?? '還沒設定生成服務');
-      const items = [{ model: video.imageModel, units: 2 }];
-      const precheck = generation.service.precheck(video.id, items, consentToken, [[{ model: video.imageModel, units: 1 }], [{ model: video.imageModel, units: 1 }]]);
+      const model = context.imageModel;
+      const items = [{ model, units: 2 }];
+      const scope = context.videoId ?? { seriesId: context.seriesId };
+      const precheck = generation.service.precheck(scope, items, consentToken, [[{ model, units: 1 }], [{ model, units: 1 }]]);
       if (!precheck.ok) return { status: 'consent_required', check: precheck.check };
-      // 這個版本用這支影片的圖片模型產生
-      if (version.imageModel !== video.imageModel) updateCharacterVersion(db, version.id, { imageModel: video.imageModel });
+      // 這個版本用這支影片（或系列角色庫：系列預設）的圖片模型產生
+      if (version.imageModel !== model) updateCharacterVersion(db, version.id, { imageModel: model });
       const current = findCharacterVersion(db, version.id) ?? version;
       const requests = [
-        await buildRequest(generation, { video, character: row, version: current, part: 'sheet' }),
-        await buildRequest(generation, { video, character: row, version: current, part: 'look' }),
+        await buildRequest(generation, { context, character: row, version: current, part: 'sheet' }),
+        await buildRequest(generation, { context, character: row, version: current, part: 'look' }),
       ];
       updateCharacterVersion(db, version.id, { sheetAssetId: null, lookAssetId: null });
       const outcome = await generation.service.submitBatch(requests, consentToken);

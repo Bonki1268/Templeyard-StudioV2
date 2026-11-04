@@ -1,4 +1,4 @@
-import { templeTags, type Series } from '@templeyard/shared';
+import { seriesCardTags, type Series } from '@templeyard/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { useId } from 'react';
@@ -6,21 +6,21 @@ import { Link } from 'react-router';
 import { fetchSeriesVideos } from '../../api/client';
 import { Tag } from '../../components/Tag';
 import styles from './SeriesCard.module.css';
-import { seriesMeta } from './seriesForm';
 
 export function seriesVideosKey(seriesId: string) {
   return ['series-videos', seriesId] as const;
 }
 
 /**
- * 系列卡片（依「1 系列首頁」設計圖）：名稱與秒數・方向、視覺風格、用過的寺廟與共同角色的標籤；
+ * 系列卡片（依「1 系列首頁」設計圖）：名稱與標籤（影片方向、用過的寺廟最多 3 個＋「+N」、共同角色）；
+ * 不顯示整段視覺風格（使用者 2026-11-05 提出）。
  * 有影片時是「新增影片」與「系列設定」，還沒有影片時是「新增第一支影片」
  */
 export function SeriesCard({ series }: { series: Series }) {
   const titleId = useId();
   const videos = useQuery({ queryKey: seriesVideosKey(series.id), queryFn: () => fetchSeriesVideos(series.id) });
   const list = videos.data?.videos ?? [];
-  const tags = [...templeTags(list), ...(videos.data?.characters ?? []).map((name) => `角色：${name}`)];
+  const tags = seriesCardTags({ direction: series.direction, videos: list, characters: videos.data?.characters ?? [] });
   const newVideo = `/series/${series.id}/videos/new`;
 
   return (
@@ -29,11 +29,9 @@ export function SeriesCard({ series }: { series: Series }) {
         <h3 id={titleId} className={styles.name}>
           {series.name}
         </h3>
-        <p className={styles.meta}>{seriesMeta(series)}</p>
       </div>
-      {series.visualStyle && <p className={styles.style}>{series.visualStyle}</p>}
       {tags.length > 0 && (
-        <ul className={styles.tags} aria-label={`${series.name}的寺廟與角色`}>
+        <ul className={styles.tags} aria-label={`${series.name}的標籤`}>
           {tags.map((tag) => (
             <li key={tag}>
               <Tag>{tag}</Tag>

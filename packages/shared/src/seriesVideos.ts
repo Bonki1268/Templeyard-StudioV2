@@ -26,8 +26,18 @@ export function templeTags(videos: readonly Pick<SeriesVideo, 'templeName'>[]): 
 /**
  * 系列卡片的標籤（使用者 2026-11-05 提出）：影片方向、用過的寺廟（最多 3 個，其餘「+N」）、共同角色（「角色：名稱」）
  */
-export function seriesCardTags(_input: { direction: string; videos: readonly Pick<SeriesVideo, 'templeName'>[]; characters: readonly string[] }): string[] {
-  return [];
+export const MAX_CARD_TEMPLE_TAGS = 3;
+
+export function seriesCardTags(input: { direction: string; videos: readonly Pick<SeriesVideo, 'templeName'>[]; characters: readonly string[] }): string[] {
+  const temples = templeTags(input.videos);
+  const shown = temples.slice(0, MAX_CARD_TEMPLE_TAGS);
+  const more = temples.length - shown.length;
+  return [
+    ...(input.direction.trim() ? [input.direction.trim()] : []),
+    ...shown,
+    ...(more > 0 ? [`+${more}`] : []),
+    ...input.characters.map((name) => `角色：${name}`),
+  ];
 }
 
 /** 影片階段的名稱（05「videos.stage」） */

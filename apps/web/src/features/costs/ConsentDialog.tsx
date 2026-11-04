@@ -11,10 +11,12 @@ export type ConsentDialogProps = {
   error: string | null;
   onConfirm: () => void;
   onCancel: () => void;
+  /** 已用與預留算在哪裡：「這支影片」，或系列角色庫的「這個系列的角色庫」 */
+  scopeLabel?: string;
 };
 
 /** 費用確認：列出這次的預估與需要同意的原因；同意後才送出（F19） */
-export function ConsentDialog({ check, confirmLabel, busy, error, onConfirm, onCancel }: ConsentDialogProps) {
+export function ConsentDialog({ check, confirmLabel, busy, error, onConfirm, onCancel, scopeLabel = '這支影片' }: ConsentDialogProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -44,7 +46,7 @@ export function ConsentDialog({ check, confirmLabel, busy, error, onConfirm, onC
         ))}
       </ul>
       <p className={styles.budget}>
-        這支影片已用 {creditsText(budget.spent)}，預留 {creditsText(budget.reserved)}
+        {scopeLabel}已用 {creditsText(budget.spent)}，預留 {creditsText(budget.reserved)}
         {budget.limit !== null && `，上限 ${creditsText(budget.limit)}`}
       </p>
       {error && (

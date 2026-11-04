@@ -56,10 +56,16 @@ export const updateCharacterSchema = z.object({
 export type UpdateCharacterInput = z.input<typeof updateCharacterSchema>;
 
 /** POST /api/series/:id/characters：系列角色庫新增角色（使用者 2026-11-05 提出） */
+export const MAX_CHARACTER_NAME_LENGTH = 20;
+
 export const createSeriesCharacterSchema = z.object({
-  name: z.string(),
-  description: z.string(),
-  continuityLocks: z.array(z.string()).default([]),
+  name: z
+    .string({ error: '請填寫角色名稱' })
+    .trim()
+    .min(1, '請填寫角色名稱')
+    .max(MAX_CHARACTER_NAME_LENGTH, `角色名稱最多 ${MAX_CHARACTER_NAME_LENGTH} 字`),
+  description: updateCharacterSchema.shape.description,
+  continuityLocks: updateCharacterSchema.shape.continuityLocks,
 });
 export type CreateSeriesCharacterInput = z.input<typeof createSeriesCharacterSchema>;
 

@@ -1,4 +1,4 @@
-import { generateCharacterSchema, updateCharacterSchema, type ApiError } from '@templeyard/shared';
+import { createSeriesCharacterSchema, generateCharacterSchema, updateCharacterSchema, type ApiError } from '@templeyard/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import type { CharacterService } from '../characters/service.js';
@@ -8,9 +8,11 @@ import { StudioError } from '../studio/errors.js';
 
 type VideoParams = { Params: { id: string } };
 type CharacterParams = { Params: { cid: string } };
+type SeriesParams = { Params: { id: string } };
 
 const CONSENT_MESSAGE = '這次生成需要先同意費用';
-const generateBodySchema = generateCharacterSchema.extend({ videoId: z.string({ error: '請指定是哪一支影片' }) });
+// 沒有 videoId：系列角色庫產生系列角色的定裝圖（使用者 2026-11-05 提出）
+const generateBodySchema = generateCharacterSchema.extend({ videoId: z.string({ error: '請指定是哪一支影片' }).optional() });
 
 function invalid(error: z.ZodError): ApiError {
   const body = toValidationError(error, '角色的資料不正確');
@@ -29,14 +31,26 @@ async function handle<T>(reply: FastifyReply, run: () => T | Promise<T>): Promis
 /**
  * GET   /api/videos/:id/characters             這支影片能用的角色
  * PATCH /api/characters/:cid                    外觀描述與連續性鎖
- * POST  /api/characters/:cid/generate           產生三視圖與定裝圖（body：videoId、consentToken）；需要同意時 409
+ * POST  /api/characters/:cid/generate           產生三視圖與定裝圖（body：videoId〔系列角色可省略〕、consentToken）；需要同意時 409
  * POST  /api/characters/:cid/confirm            確認
  * POST  /api/characters/:cid/series             設為系列角色
+ * GET   /api/series/:id/characters               系列角色庫（使用者 2026-11-05 提出）
+ * POST  /api/series/:id/characters               系列角色庫新增角色
  */
 export function registerCharacterRoutes(app: FastifyInstance, characters: CharacterService): void {
   app.get<VideoParams>('/api/videos/:id/characters', async (request, reply) =>
     handle(reply, () => ({ characters: characters.listForVideo(request.params.id) })),
   );
+
+  app.get<SeriesParams>('/api/series/:id/characters', async (request, reply) =>
+    handle(reply, () => ({ characters: characters.listForSeries(request.params.id) })),
+  );
+
+  app.post<SeriesParams>('/api/series/:id/characters', async (request, reply) => {
+    const parsed = createSeriesCharacterSchema.safeParse(request.body ?? {});
+    if (!parsed.success) return reply.status(400).send(invalid(parsed.error));
+    return handle(reply, () => reply.status(201).send({ character: characters.createForSeries(request.params.id, parsed.data) }));
+  });
 
   app.patch<CharacterParams>('/api/characters/:cid', async (request, reply) => {
     const parsed = updateCharacterSchema.safeParse(request.body ?? {});
@@ -48,7 +62,7 @@ export function registerCharacterRoutes(app: FastifyInstance, characters: Charac
     const parsed = generateBodySchema.safeParse(request.body ?? {});
     if (!parsed.success) return reply.status(400).send(invalid(parsed.error));
     return handle(reply, async () => {
-      const outcome = await characters.generate(request.params.cid, parsed.data.videoId, parsed.data.consentToken);
+      const outcome = await characters.generate(request.params.cid, parsed.data.videoId ?? null, parsed.data.consentToken);
       if (outcome.status === 'consent_required') return reply.status(409).send({ message: CONSENT_MESSAGE, check: outcome.check });
       return reply.status(202).send({ character: outcome.character });
     });

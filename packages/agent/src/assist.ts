@@ -11,7 +11,7 @@ export type AssistContext = {
   userInput: string;
   temple: { name: string; district: string; deity: string; builtYear: number | null } | null;
   userTempleNotes: string;
-  series: { visualStyle: string; direction: string; durationSec: number } | null;
+  series: { visualStyle: string; direction: string } | null;
   creativeInput: string | null;
   /** 定裝版視角圖的名稱（templeView.instruction） */
   viewName: string | null;
@@ -51,7 +51,7 @@ export function buildAssistRequest(context: AssistContext): { system: string; us
     );
   }
   if (context.userTempleNotes.trim()) lines.push(`使用者提供的寺廟歷史與簡介：${context.userTempleNotes.trim()}`);
-  if (series) lines.push(`系列設定：整體視覺風格「${series.visualStyle}」、影片方向「${series.direction}」、影片秒數 ${series.durationSec} 秒`);
+  if (series) lines.push(`系列設定：整體視覺風格「${series.visualStyle}」、影片方向「${series.direction}」`);
   if (context.creativeInput?.trim()) lines.push(`創作輸入：${context.creativeInput.trim()}`);
   const input = context.userInput.trim();
   lines.push('', input ? `使用者的輸入：\n${input}` : '使用者沒有輸入，請依資料寫一版。');

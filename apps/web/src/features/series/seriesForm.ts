@@ -1,7 +1,9 @@
 import {
   DEFAULT_IMAGE_MODEL,
-  DEFAULT_SERIES_DURATION,
   DEFAULT_VIDEO_MODEL,
+  IMAGE_MODEL_KEYS,
+  SERIES_DIRECTIONS,
+  VIDEO_MODEL_KEYS,
   type CreateSeriesInput,
   type ImageModelKey,
   type Series,
@@ -9,10 +11,11 @@ import {
   type VideoModelKey,
 } from '@templeyard/shared';
 
+// 系列表單：建立與修改共用（使用者 2026-11-05 提出：不選秒數，秒數在每支影片的問卷「長度」選）
+
 export type SeriesFormState = {
   name: string;
   visualStyle: string;
-  durationSec: number;
   /** 選取的影片方向；自己寫時為 null */
   directionOption: string | null;
   directionOther: string;
@@ -20,12 +23,11 @@ export type SeriesFormState = {
   defaultVideoModel: VideoModelKey;
 };
 
-/** 表單初始值：秒數 30、系列預設模型 */
+/** 表單初始值：系列預設模型，其他留白 */
 export function initialSeriesForm(): SeriesFormState {
   return {
     name: '',
     visualStyle: '',
-    durationSec: DEFAULT_SERIES_DURATION,
     directionOption: null,
     directionOther: '',
     defaultImageModel: DEFAULT_IMAGE_MODEL,
@@ -52,28 +54,42 @@ export function pendingMessage(items: readonly string[]): string {
   return items.length === 0 ? '' : `還有 ${items.length} 項待處理：${items.join('、')}`;
 }
 
-export function toCreateSeriesInput(state: SeriesFormState): CreateSeriesInput {
+function formFields(state: SeriesFormState) {
   return {
     name: state.name.trim(),
     visualStyle: state.visualStyle.trim(),
-    durationSec: state.durationSec,
     direction: resolveDirection(state),
     defaultImageModel: state.defaultImageModel,
     defaultVideoModel: state.defaultVideoModel,
   };
 }
 
-/** 修改系列設定的表單初始值：帶入系列目前的設定（使用者 2026-11-05 提出） */
-export function seriesFormFrom(_series: Series): SeriesFormState {
-  return initialSeriesForm();
+export function toCreateSeriesInput(state: SeriesFormState): CreateSeriesInput {
+  return formFields(state);
+}
+
+function isImageModel(key: string): key is ImageModelKey {
+  return (IMAGE_MODEL_KEYS as readonly string[]).includes(key);
+}
+
+function isVideoModel(key: string): key is VideoModelKey {
+  return (VIDEO_MODEL_KEYS as readonly string[]).includes(key);
+}
+
+/** 修改系列設定的表單初始值：帶入系列目前的設定；方向不是選項之一時放在「或自己寫」；模型已不在清單時改用預設模型 */
+export function seriesFormFrom(series: Series): SeriesFormState {
+  const isOption = (SERIES_DIRECTIONS as readonly string[]).includes(series.direction);
+  return {
+    name: series.name,
+    visualStyle: series.visualStyle,
+    directionOption: isOption ? series.direction : null,
+    directionOther: isOption ? '' : series.direction,
+    defaultImageModel: isImageModel(series.defaultImageModel) ? series.defaultImageModel : DEFAULT_IMAGE_MODEL,
+    defaultVideoModel: isVideoModel(series.defaultVideoModel) ? series.defaultVideoModel : DEFAULT_VIDEO_MODEL,
+  };
 }
 
 /** 修改系列設定送出的資料 */
-export function toUpdateSeriesInput(_state: SeriesFormState): UpdateSeriesInput {
-  return {};
-}
-
-/** 系列卡片的說明列，例如「20 秒 · 節慶宣傳」 */
-export function seriesMeta(series: Pick<Series, 'durationSec' | 'direction'>): string {
-  return `${series.durationSec} 秒 · ${series.direction}`;
+export function toUpdateSeriesInput(state: SeriesFormState): UpdateSeriesInput {
+  return formFields(state);
 }

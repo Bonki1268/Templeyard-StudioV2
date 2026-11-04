@@ -2,6 +2,7 @@ import {
   apiErrorSchema,
   assetResponseSchema,
   assistResponseSchema,
+  characterListResponseSchema,
   characterResponseSchema,
   chatListResponseSchema,
   clipsResponseSchema,
@@ -47,12 +48,14 @@ import {
   type TempleBoard,
   type UpdateTempleBoardInput,
   type CreatePhotoInput,
+  type CreateSeriesCharacterInput,
   type CreateSeriesInput,
   type ImageUpload,
   type Photo,
   type Series,
   type TempleSummary,
   type UpdateCharacterInput,
+  type UpdateSeriesInput,
   type UpdatePhotoInput,
   type UpdateVideoInput,
   type Video,
@@ -109,6 +112,22 @@ export async function fetchSeriesList(): Promise<Series[]> {
 export async function postSeries(input: CreateSeriesInput): Promise<Series> {
   const body = await request('/api/series', { method: 'POST', body: JSON.stringify(input) });
   return seriesResponseSchema.parse(body).series;
+}
+
+/** 修改系列設定（使用者 2026-11-05 提出） */
+export async function patchSeries(seriesId: string, input: UpdateSeriesInput): Promise<Series> {
+  const body = await request(`/api/series/${seriesId}`, { method: 'PATCH', body: JSON.stringify(input) });
+  return seriesResponseSchema.parse(body).series;
+}
+
+/** 系列角色庫（使用者 2026-11-05 提出） */
+export async function fetchSeriesCharacters(seriesId: string): Promise<Character[]> {
+  return characterListResponseSchema.parse(await request(`/api/series/${seriesId}/characters`)).characters;
+}
+
+export async function postSeriesCharacter(seriesId: string, input: CreateSeriesCharacterInput): Promise<Character> {
+  const body = await request(`/api/series/${seriesId}/characters`, { method: 'POST', body: JSON.stringify(input) });
+  return characterResponseSchema.parse(body).character;
 }
 
 export async function searchTemples(q: string, signal?: AbortSignal): Promise<TempleSummary[]> {
@@ -170,13 +189,20 @@ export class ConsentRequiredError extends ApiRequestError {
   }
 }
 
-export async function postCostEstimate(videoId: string, items: CostItem[]): Promise<CostCheck> {
-  const body = await request(`/api/videos/${videoId}/cost-estimate`, { method: 'POST', body: JSON.stringify({ items }) });
+/** 費用的範圍：影片編號，或系列角色庫的系列（不屬於任何影片） */
+export type CostScope = string | { seriesId: string };
+
+function costPath(scope: CostScope): string {
+  return typeof scope === 'string' ? `/api/videos/${scope}` : `/api/series/${scope.seriesId}`;
+}
+
+export async function postCostEstimate(scope: CostScope, items: CostItem[]): Promise<CostCheck> {
+  const body = await request(`${costPath(scope)}/cost-estimate`, { method: 'POST', body: JSON.stringify({ items }) });
   return costCheckSchema.parse(body);
 }
 
-export async function postConsent(videoId: string, items: CostItem[]): Promise<string> {
-  const body = await request(`/api/videos/${videoId}/consents`, { method: 'POST', body: JSON.stringify({ items }) });
+export async function postConsent(scope: CostScope, items: CostItem[]): Promise<string> {
+  const body = await request(`${costPath(scope)}/consents`, { method: 'POST', body: JSON.stringify({ items }) });
   return consentResponseSchema.parse(body).consentToken;
 }
 
@@ -316,8 +342,9 @@ export async function patchCharacter(characterId: string, input: UpdateCharacter
   return characterResponseSchema.parse(await request(`/api/characters/${characterId}`, { method: 'PATCH', body: JSON.stringify(input) })).character;
 }
 
-export async function generateCharacter(characterId: string, videoId: string, consentToken: string | undefined): Promise<void> {
-  await postGenerate(`/api/characters/${characterId}/generate`, { videoId, ...(consentToken ? { consentToken } : {}) });
+/** videoId 為 null：系列角色庫，用系列的預設圖片模型 */
+export async function generateCharacter(characterId: string, videoId: string | null, consentToken: string | undefined): Promise<void> {
+  await postGenerate(`/api/characters/${characterId}/generate`, { ...(videoId ? { videoId } : {}), ...(consentToken ? { consentToken } : {}) });
 }
 
 export async function confirmCharacter(characterId: string): Promise<Character> {

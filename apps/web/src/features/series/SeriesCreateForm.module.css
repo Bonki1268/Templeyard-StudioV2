@@ -35,3 +35,11 @@
 .bar {
   border-radius: 0 0 var(--radius-card) var(--radius-card);
 }
+
+/* 修改系列設定的按鈕列（使用者 2026-11-05 提出） */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}

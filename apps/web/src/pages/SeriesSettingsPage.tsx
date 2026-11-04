@@ -1,16 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { QUESTIONNAIRE_QUESTIONS, imageModelLabel, videoEntryPath, videoModelLabel, videoStageLabel } from '@templeyard/shared';
 import { Plus } from 'lucide-react';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { assetUrl, fetchSeriesVideos } from '../api/client';
 import { seriesVideosKey } from '../features/series/SeriesCard';
-import { seriesMeta } from '../features/series/seriesForm';
+import { SeriesCharacterLibrary } from '../features/series/SeriesCharacterLibrary';
+import { SeriesEditForm } from '../features/series/SeriesEditForm';
+import { Button } from '../components/Button';
 import { useSeriesList } from '../features/series/useSeriesList';
 import page from './CreateVideoPage.module.css';
 import styles from './SeriesSettingsPage.module.css';
 
-// 系列設定（/series/:sid/settings，03 路由表）：系列的設定與問卷預設值，以及這個系列過去做的影片（使用者 2026-11-04 提出）
+// 系列設定（/series/:sid/settings，03 路由表）：系列的設定與問卷預設值，以及這個系列過去做的影片（使用者 2026-11-04 提出）；
+// 可以修改系列設定，並有角色庫（使用者 2026-11-05 提出）
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
@@ -22,6 +25,7 @@ export function SeriesSettingsPage() {
   const { sid = '' } = useParams();
   const settingsId = useId();
   const videosId = useId();
+  const [editing, setEditing] = useState(false);
   const seriesList = useSeriesList();
   const series = seriesList.data?.find((item) => item.id === sid);
   const videos = useQuery({ queryKey: seriesVideosKey(sid), queryFn: () => fetchSeriesVideos(sid), enabled: Boolean(sid) });
@@ -64,33 +68,38 @@ export function SeriesSettingsPage() {
 
         {series && (
           <section className={styles.section} aria-labelledby={settingsId}>
-            <h2 id={settingsId} className={styles.sectionTitle}>
-              {series.name}
-            </h2>
-            <dl className={styles.facts}>
-              <div>
-                <dt>秒數與方向</dt>
-                <dd>{seriesMeta(series)}</dd>
-              </div>
-              <div>
-                <dt>整體視覺風格</dt>
-                <dd>{series.visualStyle || '沒有'}</dd>
-              </div>
-              <div>
-                <dt>預設模型</dt>
-                <dd>{`${imageModelLabel(series.defaultImageModel)} · ${videoModelLabel(series.defaultVideoModel)}`}</dd>
-              </div>
-              <div>
-                <dt>共同角色</dt>
-                <dd>{videos.data && videos.data.characters.length > 0 ? videos.data.characters.join('、') : '沒有'}</dd>
-              </div>
-              <div>
-                <dt>問卷預設值</dt>
-                <dd>{defaultLines.length > 0 ? defaultLines.join('\n') : '第一支影片送出問卷後會存成預設值'}</dd>
-              </div>
-            </dl>
+            <div className={styles.sectionHead}>
+              <h2 id={settingsId} className={styles.sectionTitle}>
+                {series.name}
+              </h2>
+              {!editing && <Button onClick={() => setEditing(true)}>修改系列設定</Button>}
+            </div>
+            {editing ? (
+              <SeriesEditForm series={series} titleId={settingsId} onDone={() => setEditing(false)} />
+            ) : (
+              <dl className={styles.facts}>
+                <div>
+                  <dt>影片方向</dt>
+                  <dd>{series.direction}</dd>
+                </div>
+                <div>
+                  <dt>整體視覺風格</dt>
+                  <dd>{series.visualStyle || '沒有'}</dd>
+                </div>
+                <div>
+                  <dt>預設模型</dt>
+                  <dd>{`${imageModelLabel(series.defaultImageModel)} · ${videoModelLabel(series.defaultVideoModel)}`}</dd>
+                </div>
+                <div>
+                  <dt>問卷預設值</dt>
+                  <dd>{defaultLines.length > 0 ? defaultLines.join('\n') : '第一支影片送出問卷後會存成預設值'}</dd>
+                </div>
+              </dl>
+            )}
           </section>
         )}
+
+        {series && <SeriesCharacterLibrary seriesId={series.id} />}
 
         <section className={styles.section} aria-labelledby={videosId}>
           <div className={styles.sectionHead}>

@@ -84,7 +84,7 @@ export function createAssistService(deps: {
       userInput: input.userInput,
       temple: temple ? { name: temple.name, district: temple.district, deity: temple.deity, builtYear: temple.foundedYear } : null,
       userTempleNotes: video?.userTempleNotes ?? '',
-      series: seriesRow ? { visualStyle: seriesRow.visualStyle, direction: seriesRow.direction, durationSec: seriesRow.durationSec } : null,
+      series: seriesRow ? { visualStyle: seriesRow.visualStyle, direction: seriesRow.direction } : null,
       creativeInput: video?.creativeInput ?? null,
       viewName: viewKey ? viewName(viewKey) : null,
       questionTitle: questionId ? (findQuestion(questionId)?.title ?? null) : null,

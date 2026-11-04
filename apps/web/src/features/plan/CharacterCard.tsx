@@ -8,18 +8,23 @@ import { useAiAssist } from '../assist/useAiAssist';
 import { useCostConsent } from '../costs/useCostConsent';
 import styles from './PlanPanel.module.css';
 
-type CharacterCardProps = { videoId: string; character: Character; onChanged: () => Promise<void> };
+/**
+ * 方案的角色卡指定 videoId；系列設定的角色庫（使用者 2026-11-05 提出）指定 seriesId，
+ * 用系列的預設圖片模型產生，費用算在系列
+ */
+type CharacterCardProps = { character: Character; onChanged: () => Promise<void> } & ({ videoId: string; seriesId?: undefined } | { videoId?: undefined; seriesId: string });
 
 /** 角色卡：外觀描述與連續性鎖（可用 AI 幫我寫）、產生三視圖與定裝圖、確認、設為系列角色 */
-export function CharacterCard({ videoId, character, onChanged }: CharacterCardProps) {
+export function CharacterCard({ videoId, seriesId, character, onChanged }: CharacterCardProps) {
   const name = character.name;
   const [description, setDescription] = useState(character.version.description);
   const [locks, setLocks] = useState(character.version.continuityLocks.join('\n'));
-  const consent = useCostConsent(videoId);
+  const consent = useCostConsent(videoId ?? { seriesId: seriesId ?? '' });
   const descriptionAssist = useAiAssist({
     field: 'character.description',
     fieldLabel: `${name}的外觀描述`,
     videoId,
+    seriesId,
     target: { characterId: character.id },
     userInput: () => description,
     onAdopt: setDescription,
@@ -28,6 +33,7 @@ export function CharacterCard({ videoId, character, onChanged }: CharacterCardPr
     field: 'character.locks',
     fieldLabel: `${name}的連續性鎖`,
     videoId,
+    seriesId,
     target: { characterId: character.id },
     userInput: () => description,
     onAdopt: setLocks,
@@ -47,7 +53,7 @@ export function CharacterCard({ videoId, character, onChanged }: CharacterCardPr
       run: async (consentToken) => {
         // 先存下還沒存的修改，再用最新的外觀描述產生
         if (changed) await patchCharacter(character.id, { description, continuityLocks: parseLocks(locks) });
-        await generateCharacter(character.id, videoId, consentToken);
+        await generateCharacter(character.id, videoId ?? null, consentToken);
         await onChanged();
       },
     });

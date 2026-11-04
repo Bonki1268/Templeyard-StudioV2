@@ -3,15 +3,18 @@ import type { ComfyClient, Limiter, WaitResult } from '@templeyard/comfy-client'
 import { and, eq, inArray } from 'drizzle-orm';
 import { insertAsset } from '../assets/repository.js';
 import type { AssetStore } from '../assets/store.js';
-import type { ConsentStore } from '../costs/consents.js';
+import { seriesConsentScope, type ConsentStore } from '../costs/consents.js';
 import { checkConsent, estimateCost } from '../costs/estimate.js';
-import { getSettings, videoSpending } from '../costs/repository.js';
+import { getSettings, seriesSpending, videoSpending } from '../costs/repository.js';
 import type { AppDatabase } from '../db/client.js';
 import { generations, videos, type GenerationRow } from '../db/schema.js';
 import type { Clock } from '../series/repository.js';
 
 export type GenerationRequest = {
-  videoId: string;
+  /** 屬於哪一支影片；系列角色庫的生成不屬於任何影片（null），改看 seriesId */
+  videoId: string | null;
+  /** videoId 為 null 時必填：費用與同意憑證算在這個系列（使用者 2026-11-05 提出） */
+  seriesId?: string | null;
   /** 節點代號，例如 temple-view */
   node: string;
   target: Record<string, unknown>;
@@ -34,6 +37,21 @@ export type SubmitOutcome =
 export type BatchOutcome =
   | { status: 'consent_required'; check: CostCheck }
   | { status: 'accepted'; generationIds: string[] };
+
+/** 費用的範圍：影片編號，或不屬於任何影片的系列（系列沒有影片上限，只看單筆門檻） */
+export type CostScope = string | { seriesId: string };
+
+/** 生成請求的費用範圍 */
+export function scopeOf(request: Pick<GenerationRequest, 'videoId' | 'seriesId'>): CostScope {
+  if (request.videoId) return request.videoId;
+  if (request.seriesId) return { seriesId: request.seriesId };
+  throw new Error('生成請求要指定影片或系列');
+}
+
+/** 同意憑證綁定的範圍 */
+function consentKey(scope: CostScope): string {
+  return typeof scope === 'string' ? scope : seriesConsentScope(scope.seriesId);
+}
 
 /** 付費生成前的檢查結果（不作廢同意憑證） */
 export type Precheck = { ok: true } | { ok: false; check: CostCheck };
@@ -72,7 +90,7 @@ export type GenerationService = {
    * 之後要用 submitBatch 送出時，傳入每一筆的項目（requestItems），單筆同意門檻才會和 submitBatch 一樣看每一筆。
    */
   precheck(
-    videoId: string,
+    scope: CostScope,
     costItems: readonly CostItem[],
     consentToken: string | null | undefined,
     requestItems?: readonly CostItem[][],
@@ -207,14 +225,17 @@ export function createGenerationService(deps: GenerationServiceDeps): Generation
   }
 
   /** 預估並檢查門檻與上限（不作廢同意憑證） */
-  function checkFor(videoId: string, costItems: readonly CostItem[]): CostCheck {
+  function checkFor(scope: CostScope, costItems: readonly CostItem[]): CostCheck {
     const estimate = estimateCost([...costItems], deps.workflows);
-    const video = db.select({ costLimit: videos.costLimit }).from(videos).where(eq(videos.id, videoId)).get();
-    const budget = {
-      ...videoSpending(db, videoId),
-      limit: video?.costLimit ?? null,
-      threshold: getSettings(db).consentThresholdCredits,
-    };
+    const threshold = getSettings(db).consentThresholdCredits;
+    let budget;
+    if (typeof scope === 'string') {
+      const video = db.select({ costLimit: videos.costLimit }).from(videos).where(eq(videos.id, scope)).get();
+      budget = { ...videoSpending(db, scope), limit: video?.costLimit ?? null, threshold };
+    } else {
+      // 系列角色庫：沒有影片上限，只看單筆門檻
+      budget = { ...seriesSpending(db, scope.seriesId), limit: null, threshold };
+    }
     return { estimate, budget, consent: checkConsent(estimate, budget, deps.workflows) };
   }
 
@@ -222,11 +243,11 @@ export function createGenerationService(deps: GenerationServiceDeps): Generation
    * 一批的檢查：單筆同意門檻看每一筆；本支影片上限與單價待實測看整批合計。
    * 同意憑證對應整批合計的項目。
    */
-  function batchCheck(videoId: string, requests: readonly { costItems: CostItem[] }[], items: readonly CostItem[]): CostCheck {
-    const combined = checkFor(videoId, items);
+  function batchCheck(scope: CostScope, requests: readonly { costItems: CostItem[] }[], items: readonly CostItem[]): CostCheck {
+    const combined = checkFor(scope, items);
     const reasons = combined.consent.reasons.filter((reason) => reason.code !== 'over_threshold');
     const overThreshold = requests
-      .map((request) => checkFor(videoId, request.costItems).consent.reasons.find((reason) => reason.code === 'over_threshold'))
+      .map((request) => checkFor(scope, request.costItems).consent.reasons.find((reason) => reason.code === 'over_threshold'))
       .find((reason) => reason !== undefined);
     if (overThreshold) reasons.push(overThreshold);
     return { ...combined, consent: { required: reasons.length > 0, reasons } };
@@ -240,7 +261,8 @@ export function createGenerationService(deps: GenerationServiceDeps): Generation
         id,
         videoId: request.videoId,
         node: request.node,
-        target: request.target,
+        // 不屬於任何影片的生成記下系列，用來算這個系列的已用與預留
+        target: request.videoId ? request.target : { ...request.target, seriesId: request.seriesId ?? null },
         promptIdRef: request.promptRef?.id ?? null,
         promptVersion: request.promptRef?.version ?? null,
         mcpTool: request.call.tool,
@@ -263,8 +285,9 @@ export function createGenerationService(deps: GenerationServiceDeps): Generation
 
   return {
     async submit(request) {
-      const check = checkFor(request.videoId, request.costItems);
-      if (check.consent.required && !deps.consents.consume(request.consentToken, request.videoId, request.costItems)) {
+      const scope = scopeOf(request);
+      const check = checkFor(scope, request.costItems);
+      if (check.consent.required && !deps.consents.consume(request.consentToken, consentKey(scope), request.costItems)) {
         return { status: 'consent_required', check };
       }
       const id = await accept(request, check.estimate);
@@ -281,8 +304,9 @@ export function createGenerationService(deps: GenerationServiceDeps): Generation
       const first = requests[0];
       if (!first) throw new Error('沒有要送出的生成');
       const items = combineItems(requests.flatMap((request) => request.costItems));
-      const check = batchCheck(first.videoId, requests, items);
-      if (check.consent.required && !deps.consents.consume(consentToken, first.videoId, items)) {
+      const scope = scopeOf(first);
+      const check = batchCheck(scope, requests, items);
+      if (check.consent.required && !deps.consents.consume(consentToken, consentKey(scope), items)) {
         return { status: 'consent_required', check };
       }
       const generationIds: string[] = [];
@@ -292,11 +316,11 @@ export function createGenerationService(deps: GenerationServiceDeps): Generation
       return { status: 'accepted', generationIds };
     },
 
-    precheck(videoId, costItems, consentToken, requestItems) {
+    precheck(scope, costItems, consentToken, requestItems) {
       const check = requestItems
-        ? batchCheck(videoId, requestItems.map((items) => ({ costItems: items })), costItems)
-        : checkFor(videoId, costItems);
-      if (check.consent.required && !deps.consents.peek(consentToken, videoId, costItems)) return { ok: false, check };
+        ? batchCheck(scope, requestItems.map((items) => ({ costItems: items })), costItems)
+        : checkFor(scope, costItems);
+      if (check.consent.required && !deps.consents.peek(consentToken, consentKey(scope), costItems)) return { ok: false, check };
       return { ok: true };
     },
 

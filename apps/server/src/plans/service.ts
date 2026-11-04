@@ -1,7 +1,6 @@
 import { ClaudeCallError, StructuredOutputError, requestToolInput, type ClaudeModel } from '@templeyard/agent';
 import { renderPrompt } from '@templeyard/prompts';
 import {
-  MAX_VIDEO_SEC,
   PlanInputError,
   SPEECH_RATE_CHARS_PER_SEC,
   answerSummaryLines,
@@ -117,9 +116,8 @@ export function createPlanService(deps: {
   }
 
   function rulesFor(video: Video) {
-    const seriesRow = findSeries(db, video.seriesId);
     return {
-      targetSec: planTargetSec(lengthChoice(video.id), seriesRow?.durationSec ?? MAX_VIDEO_SEC),
+      targetSec: planTargetSec(lengthChoice(video.id)),
       minGenerationSec: workflows.models[video.videoModel]?.slots?.durationSec?.min ?? null,
       videoModelLabel: videoModelLabel(video.videoModel),
     };

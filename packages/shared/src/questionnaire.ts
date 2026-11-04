@@ -135,17 +135,13 @@ function prefillFrom(question: Question, value: { choice?: string | undefined; c
 }
 
 /**
- * 預填問卷（規格書「預填順序」）：本次的創作輸入（Agent 的預填）→ 系列問卷預設值 → 系列設定 → 留白由系統選擇。
+ * 預填問卷（規格書「預填順序」）：本次的創作輸入（Agent 的預填）→ 系列問卷預設值 → 留白由系統選擇。
  * - 只留 Agent 挑的題目，依題庫順序
  * - Agent 預填的選項不在題目的選項裡時不採用
  * - 每支影片不同的題目不使用系列問卷預設值
- * - 系列設定只有影片秒數對應「長度」
+ * - 系列不再設定影片秒數（使用者 2026-11-05 提出）：「長度」只看系列問卷預設值
  */
-export function prefillAnswers(input: {
-  tool: GenerateQuestionnaireInput;
-  seriesDefaults: QuestionnaireDefaults | null;
-  series: { durationSec: number };
-}): QuestionnaireAnswer[] {
+export function prefillAnswers(input: { tool: GenerateQuestionnaireInput; seriesDefaults: QuestionnaireDefaults | null }): QuestionnaireAnswer[] {
   const asked = new Set<string>(input.tool.questionIds);
   return QUESTIONNAIRE_QUESTIONS.filter((q) => asked.has(q.id)).map((question): QuestionnaireAnswer => {
     const agent = input.tool.prefill.find((p) => p.questionId === question.id);
@@ -154,10 +150,6 @@ export function prefillAnswers(input: {
     const fallback = input.seriesDefaults?.[question.id];
     const fromDefaults = !question.perVideo && fallback ? prefillFrom(question, fallback, 'series_default') : null;
     if (fromDefaults) return fromDefaults;
-    if (question.id === 'length') {
-      const fromSeries = prefillFrom(question, { choice: `${input.series.durationSec} 秒` }, 'series_default');
-      if (fromSeries) return fromSeries;
-    }
     return { questionId: question.id, source: 'system' };
   });
 }

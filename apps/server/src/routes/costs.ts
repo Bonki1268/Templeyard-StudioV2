@@ -1,11 +1,12 @@
 import { costRequestSchema, updateSettingsSchema, type ApiError, type CostCheck, type WorkflowConfig } from '@templeyard/shared';
 import type { FastifyInstance } from 'fastify';
-import type { ConsentStore } from '../costs/consents.js';
+import { seriesConsentScope, type ConsentStore } from '../costs/consents.js';
 import { UnknownModelError, checkConsent, estimateCost } from '../costs/estimate.js';
-import { getSettings, updateSettings, videoSpending } from '../costs/repository.js';
+import { getSettings, seriesSpending, updateSettings, videoSpending } from '../costs/repository.js';
 import type { AppDatabase } from '../db/client.js';
 import { errorBody } from '../http/errorBody.js';
 import { toValidationError } from '../http/errors.js';
+import { findSeries } from '../series/repository.js';
 import { findVideo } from '../videos/repository.js';
 
 const CONSENT_MESSAGE = '需要同意：這次生成要你再按一次同意才會送出';
@@ -17,6 +18,7 @@ type VideoParams = { Params: { id: string } };
  * POST /api/videos/:id/consents：使用者同意後發同意憑證
  * GET /api/videos/:id/cost：已用、預留、上限、門檻
  * GET /api/settings、PATCH /api/settings：單筆同意門檻
+ * POST /api/series/:id/cost-estimate、POST /api/series/:id/consents：系列角色庫的生成（不屬於任何影片；沒有影片上限，只看單筆門檻）
  */
 export function registerCostRoutes(app: FastifyInstance, db: AppDatabase, workflows: WorkflowConfig, consents: ConsentStore): void {
   function budgetFor(videoId: string, costLimit: number | null) {
@@ -67,6 +69,31 @@ export function registerCostRoutes(app: FastifyInstance, db: AppDatabase, workfl
     const video = findVideo(db, request.params.id);
     if (!video) return reply.status(404).send(errorBody('找不到這支影片'));
     return { budget: budgetFor(video.id, video.costLimit) };
+  });
+
+  // 使用者 2026-11-05 提出：系列角色庫的生成不屬於任何影片，同意憑證綁定系列
+  app.post<VideoParams>('/api/series/:id/cost-estimate', async (request, reply) => {
+    const series = findSeries(db, request.params.id);
+    if (!series) return reply.status(404).send(errorBody('找不到這個系列'));
+    const parsed = costRequestSchema.safeParse(request.body ?? {});
+    if (!parsed.success) return reply.status(400).send(toValidationError(parsed.error, '費用預估的資料不正確'));
+    const result = estimateOr400(parsed.data.items);
+    if (result.error) return reply.status(400).send(result.error);
+    const budget = { ...seriesSpending(db, series.id), limit: null, threshold: getSettings(db).consentThresholdCredits };
+    const consent = checkConsent(result.estimate, budget, workflows);
+    const body: CostCheck & { message: string } = { estimate: result.estimate, budget, consent, message: consent.required ? CONSENT_MESSAGE : '' };
+    return body;
+  });
+
+  app.post<VideoParams>('/api/series/:id/consents', async (request, reply) => {
+    const series = findSeries(db, request.params.id);
+    if (!series) return reply.status(404).send(errorBody('找不到這個系列'));
+    const parsed = costRequestSchema.safeParse(request.body ?? {});
+    if (!parsed.success) return reply.status(400).send(toValidationError(parsed.error, '費用預估的資料不正確'));
+    const result = estimateOr400(parsed.data.items);
+    if (result.error) return reply.status(400).send(result.error);
+    const { token, expiresAt } = consents.issue(seriesConsentScope(series.id), parsed.data.items);
+    return reply.status(201).send({ consentToken: token, expiresAt, estimate: result.estimate });
   });
 
   app.get('/api/settings', async () => ({ settings: getSettings(db) }));

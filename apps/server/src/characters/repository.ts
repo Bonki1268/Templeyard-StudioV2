@@ -22,6 +22,16 @@ export function listCharactersFor(db: AppDatabase, video: { id: string; seriesId
     .all();
 }
 
+/** 系列角色庫：這個系列的系列角色（含從影片設為系列角色的）；依建立順序 */
+export function listSeriesCharacters(db: AppDatabase, seriesId: string): CharacterRow[] {
+  return db
+    .select()
+    .from(characters)
+    .where(and(eq(characters.isSeries, true), eq(characters.seriesId, seriesId)))
+    .orderBy(sql`rowid`)
+    .all();
+}
+
 export function insertCharacter(db: AppDatabase, row: CharacterRow): void {
   db.insert(characters).values(row).run();
 }

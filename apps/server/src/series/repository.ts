@@ -11,7 +11,6 @@ function toSeries(row: SeriesRow): Series {
     id: row.id,
     name: row.name,
     visualStyle: row.visualStyle,
-    durationSec: row.durationSec,
     direction: row.direction,
     defaultImageModel: row.defaultImageModel,
     defaultVideoModel: row.defaultVideoModel,

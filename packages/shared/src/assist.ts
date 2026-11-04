@@ -24,8 +24,9 @@ export const ASSIST_FIELDS = [
   { key: 'questionnaire.mustSay', label: '一定要說到的事', scope: 'video' },
   { key: 'questionnaire.custom', label: '問卷題目的「或自己寫」', scope: 'video' },
   // 第 8 階段：方案的角色卡（規格書「5 分鏡方案：新角色的描述與連續性鎖」）
-  { key: 'character.description', label: '角色的外觀描述', scope: 'video', node: 'character-design' },
-  { key: 'character.locks', label: '角色的連續性鎖', scope: 'video', node: 'character-design' },
+  // 系列設定的角色庫沒有影片（使用者 2026-11-05 提出），所以只要有系列就可以用
+  { key: 'character.description', label: '角色的外觀描述', scope: 'series', node: 'character-design' },
+  { key: 'character.locks', label: '角色的連續性鎖', scope: 'series', node: 'character-design' },
   // 第 10 階段：分鏡細修「限定範圍修改的指令」
   { key: 'shot.regionEdit', label: '限定範圍修改的指令（只改圈選的一處）', scope: 'video' },
 ] as const satisfies readonly AssistField[];

@@ -12,6 +12,8 @@ export default tseslint.config(
       'test-results/**',
       'playwright-report/**',
       'docs/**',
+      // Floorplan 外掛產生的專案地圖（本機用、不進 git）
+      'floorplan/**',
       '_to_delete/**',
       // 既有的 Prompt Studio：CommonJS、Node 18、無套件，有自己的 node --test，不套用這裡的 TypeScript 規則
       'prompt-studio/**',

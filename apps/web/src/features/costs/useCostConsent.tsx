@@ -1,6 +1,6 @@
 import type { CostCheck, CostItem } from '@templeyard/shared';
 import { useState, type ReactNode } from 'react';
-import { ApiRequestError, ConsentRequiredError, postConsent, postCostEstimate } from '../../api/client';
+import { ApiRequestError, ConsentRequiredError, postConsent, postCostEstimate, type CostScope } from '../../api/client';
 import { ConsentDialog } from './ConsentDialog';
 
 type Pending = {
@@ -25,7 +25,7 @@ function messageOf(error: unknown): string {
  * 付費生成前的流程：先預估；需要同意時顯示費用確認，同意後取得同意憑證再送出；不需要同意就直接送出。
  * 回傳 ask（開始流程）、dialog（放在頁面上）、error（送出失敗的原因）。
  */
-export function useCostConsent(videoId: string): { ask: (request: AskConsent) => Promise<void>; dialog: ReactNode; error: string | null; busy: boolean } {
+export function useCostConsent(scope: CostScope): { ask: (request: AskConsent) => Promise<void>; dialog: ReactNode; error: string | null; busy: boolean } {
   const [pending, setPending] = useState<Pending | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function useCostConsent(videoId: string): { ask: (request: AskConsent) =>
     setError(null);
     setBusy(true);
     try {
-      const check = await postCostEstimate(videoId, request.items);
+      const check = await postCostEstimate(scope, request.items);
       if (check.consent.required) {
         setDialogError(null);
         setPending({ ...request, check });
@@ -56,7 +56,7 @@ export function useCostConsent(videoId: string): { ask: (request: AskConsent) =>
     setBusy(true);
     setDialogError(null);
     try {
-      const token = await postConsent(videoId, pending.items);
+      const token = await postConsent(scope, pending.items);
       await pending.run(token);
       setPending(null);
     } catch (cause: unknown) {
@@ -70,6 +70,7 @@ export function useCostConsent(videoId: string): { ask: (request: AskConsent) =>
   const dialog = pending ? (
     <ConsentDialog
       check={pending.check}
+      scopeLabel={typeof scope === 'string' ? '這支影片' : '這個系列的角色庫'}
       confirmLabel={pending.confirmLabel}
       busy={busy}
       error={dialogError}

@@ -24,7 +24,7 @@ export function SeriesHomePage() {
           <h2 id={listTitleId} className={styles.sectionTitle}>
             你的系列
           </h2>
-          <p className={styles.sectionIntro}>一個系列共用風格、秒數、方向與預設模型，可以用一致的樣子介紹多間廟。</p>
+          <p className={styles.sectionIntro}>一個系列共用風格、方向、角色與預設模型，可以用一致的樣子介紹多間廟。</p>
 
           {seriesList.isPending && (
             <p className={styles.status} role="status">

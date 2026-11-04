@@ -8,7 +8,7 @@ export type AgentContext = {
   temple: { name: string; district: string; deity: string; builtYear: number | null };
   /** 使用者貼上的寺廟歷史與簡介（可能是空的） */
   userTempleNotes: string;
-  series: { name: string; visualStyle: string; durationSec: number; direction: string };
+  series: { name: string; visualStyle: string; direction: string };
   models: { image: string; video: string };
   /** 問卷是否已送出（送出後不能重新產生） */
   questionnaireSubmitted: boolean;
@@ -60,7 +60,6 @@ export function buildAgentSystem(context: AgentContext): string {
     '## 系列設定',
     `- 系列名稱：${series.name}`,
     `- 整體視覺風格：${series.visualStyle}`,
-    `- 影片秒數：${series.durationSec} 秒`,
     `- 影片方向：${series.direction}`,
     `- 這支影片的模型：圖片 ${models.image}、影片 ${models.video}`,
     '',

@@ -1,0 +1,33 @@
+.section {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 20px;
+}
+
+.muted {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  color: var(--color-error);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}

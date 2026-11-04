@@ -267,10 +267,11 @@ export function missingViewName(viewKey: string): string | null {
   return viewKey.startsWith('missing:') ? viewKey.slice('missing:'.length).trim() || null : null;
 }
 
-/** 目標長度：問卷的「長度」（例如「20 秒」）優先，否則系列的影片秒數；都不超過 30 秒 */
-export function planTargetSec(lengthChoice: string | null, seriesDurationSec: number): number {
+/** 目標長度：問卷的「長度」（例如「20 秒」）；沒有選時 30 秒；都不超過 30 秒 */
+export function planTargetSec(lengthChoice: string | null): number {
   const fromQuestionnaire = lengthChoice ? /^(\d+)\s*秒$/.exec(lengthChoice.trim()) : null;
-  const target = fromQuestionnaire ? Number(fromQuestionnaire[1]) : seriesDurationSec;
+  // 問卷沒有選長度（或看不懂）：由系統決定，用上限（使用者 2026-11-05 提出：系列不再設定秒數）
+  const target = fromQuestionnaire ? Number(fromQuestionnaire[1]) : MAX_VIDEO_SEC;
   return Math.min(target, MAX_VIDEO_SEC);
 }
 

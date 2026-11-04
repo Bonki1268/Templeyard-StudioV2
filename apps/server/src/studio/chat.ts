@@ -89,7 +89,7 @@ export function createChatService(deps: {
     return buildAgentSystem({
       temple: { name: temple.name, district: temple.district, deity: temple.deity, builtYear: temple.foundedYear },
       userTempleNotes: video.userTempleNotes,
-      series: { name: seriesRow.name, visualStyle: seriesRow.visualStyle, durationSec: seriesRow.durationSec, direction: seriesRow.direction },
+      series: { name: seriesRow.name, visualStyle: seriesRow.visualStyle, direction: seriesRow.direction },
       models: { image: imageModelLabel(video.imageModel), video: videoModelLabel(video.videoModel) },
       questionnaireSubmitted: Boolean(findQuestionnaire(db, video.id)?.submittedAt),
       plan: deps.plans?.current(video.id) ?? null,

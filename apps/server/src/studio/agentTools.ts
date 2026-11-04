@@ -57,7 +57,7 @@ export function createAgentTools(deps: {
     name: 'read_series',
     label: '讀取系列設定',
     subject: '系列設定',
-    description: '讀取這支影片所屬系列的設定：名稱、整體視覺風格、影片秒數、影片方向、預設模型與系列問卷預設值。',
+    description: '讀取這支影片所屬系列的設定：名稱、整體視覺風格、影片方向、預設模型與系列問卷預設值。',
     inputSchema: z.object({}),
     paid: false,
     run: async () => {
@@ -67,7 +67,6 @@ export function createAgentTools(deps: {
       const content = JSON.stringify({
         name: found.name,
         visualStyle: found.visualStyle,
-        durationSec: found.durationSec,
         direction: found.direction,
         defaultImageModel: found.defaultImageModel,
         defaultVideoModel: found.defaultVideoModel,

@@ -6,12 +6,7 @@ import { IMAGE_MODEL_KEYS, VIDEO_MODEL_KEYS } from './models.js';
 /** 影片方向的選項；也可以自己寫 */
 export const SERIES_DIRECTIONS = ['歷史故事', '節慶宣傳', '景點導覽', '人物代言'] as const;
 
-/** 影片秒數的選項（≤ 30） */
-export const SERIES_DURATIONS = [15, 20, 30] as const;
-export const DEFAULT_SERIES_DURATION = 30;
-export const MAX_SERIES_DURATION = 30;
-
-const DURATION_ERROR = `影片秒數要在 1～${MAX_SERIES_DURATION} 秒之間`;
+// 影片秒數不在系列設定：每支影片在問卷的「長度」選（使用者 2026-11-05 提出）
 
 const seriesFields = {
   name: z
@@ -24,11 +19,6 @@ const seriesFields = {
     .trim()
     .min(1, { error: '請填寫整體視覺風格' })
     .max(500, { error: '整體視覺風格最多 500 字' }),
-  durationSec: z
-    .number({ error: DURATION_ERROR })
-    .int({ error: DURATION_ERROR })
-    .min(1, { error: DURATION_ERROR })
-    .max(MAX_SERIES_DURATION, { error: DURATION_ERROR }),
   direction: z
     .string({ error: '請選擇或填寫影片方向' })
     .trim()
@@ -53,7 +43,6 @@ export const seriesSchema = z.object({
   id: z.string(),
   name: z.string(),
   visualStyle: z.string(),
-  durationSec: z.number().int(),
   direction: z.string(),
   defaultImageModel: z.string(),
   defaultVideoModel: z.string(),

@@ -75,7 +75,6 @@ export function createQuestionnaireService(deps: { db: AppDatabase; clock: Clock
       const answers = prefillAnswers({
         tool: input,
         seriesDefaults: readDefaults(seriesRow.questionnaireDefaults),
-        series: { durationSec: seriesRow.durationSec },
       });
       return db.transaction(() => {
         const questionnaire = existing
