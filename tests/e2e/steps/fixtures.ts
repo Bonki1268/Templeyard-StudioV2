@@ -29,6 +29,10 @@ type ScenarioState = {
   clipIds?: (string | null)[];
   /** 複製出來的新影片（第 12 階段） */
   copiedVideoId?: string;
+  /** 第 14 階段：系列頁的角色詳情與版本、另一個系列的角色 */
+  characterId?: string;
+  otherCharacterId?: string;
+  characterAssets?: { sheet: string | null; look: string | null };
   /** 「確認並下載」下載到的檔案（第 12 階段） */
   downloaded?: { filename: string; bytes: Buffer };
 };

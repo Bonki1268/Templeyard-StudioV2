@@ -1,3 +1,4 @@
+import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { seriesConsentScope } from '../costs/consents.js';
 import { generations, series } from '../db/schema.js';
@@ -311,5 +312,188 @@ describe('系列角色庫', () => {
     const changed = characters.update(created.id, { description: '戴斗笠、白鬍子、拄拐杖', continuityLocks: ['straw hat', 'wooden cane'] });
 
     expect(changed).toMatchObject({ isSeries: true, state: 'draft', version: { version: 2, sheetAssetId: null, lookAssetId: null } });
+  });
+});
+
+// 第 14 階段：角色詳情（身份錨點與造型、版本說明、分別重生、影片保存的系列設定）
+describe('身份錨點與造型', () => {
+  const base = { name: '阿嬤', continuityLocks: ['navy blouse'] };
+
+  function seriesConsent14(units = 2) {
+    return world.consents.issue(seriesConsentScope('s1'), [{ model: 'nano-banana-pro', units }]).token;
+  }
+
+  async function confirmedGrandma() {
+    const created = characters.createForSeries('s1', { ...base, identityAnchors: '七十歲、短白髮', look: '深藍布衫' });
+    await characters.generate(created.id, null, seriesConsent14());
+    await settleAll();
+    return characters.confirm(created.id);
+  }
+
+  it('新增角色：外觀描述由身份錨點與造型組成', () => {
+    const created = characters.createForSeries('s1', { ...base, identityAnchors: '七十歲、短白髮', look: '深藍布衫' });
+    expect(created.version).toMatchObject({ description: '七十歲、短白髮；深藍布衫', identityAnchors: '七十歲、短白髮', look: '深藍布衫' });
+  });
+
+  it('新增角色：只給外觀描述（舊寫法）時照存，身份錨點與造型留空', () => {
+    const created = characters.createForSeries('s1', { name: '阿公', description: '戴斗笠' });
+    expect(created.version).toMatchObject({ description: '戴斗笠', identityAnchors: null, look: null });
+  });
+
+  it('新增角色：外觀描述、身份錨點、造型都沒有：400', () => {
+    expect(() => characters.createForSeries('s1', { name: '阿公' })).toThrowError(/請填寫角色的外觀描述/);
+  });
+
+  it('未確認的角色：修改身份錨點與造型，直接更新同一版，外觀描述重新組成', () => {
+    const created = characters.createForSeries('s1', { ...base, identityAnchors: '七十歲', look: '深藍布衫' });
+    const changed = characters.update(created.id, { identityAnchors: '八十歲、白髮盤髻', look: '墨綠布衫', continuityLocks: ['green blouse'] });
+    expect(changed.version).toMatchObject({
+      version: 1,
+      id: created.version.id,
+      description: '八十歲、白髮盤髻；墨綠布衫',
+      identityAnchors: '八十歲、白髮盤髻',
+      look: '墨綠布衫',
+      continuityLocks: ['green blouse'],
+    });
+  });
+
+  it('已確認的角色：修改造型另存新版本，並記下和上一版的差別；身份錨點沒傳就沿用', async () => {
+    const confirmed = await confirmedGrandma();
+    const changed = characters.update(confirmed.id, { look: '灰色毛線外套', continuityLocks: ['navy blouse'] });
+    expect(changed.version).toMatchObject({
+      version: 2,
+      identityAnchors: '七十歲、短白髮',
+      look: '灰色毛線外套',
+      description: '七十歲、短白髮；灰色毛線外套',
+      changeNote: '和 v1 的差別：造型有修改',
+      sheetAssetId: null,
+      lookAssetId: null,
+      confirmedAt: null,
+    });
+    expect(changed.state).toBe('draft');
+  });
+
+  it('舊資料（只有外觀描述）修改造型：身份錨點留空，外觀描述只剩造型', () => {
+    const created = characters.createForSeries('s1', { name: '阿公', description: '戴斗笠' });
+    const changed = characters.update(created.id, { look: '戴草帽', continuityLocks: [] });
+    expect(changed.version).toMatchObject({ description: '戴草帽', look: '戴草帽' });
+  });
+
+  it('連續性鎖超過 10 條：400', () => {
+    const created = characters.createForSeries('s1', { ...base, identityAnchors: '七十歲', look: '深藍布衫' });
+    const tooMany = Array.from({ length: 11 }, (_, i) => `lock ${i}`);
+    expect(() => characters.update(created.id, { look: '深藍布衫', continuityLocks: tooMany })).toThrow();
+  });
+
+  it('三視圖與定裝圖的指令帶上組成後的外觀描述', async () => {
+    const created = characters.createForSeries('s1', { ...base, identityAnchors: '七十歲、短白髮', look: '深藍布衫' });
+    await characters.generate(created.id, null, seriesConsent14());
+    await settleAll();
+    expect(world.writer.calls.map((c) => c.content).join('\n')).toContain('七十歲、短白髮；深藍布衫');
+  });
+});
+
+describe('分別重生三視圖或定裝圖', () => {
+  const grandpaInput = { name: '阿公', description: '戴斗笠', continuityLocks: ['straw hat'] };
+
+  function seriesConsent14(units: number) {
+    return world.consents.issue(seriesConsentScope('s1'), [{ model: 'nano-banana-pro', units }]).token;
+  }
+
+  async function generatedGrandpa() {
+    const created = characters.createForSeries('s1', grandpaInput);
+    await characters.generate(created.id, null, seriesConsent14(2));
+    await settleAll();
+    return created.id;
+  }
+
+  it('part=sheet 只送三視圖一張，定裝圖不動；費用算 1 張', async () => {
+    const id = await generatedGrandpa();
+    const before = characters.listForSeries('s1')[0]?.version;
+    const count = world.db.select().from(generations).all().length;
+
+    const outcome = await characters.generate(id, null, seriesConsent14(1), 'sheet');
+    expect(outcome.status).toBe('accepted');
+    await settleAll();
+
+    expect(world.db.select().from(generations).all()).toHaveLength(count + 1);
+    const after = characters.listForSeries('s1')[0]?.version;
+    expect(after?.lookAssetId).toBe(before?.lookAssetId);
+    expect(after?.sheetAssetId).not.toBeNull();
+    expect(after?.sheetAssetId).not.toBe(before?.sheetAssetId);
+  });
+
+  it('part=look 只送定裝圖一張，三視圖不動', async () => {
+    const id = await generatedGrandpa();
+    const before = characters.listForSeries('s1')[0]?.version;
+    await characters.generate(id, null, seriesConsent14(1), 'look');
+    await settleAll();
+    const after = characters.listForSeries('s1')[0]?.version;
+    expect(after?.sheetAssetId).toBe(before?.sheetAssetId);
+    expect(after?.lookAssetId).not.toBe(before?.lookAssetId);
+  });
+
+  it('只重生一張，沒有同意憑證時要先同意', async () => {
+    const id = await generatedGrandpa();
+    const outcome = await characters.generate(id, null, undefined, 'sheet');
+    expect(outcome.status).toBe('consent_required');
+  });
+
+  it('已確認的版本重生其中一張：另存為新版本，另一張沿用原版本，原版本不變', async () => {
+    const id = await generatedGrandpa();
+    const confirmed = characters.confirm(id);
+    const v1 = confirmed.version;
+
+    const outcome = await characters.generate(id, null, seriesConsent14(1), 'look');
+    expect(outcome.status).toBe('accepted');
+    await settleAll();
+
+    const [current] = characters.listForSeries('s1');
+    expect(current?.version).toMatchObject({
+      version: 2,
+      sheetAssetId: v1.sheetAssetId,
+      confirmedAt: null,
+      changeNote: '和 v1 的差別：重新產生定裝圖',
+    });
+    expect(current?.version.lookAssetId).not.toBe(v1.lookAssetId);
+  });
+
+  it('已確認的版本不帶 part 重生兩張：仍是 409「已經確認」，要改請先修改外觀', async () => {
+    const id = await generatedGrandpa();
+    characters.confirm(id);
+    await expectStudioError(() => characters.generate(id, null, seriesConsent14(2)), 409, '「阿公」已經確認；要修改請先改外觀描述');
+  });
+});
+
+describe('影片保存的系列設定', () => {
+  it('影片有保存的系列設定時，定裝圖指令用保存的視覺風格，不用系列目前的', async () => {
+    world.db.run(
+      sql`UPDATE videos SET series_snapshot = ${JSON.stringify({
+        visualStyle: '建立影片當時的視覺風格',
+        direction: '歷史故事',
+        defaultImageModel: 'nano-banana-pro',
+        defaultVideoModel: 'gemini-omni-1.1-flash',
+        questionnaireDefaults: null,
+      })} WHERE id = 'v1'`,
+    );
+    world.db.update(series).set({ visualStyle: '系列改版後的視覺風格' }).where(eq(series.id, 's1')).run();
+    const id = grandma();
+
+    await generated(id);
+
+    const prompts = world.db
+      .select()
+      .from(generations)
+      .all()
+      .map((row) => JSON.stringify(row.call));
+    expect(world.writer.calls.map((c) => c.content).join('\n')).toContain('建立影片當時的視覺風格');
+    expect(world.writer.calls.map((c) => c.content).join('\n')).not.toContain('系列改版後的視覺風格');
+    expect(prompts).toHaveLength(2);
+  });
+
+  it('影片沒有保存的系列設定（舊資料）時，用系列目前的視覺風格', async () => {
+    world.db.update(series).set({ visualStyle: '系列目前的視覺風格' }).where(eq(series.id, 's1')).run();
+    await generated(grandma());
+    expect(world.writer.calls.map((c) => c.content).join('\n')).toContain('系列目前的視覺風格');
   });
 });

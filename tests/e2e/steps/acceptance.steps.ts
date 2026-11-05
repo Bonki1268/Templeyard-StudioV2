@@ -54,23 +54,6 @@ function seriesCardOf(page: Page, state: SeriesState) {
     .filter({ has: page.getByRole('heading', { name: state.seriesName, exact: true }) });
 }
 
-function settingsVideos(page: Page) {
-  return page.getByRole('list', { name: '這個系列的影片' });
-}
-
 Then(/^這個系列的卡片有標籤「(.+)」$/, async ({ page, state }, tag: string) => {
   await expect(seriesCardOf(page, state).getByText(tag, { exact: true })).toBeVisible({ timeout: 20_000 });
-});
-
-When('我打開這個系列的系列設定', async ({ page, state }) => {
-  if (!state.seriesId) throw new Error('這個場景還沒有建立系列');
-  await page.goto(`/series/${state.seriesId}/settings`);
-});
-
-Then(/^系列設定列出影片「(.+)」$/, async ({ page }, name: string) => {
-  await expect(settingsVideos(page).getByRole('link', { name, exact: true })).toBeVisible({ timeout: 20_000 });
-});
-
-When(/^我在系列設定按下影片「(.+)」$/, async ({ page }, name: string) => {
-  await settingsVideos(page).getByRole('link', { name, exact: true }).click();
 });

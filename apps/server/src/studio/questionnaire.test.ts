@@ -1,5 +1,5 @@
 import { QUESTIONNAIRE_QUESTIONS, type GenerateQuestionnaireInput } from '@templeyard/shared';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { chatMessages, series, videos } from '../db/schema.js';
 import { addPhoto, addVideo, createStudioWorld, type StudioWorld } from './__fixtures__/studio.js';
@@ -79,6 +79,19 @@ describe('開啟問卷', () => {
       choice: '外地遊客',
       source: 'series_default',
     });
+  });
+
+  // 第 14 階段：修改系列只影響之後新增的影片
+  it('影片建立時保存了問卷預設值：問卷帶入保存的，不看系列目前的', () => {
+    world.db.run(sql`UPDATE videos SET series_snapshot = ${JSON.stringify({ visualStyle: 'x', direction: 'x', defaultImageModel: 'nano-banana-pro', defaultVideoModel: 'gemini-omni-1.1-flash', questionnaireDefaults: { tone: { choice: '溫暖' } } })} WHERE id = 'v1'`);
+    world.db.update(series).set({ questionnaireDefaults: { tone: { choice: '莊重' } } }).where(eq(series.id, 's1')).run();
+    expect(open().answers.find((a) => a.questionId === 'tone')).toEqual({ questionId: 'tone', choice: '溫暖', source: 'series_default' });
+  });
+
+  it('影片建立時系列還沒有問卷預設值：之後系列才有的預設值不會帶進這支影片的問卷', () => {
+    world.db.run(sql`UPDATE videos SET series_snapshot = ${JSON.stringify({ visualStyle: 'x', direction: 'x', defaultImageModel: 'nano-banana-pro', defaultVideoModel: 'gemini-omni-1.1-flash', questionnaireDefaults: null })} WHERE id = 'v1'`);
+    world.db.update(series).set({ questionnaireDefaults: { tone: { choice: '莊重' } } }).where(eq(series.id, 's1')).run();
+    expect(open().answers.find((a) => a.questionId === 'tone')).toEqual({ questionId: 'tone', source: 'system' });
   });
 
   it('系列問卷預設值的格式不正確時當成沒有預設值，不會讓問卷打不開', () => {

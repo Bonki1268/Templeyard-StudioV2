@@ -1,10 +1,9 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, type APIResponse, type Page } from '@playwright/test';
 import { characterListResponseSchema, characterResponseSchema, templeSearchResponseSchema } from '@templeyard/shared';
 import { Given, Then, When } from './fixtures';
 import { createVideoViaApi, uniqueName } from './support/api';
 
-// 系列卡片標籤、修改系列設定、系列角色庫（使用者 2026-11-05 提出）
+// 系列卡片標籤、系列角色庫 API（使用者 2026-11-05 提出）；系列頁的分頁見 series-pages.steps.ts
 
 type State = { seriesId?: string; seriesName?: string; seriesTemples?: string[]; videoIds?: string[]; lastResponse?: APIResponse };
 
@@ -70,15 +69,9 @@ When(/^我把「(.+)」清空$/, async ({ page }, label: string) => {
   await page.getByLabel(label, { exact: true }).fill('');
 });
 
-Then(/^系列設定的「(.+)」是「(.+)」$/, async ({ page }, term: string, value: string) => {
-  const dt = page.getByRole('term').filter({ hasText: new RegExp(`^${term}$`) });
-  await expect(dt).toBeVisible();
-  await expect(dt.locator('xpath=following-sibling::dd[1]')).toHaveText(value);
-});
-
 // ── 角色庫 ──
 
-Given(/^我已經透過 API 在這個系列的角色庫新增角色「(.+)」$/, async ({ request, state }, name: string) => {
+Given(/^我已經透過 API 在這個系列的角色庫新增角色「([^」]+)」$/, async ({ request, state }, name: string) => {
   const response = await request.post(`/api/series/${requireSeriesId(state)}/characters`, {
     data: { name, description: '七十歲、短白髮、深藍布衫', continuityLocks: ['short white hair'] },
   });
@@ -111,21 +104,6 @@ Then(/^角色庫的角色「(.+)」標示「(.+)」$/, async ({ page }, name: st
   await expect(libraryCharacter(page, name).getByText(tag, { exact: true })).toBeVisible({ timeout: 20_000 });
 });
 
-Then(/^角色庫的角色「(.+)」有「三視圖」與「定裝圖」$/, async ({ page }, name: string) => {
-  const card = libraryCharacter(page, name);
-  await expect(card.getByRole('img', { name: `${name}三視圖`, exact: true })).toBeVisible({ timeout: 20_000 });
-  await expect(card.getByRole('img', { name: `${name}定裝圖`, exact: true })).toBeVisible();
-});
-
-// 同意門檻是全域設定，其他情境會並行修改：需要同意時才會跳出費用確認
-When(/^我按下「(.+)」，需要時在費用確認對話框同意$/, async ({ page }, name: string) => {
-  await page.getByRole('button', { name, exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: '費用確認' });
-  const started = library(page).getByText(/^(生成中|待確認)$/);
-  await expect(dialog.or(started).first()).toBeVisible({ timeout: 20_000 });
-  if (await dialog.isVisible()) await dialog.getByRole('button', { name: '同意並產生', exact: true }).click();
-});
-
 Then(/^這支影片能用的角色有「(.+)」，是系列角色$/, async ({ request, state }, name: string) => {
   const videoId = state.videoIds?.at(-1);
   if (!videoId) throw new Error('這個場景還沒有建立影片');
@@ -135,13 +113,4 @@ Then(/^這支影片能用的角色有「(.+)」，是系列角色$/, async ({ re
   expect(found?.isSeries).toBe(true);
   expect(found?.seriesId).toBe(requireSeriesId(state));
   expect(found?.videoId).toBeNull();
-});
-
-// ── 無障礙 ──
-
-Then('系列設定頁沒有 WCAG 2 AA 的無障礙問題', async ({ page }) => {
-  await expect(page.getByRole('heading', { level: 1, name: '系列設定' })).toBeVisible();
-  await expect(library(page)).toBeVisible();
-  const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
-  expect(result.violations.map((v) => `${v.id}：${v.help}`)).toEqual([]);
 });
