@@ -73,7 +73,7 @@ erDiagram
 | 表 | 欄位 | 說明 |
 | --- | --- | --- |
 | characters | id, series_id (nullable), video_id (nullable), name, is_series, current_version_id | 系列角色有 series_id；影片專屬角色有 video_id。系列設定的角色庫建立的角色：series_id 有值、video_id 為 null、is_series = 1 |
-| character_versions | id, character_id, version, description, continuity_locks (json：字串陣列), sheet_asset_id, look_asset_id, image_model, confirmed_at | 確認後鎖定，後續生成都使用此版本 |
+| character_versions | id, character_id, version, description, identity_anchors (text nullable), look (text nullable), change_note (text nullable), continuity_locks (json：字串陣列), sheet_asset_id, look_asset_id, image_model, confirmed_at | 確認後鎖定，後續生成都使用此版本。identity_anchors、look 由角色詳情分開編輯，description 由兩者組成；change_note 說明和上一版的差別 |
 
 ### `temple_boards`、`temple_board_versions`、`temple_views` 寺廟定裝版
 
@@ -113,6 +113,7 @@ erDiagram
 | creative_input | text | 第 3 步的第一句話 |
 | cost_limit | integer nullable | 本支影片費用上限（以點數或最小貨幣單位） |
 | copied_from_video_id | text nullable | 複製來源 |
+| series_snapshot | json | 建立影片時保存的系列設定：視覺風格、方向、預設模型、問卷預設值；之後這支影片的生成讀這份，不讀系列的即時值（落實「修改只影響之後新增的影片」） |
 | created_at, updated_at | text | |
 
 ### `chat_messages` 對話紀錄
@@ -244,8 +245,10 @@ erDiagram
 | --- | --- |
 | `GET /api/health` | 健康檢查 |
 | `GET/POST /api/series`、`PATCH /api/series/:id` | 系列 |
-| `GET /api/series/:id/videos` | 系列設定：這個系列的影片（寺廟、階段、更新時間、縮圖）與共同角色 |
-| `GET/POST /api/series/:id/characters` | 系列設定的角色庫：列出系列角色、新增系列角色（名稱、外觀描述、連續性鎖） |
+| `GET /api/series/:id/videos?status=&sort=`（status：all、wip、done；sort：updated、created、temple） | 過去的影片：寺廟、階段與狀態細節、鎖定的模型、更新時間、縮圖、成品長度、是否為問卷預設來源 |
+| `GET/PATCH /api/series/:id/questionnaire-defaults` | 系列問卷預設值：逐題修改或清除，回傳來源影片 |
+| `GET /api/characters/:cid/versions`、`GET /api/characters/:cid/usage` | 角色詳情：版本列表；用到這個角色的影片與版本 |
+| `GET/POST /api/series/:id/characters?scope=&q=`（scope：all、series、video） | 角色庫：列出系列角色與這個系列影片的影片專屬角色（可搜尋、篩選）、新增系列角色 |
 | `POST /api/series/:id/cost-estimate`、`POST /api/series/:id/consents` | 角色庫生成的費用預估、取得同意憑證（綁定系列） |
 | `GET/PATCH /api/settings` | 系統設定（單筆同意門檻） |
 | `GET /api/temples?q=` | 寺廟搜尋 |

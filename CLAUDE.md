@@ -24,6 +24,7 @@
 | `docs/spec/系統規格書.md` | 完整產品規格（v8） | 細節不清楚時 |
 | `docs/drama-skills/` | 分鏡、角色一致性、圖片與影片指令寫法（MIT） | 寫生成指令時 |
 | `docs/design/*.dc.html` | UI 視覺稿（10 個畫面） | 做畫面時參考；與 04 不一致以 04 為準 |
+| `docs/design/series/*.dc.html` | 系列頁視覺稿：系列設定、角色庫、角色詳情、過去的影片 | 第 14 階段；畫面中的影片、角色、日期是示意資料，`[金額]`、`[單價]` 是佔位 |
 | `docs/reference/comfyui-test/server.mjs` | 已實測可用的 MCP 用戶端 | 第 4 階段、寫假 MCP 伺服器時 |
 | `寺廟資料/新北市寺廟資料.csv` | 寺廟原始資料 | 第 1 階段 |
 
