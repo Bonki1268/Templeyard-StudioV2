@@ -95,6 +95,7 @@ describe('建立影片 POST /api/videos', () => {
       creativeInput: null,
       costLimit: null,
       copiedFromVideoId: null,
+      seriesSnapshot: expect.any(Object),
       createdAt: expect.any(String),
       updatedAt: expect.any(String),
     });

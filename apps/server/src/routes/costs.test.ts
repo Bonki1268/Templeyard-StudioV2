@@ -61,14 +61,14 @@ const gemini4 = [{ model: 'gemini-omni-1.1-flash', units: 4 }];
 describe('系統設定 /api/settings', () => {
   it('一開始沒有單筆同意門檻', async () => {
     const response = await currentApp().inject({ url: '/api/settings' });
-    expect(response.json()).toEqual({ settings: { consentThresholdCredits: null } });
+    expect(response.json()).toEqual({ settings: { consentThresholdCredits: null, defaultVideoCostLimitCredits: null } });
   });
 
   it('設定單筆同意門檻', async () => {
     const response = await setThreshold(150);
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ settings: { consentThresholdCredits: 150 } });
-    expect((await currentApp().inject({ url: '/api/settings' })).json()).toEqual({ settings: { consentThresholdCredits: 150 } });
+    expect(response.json()).toEqual({ settings: { consentThresholdCredits: 150, defaultVideoCostLimitCredits: null } });
+    expect((await currentApp().inject({ url: '/api/settings' })).json()).toEqual({ settings: { consentThresholdCredits: 150, defaultVideoCostLimitCredits: null } });
   });
 
   it.each([-1, 1.5, '100'])('門檻是 %j 時回應 400', async (value) => {

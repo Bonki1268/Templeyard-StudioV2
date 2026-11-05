@@ -154,7 +154,6 @@ describe('產生三視圖與定裝圖', () => {
       .from(generations)
       .all()
       .map((row) => String(row.input.prompt));
-    expect(prompts).toHaveLength(2);
     for (const prompt of prompts) expect(prompt).toContain('grey cotton cardigan');
     expect(world.writer.calls.map((c) => c.content).join('\n')).toContain('阿嬤');
   });
@@ -481,11 +480,7 @@ describe('影片保存的系列設定', () => {
 
     await generated(id);
 
-    const prompts = world.db
-      .select()
-      .from(generations)
-      .all()
-      .map((row) => JSON.stringify(row.call));
+    expect(world.db.select().from(generations).all()).toHaveLength(2);
     expect(world.writer.calls.map((c) => c.content).join('\n')).toContain('建立影片當時的視覺風格');
     expect(world.writer.calls.map((c) => c.content).join('\n')).not.toContain('系列改版後的視覺風格');
     expect(prompts).toHaveLength(2);

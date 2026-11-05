@@ -78,7 +78,7 @@ describe('系列角色庫 API', () => {
 
   it('GET /api/series/:id/characters 只列出系列角色，不含影片專屬角色', async () => {
     await app.inject({ method: 'POST', url: `/api/series/s1/characters`, payload: { name: '阿公', description: '戴斗笠' } });
-    const response = await app.inject({ method: 'GET', url: `/api/series/s1/characters` });
+    const response = await app.inject({ method: 'GET', url: `/api/series/s1/characters?scope=series` });
     expect(response.statusCode).toBe(200);
     expect(characterListResponseSchema.parse(response.json()).characters.map((c) => c.name)).toEqual(['阿公']);
   });
