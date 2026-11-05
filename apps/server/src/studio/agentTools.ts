@@ -3,7 +3,7 @@ import { SHOT_SIZES, costItemSchema, generatedClipSec, planRulesSchema, schedule
 import { z } from 'zod';
 import { UnknownModelError, estimateCost } from '../costs/estimate.js';
 import type { AppDatabase } from '../db/client.js';
-import { findSeries } from '../series/repository.js';
+import { seriesSettingsForVideo } from '../series/settings.js';
 import { listTemples } from '../temples/repository.js';
 import { searchTemples } from '../temples/search.js';
 import { findVideo } from '../videos/repository.js';
@@ -62,7 +62,7 @@ export function createAgentTools(deps: {
     paid: false,
     run: async () => {
       const video = findVideo(db, videoId);
-      const found = video ? findSeries(db, video.seriesId) : null;
+      const found = video ? seriesSettingsForVideo(db, video) : null;
       if (!found) return { ok: false, content: '找不到這支影片的系列', summary: '找不到這支影片的系列' };
       const content = JSON.stringify({
         name: found.name,

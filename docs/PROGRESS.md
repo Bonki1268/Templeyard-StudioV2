@@ -1,8 +1,8 @@
 # 開發進度
 
 目前階段: 14
-階段狀態: 紅燈
-測試提交: fce3f7f
+階段狀態: 綠燈
+測試提交: 351daab
 
 上面三行給 `/next-stage` 與 `/auto-dev` 讀取，格式不要改。階段狀態：未開始 → 情境 → 紅燈 → 綠燈 → 完成；中途停下來就是「停止」。
 
@@ -261,6 +261,17 @@
   → test cfb733b、fix d37b79b。`pnpm test` 1279、`pnpm test:e2e` 333 通過。假 Claude 一律回 JSON，所以這類問題要用真的 Claude 試過才知道；請你再按一次確認。
 
 - [x] 【2026-11-05 使用者提出】系列頁依設計稿（`docs/design/series/`）排進開發：新增第 14 階段（06），03、04、05、01 F1 已更新。第 13 階段仍等實測；`/next-stage` 會先做第 14 階段，做完再回到第 13 階段。設計稿原本的「目標長度」已改為問卷預設值中的「長度」（系列不選秒數）。
+
+- [x] 【第 14 階段・停止原因】綠燈時發現紅燈時我寫錯／漏改 6 處測試（不是實作沒做到），綠燈不能改，需要你同意回到紅燈修正：
+  1. `apps/server/src/characters/service.test.ts` 第 488 行 `row.call`：generations 沒有 `call` 欄位，`pnpm typecheck` 失敗。建議刪掉這個 `prompts` 變數與它的 `toHaveLength(2)`（上面已用 writer.calls 驗證）。
+  2. `apps/server/src/routes/characters.test.ts`「GET /api/series/:id/characters 只列出系列角色，不含影片專屬角色」：05 更新後預設範圍是 all（含影片專屬）。建議網址改成 `?scope=series`。
+  3. `apps/server/src/routes/costs.test.ts` 兩個 `/api/settings` 測試：設定多了 `defaultVideoCostLimitCredits: null`，`toEqual` 要補這個欄位。
+  4. `apps/server/src/routes/videos.test.ts`「建立影片草稿…」：影片多了 `seriesSnapshot`，`toEqual` 要補（或用 `expect.any(Object)`）。
+  5. `features/stage-14-series-pages/series-snapshot.feature` 第一個場景：既有步驟「預設影片模型改成「…」」要的是模型代號，請把「Seedance 2.0」改成「seedance-2.0」（後面比對用名稱的步驟不變）。
+  6. `features/stage-14-series-pages/series-settings-tab.feature`「預設影片模型以卡片顯示特性…」：建立影片頁選了寺廟才有「影片模型」，打開建立影片頁前要先「我已經為這個系列選好寺廟「板橋慈惠宮」」（取代「我打開這個系列的建立影片頁」）。
+  - 其他：`pnpm test` 1430／1434（失敗的就是 2～4）、e2e 第 14 階段 78 個中只剩 5、6 與 1 個不穩定（卡片標籤等待）；`pnpm lint` 通過。實作尚未 commit（工作區保留）；測試提交 fce3f7f 沒有被改動。
+  - 舊的 `SeriesSettingsPage.tsx`、`SeriesCharacterLibrary.tsx`、`SeriesEditForm.tsx`（與 css）已不再使用，刪除檔案要你同意。
+  → 2026-11-05 使用者同意回到紅燈修正並刪除舊檔。實作先 stash，修正測試（f27150e、351daab，其中一處誤刪斷言已還原），放回實作後全部通過，測試提交改為 351daab。
 
 ## 停止紀錄
 

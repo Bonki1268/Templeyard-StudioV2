@@ -9,6 +9,7 @@ import type {
   PlanDiff,
   PlanSource,
   QuestionnaireAnswer,
+  SeriesSnapshot,
   ShotSize,
   TempleFlag,
   TempleStatus,
@@ -59,6 +60,8 @@ export const series = sqliteTable('series', {
   defaultImageModel: text('default_image_model').notNull(),
   defaultVideoModel: text('default_video_model').notNull(),
   questionnaireDefaults: text('questionnaire_defaults', { mode: 'json' }).$type<Record<string, unknown> | null>(),
+  // 第 14 階段：在系列設定改過的預設值題目（標示「自己寫」）
+  questionnaireDefaultEdits: text('questionnaire_default_edits', { mode: 'json' }).$type<string[] | null>(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -86,6 +89,8 @@ export const videos = sqliteTable(
     creativeInput: text('creative_input'),
     costLimit: integer('cost_limit'),
     copiedFromVideoId: text('copied_from_video_id'),
+    // 第 14 階段：建立影片時保存的系列設定（視覺風格、方向、預設模型、問卷預設值）
+    seriesSnapshot: text('series_snapshot', { mode: 'json' }).$type<SeriesSnapshot | null>(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -395,6 +400,10 @@ export const characterVersions = sqliteTable(
     version: integer('version').notNull(),
     description: text('description').notNull(),
     continuityLocks: text('continuity_locks', { mode: 'json' }).$type<string[]>().notNull(),
+    // 第 14 階段：身份錨點與造型分開編輯（舊資料為 null）；change_note 是和上一版的差別
+    identityAnchors: text('identity_anchors'),
+    look: text('look'),
+    changeNote: text('change_note'),
     sheetAssetId: text('sheet_asset_id').references(() => assets.id),
     lookAssetId: text('look_asset_id').references(() => assets.id),
     imageModel: text('image_model').notNull(),

@@ -85,6 +85,13 @@
       "when": 1793815079251,
       "tag": "0011_drop_series_duration",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1793848923538,
+      "tag": "0012_series_pages",
+      "breakpoints": true
     }
   ]
 }

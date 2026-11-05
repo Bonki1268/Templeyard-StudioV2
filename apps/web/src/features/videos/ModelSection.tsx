@@ -83,10 +83,12 @@ type ModelPickerProps<K extends string> = {
   seriesDefault: string | undefined;
   disabled: boolean;
   onChange: (key: K) => void;
+  /** 預設模型旁的標籤文字；建立影片頁是「系列預設」，系列設定頁是「系統預設」 */
+  defaultLabel?: string;
 };
 
-/** 單選的模型卡片：名稱、系列預設標籤、主要特性與參考單價（以 aria-describedby 關聯） */
-function ModelPicker<K extends string>({ legend, models, value, seriesDefault, disabled, onChange }: ModelPickerProps<K>) {
+/** 單選的模型卡片：名稱、系列預設標籤、主要特性與參考單價（以 aria-describedby 關聯）；系列設定頁也用 */
+export function ModelPicker<K extends string>({ legend, models, value, seriesDefault, disabled, onChange, defaultLabel = '系列預設' }: ModelPickerProps<K>) {
   const baseId = useId();
   return (
     <fieldset className={styles.group}>
@@ -109,7 +111,7 @@ function ModelPicker<K extends string>({ legend, models, value, seriesDefault, d
               >
                 <span className={styles.optionHead}>
                   <span className={styles.optionName}>{model.label}</span>
-                  {model.key === seriesDefault && <Tag>系列預設</Tag>}
+                  {model.key === seriesDefault && <Tag>{defaultLabel}</Tag>}
                 </span>
                 <span id={descriptionId} className={styles.optionDescription}>
                   <span>{model.features}</span> <span className={styles.price}>{referencePriceText(model.referencePrice)}</span>

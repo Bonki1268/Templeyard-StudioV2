@@ -43,7 +43,8 @@ import { findGeneration } from '../frames/repository.js';
 import type { FrameGeneration, FrameService } from '../frames/service.js';
 import type { GenerationRequest, SucceededHandler } from '../generations/service.js';
 import type { PlanService } from '../plans/service.js';
-import { findSeries, type Clock } from '../series/repository.js';
+import type { Clock } from '../series/repository.js';
+import { seriesSettingsForVideo } from '../series/settings.js';
 import { StudioError, VIDEO_NOT_FOUND } from '../studio/errors.js';
 import { findVersion as findBoardVersion, listViews } from '../templeBoards/repository.js';
 import { fitReferences } from '../references/sheet.js';
@@ -352,7 +353,7 @@ export function createClipService(deps: {
       temple: { appearanceLocks: appearanceLocks.join('; ') },
       references: referenceText,
       nextShot: { actionStart: next?.actionStart ?? '' },
-      series: { style: findSeries(db, video.seriesId)?.visualStyle ?? '' },
+      series: { style: seriesSettingsForVideo(db, video)?.visualStyle ?? '' },
       // 使用者調整指令：對話修改成品時排定的調整（第 12 階段）＋不使用原生語音的說明
       instruction: [revision ?? '', nativeVoice ? '' : '這一格不使用原生語音：畫面中的人不開口說台詞，台詞只出現在字幕'].filter(Boolean).join('；'),
     };

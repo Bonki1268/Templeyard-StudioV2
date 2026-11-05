@@ -12,7 +12,8 @@ import { eq } from 'drizzle-orm';
 import type { ConsentStore } from '../costs/consents.js';
 import type { AppDatabase } from '../db/client.js';
 import { videos } from '../db/schema.js';
-import { findSeries, type Clock } from '../series/repository.js';
+import type { Clock } from '../series/repository.js';
+import { seriesSettingsForVideo } from '../series/settings.js';
 import { findTemple } from '../temples/repository.js';
 import { findVideo } from '../videos/repository.js';
 import type { ClipService } from '../clips/service.js';
@@ -84,7 +85,7 @@ export function createChatService(deps: {
 
   function systemFor(video: Video, focusShot: { seq: number } | null = null): string {
     const temple = findTemple(db, video.templeId);
-    const seriesRow = findSeries(db, video.seriesId);
+    const seriesRow = seriesSettingsForVideo(db, video);
     if (!temple || !seriesRow) throw new Error('影片的寺廟或系列不存在');
     return buildAgentSystem({
       temple: { name: temple.name, district: temple.district, deity: temple.deity, builtYear: temple.foundedYear },

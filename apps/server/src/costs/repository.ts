@@ -37,7 +37,7 @@ export function seriesSpending(db: AppDatabase, seriesId: string): { spent: numb
   return { spent: Number(spent?.total ?? 0), reserved: Number(reserved?.total ?? 0) };
 }
 
-const DEFAULT_SETTINGS: Settings = { consentThresholdCredits: null };
+const DEFAULT_SETTINGS: Settings = { consentThresholdCredits: null, defaultVideoCostLimitCredits: null };
 
 export function getSettings(db: AppDatabase): Settings {
   const rows = db.select().from(settings).all();
@@ -48,6 +48,7 @@ export function getSettings(db: AppDatabase): Settings {
 
 export function updateSettings(db: AppDatabase, input: Partial<Settings>): Settings {
   for (const [key, value] of Object.entries(input)) {
+    if (value === undefined) continue;
     db.insert(settings)
       .values({ key, value })
       .onConflictDoUpdate({ target: settings.key, set: { value } })

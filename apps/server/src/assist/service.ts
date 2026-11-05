@@ -16,6 +16,7 @@ import type { z } from 'zod';
 import type { AppDatabase } from '../db/client.js';
 import { aiAssistLogs, type AiAssistLogRow } from '../db/schema.js';
 import { findSeries, type Clock } from '../series/repository.js';
+import { seriesSettingsForVideo } from '../series/settings.js';
 import { StudioError, VIDEO_NOT_FOUND } from '../studio/errors.js';
 import { findTemple } from '../temples/repository.js';
 import { findVideo } from '../videos/repository.js';
@@ -77,6 +78,9 @@ export function createAssistService(deps: {
     const seriesRow = seriesId ? findSeries(db, seriesId) : null;
     if (seriesId && !seriesRow) throw new StudioError(404, '找不到這個系列');
     const temple = video ? findTemple(db, video.templeId) : null;
+    // 影片用建立時保存的系列設定；還沒有影片（建立系列、系列設定）時用系列目前的設定
+    const videoSeries = video ? seriesSettingsForVideo(db, video) : null;
+    const assistSeries = videoSeries ? { visualStyle: videoSeries.visualStyle, direction: videoSeries.direction } : seriesRow ? { visualStyle: seriesRow.visualStyle, direction: seriesRow.direction } : null;
     const viewKey = input.target.viewKey;
     const questionId = input.target.questionId;
     const context: AssistContext = {
@@ -84,7 +88,7 @@ export function createAssistService(deps: {
       userInput: input.userInput,
       temple: temple ? { name: temple.name, district: temple.district, deity: temple.deity, builtYear: temple.foundedYear } : null,
       userTempleNotes: video?.userTempleNotes ?? '',
-      series: seriesRow ? { visualStyle: seriesRow.visualStyle, direction: seriesRow.direction } : null,
+      series: assistSeries,
       creativeInput: video?.creativeInput ?? null,
       viewName: viewKey ? viewName(viewKey) : null,
       questionTitle: questionId ? (findQuestion(questionId)?.title ?? null) : null,

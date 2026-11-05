@@ -1,0 +1,404 @@
+/* 系列頁（設定、角色庫、角色詳情、過去的影片）：版面依 docs/design/series/，色彩與間距只用 04 的 token */
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.topBar {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.topBarInner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+  max-width: 1280px;
+  min-height: 64px;
+  margin: 0 auto;
+  padding: 0 var(--space-8);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text);
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.breadcrumb {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.breadcrumb li + li::before {
+  content: '›';
+  margin-right: var(--space-2);
+}
+
+.breadcrumb a {
+  color: var(--color-info);
+}
+
+.notice,
+.errorBox {
+  max-width: 1280px;
+  width: 100%;
+  margin: var(--space-6) auto 0;
+  padding: var(--space-3) var(--space-8);
+  box-sizing: border-box;
+}
+
+.errorBox {
+  color: var(--color-error);
+}
+
+.notFound {
+  max-width: 1280px;
+  width: 100%;
+  margin: var(--space-6) auto 0;
+  padding: 0 var(--space-8);
+  box-sizing: border-box;
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.notFound .errorBox {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-error-surface);
+}
+
+.titleBlock {
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-8) 0;
+  box-sizing: border-box;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.title {
+  margin: 2px 0 var(--space-1);
+  font-family: var(--font-serif);
+  font-size: 36px;
+  line-height: 1.3;
+}
+
+.summary {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.main {
+  flex: 1;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-8) var(--space-10);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* 搜尋、篩選與主要按鈕的列 */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.spacer {
+  flex: 1 1 0;
+}
+
+.search {
+  position: relative;
+  flex: 1 1 260px;
+  max-width: 360px;
+}
+
+.search input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.selectRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.selectRow select {
+  height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.primaryLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 48px;
+  padding: 0 22px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.secondaryLink {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.outlineLink {
+  composes: secondaryLink;
+  border-color: var(--color-text);
+  font-weight: 500;
+}
+
+.primaryLink:focus-visible,
+.secondaryLink:focus-visible,
+.outlineLink:focus-visible,
+.cardLink:focus-visible {
+  outline: 3px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+.infoBox {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.emptyBox {
+  margin: 0;
+  padding: var(--space-10) var(--space-4);
+  border: 1px dashed var(--color-border-input);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.thumbs {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 2px;
+  aspect-ratio: 16 / 9;
+  background: var(--color-border);
+}
+
+.thumb {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  overflow: hidden;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cardBody {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px 20px;
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.4;
+}
+
+.text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.meta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.locksLabel {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.locks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.code {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.cardLink {
+  composes: secondaryLink;
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-error-surface);
+  color: var(--color-error);
+}
+
+.duration {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lockRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.modelLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}

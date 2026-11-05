@@ -16,6 +16,7 @@ import type { AppDatabase } from '../db/client.js';
 import { series, videos } from '../db/schema.js';
 import { listPhotosForVideo } from '../photos/repository.js';
 import { findSeries, type Clock } from '../series/repository.js';
+import { seriesSettingsForVideo } from '../series/settings.js';
 import { findVideo } from '../videos/repository.js';
 import { QUESTIONNAIRE_ALREADY_SUBMITTED, QUESTIONNAIRE_NOT_OPENED, StudioError, VIDEO_NOT_FOUND } from './errors.js';
 import { findQuestionnaire, insertChatMessage, insertQuestionnaire, updateQuestionnaire } from './repository.js';
@@ -71,10 +72,12 @@ export function createQuestionnaireService(deps: { db: AppDatabase; clock: Clock
       const video = requireVideo(videoId);
       const existing = findQuestionnaire(db, videoId);
       if (existing?.submittedAt) throw new StudioError(409, QUESTIONNAIRE_ALREADY_SUBMITTED);
-      const seriesRow = requireSeries(video.seriesId);
+      requireSeries(video.seriesId);
+      // 預填用建立影片時保存的系列問卷預設值（修改系列只影響之後新增的影片）
+      const saved = seriesSettingsForVideo(db, video);
       const answers = prefillAnswers({
         tool: input,
-        seriesDefaults: readDefaults(seriesRow.questionnaireDefaults),
+        seriesDefaults: readDefaults(saved?.questionnaireDefaults ?? null),
       });
       return db.transaction(() => {
         const questionnaire = existing

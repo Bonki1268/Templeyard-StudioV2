@@ -11,6 +11,22 @@ export const seriesVideoSchema = z.object({
   updatedAt: z.string(),
   /** 縮圖：有成品時是第 1 格的首格精緻圖；還沒有圖時是 null */
   thumbnailAssetId: z.string().nullable(),
+  // 第 14 階段：過去的影片分頁的影片卡
+  /** 行政區 */
+  district: z.string().default(''),
+  /** 影片標題：寺廟名稱，有想講的故事時接在後面 */
+  title: z.string().default(''),
+  /** 鎖定的（或建立時選的）圖片與影片模型 */
+  imageModel: z.string().default(''),
+  videoModel: z.string().default(''),
+  /** 狀態標籤，含細節（例如「精緻圖・2 格需重新確認」） */
+  statusLabel: z.string().default(''),
+  group: z.enum(['wip', 'done']).default('wip'),
+  /** 有成品時的成品長度（秒） */
+  finalDurationSec: z.number().nullable().default(null),
+  createdAt: z.string().default(''),
+  /** 系列問卷預設值來自這支影片（系列第一支送出問卷的影片） */
+  isDefaultsSource: z.boolean().default(false),
 });
 export type SeriesVideo = z.infer<typeof seriesVideoSchema>;
 

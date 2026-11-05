@@ -1,8 +1,17 @@
 import { CallBuildError, buildMcpCall, composeFinalPrompt, renderPrompt, type PromptWriter } from '@templeyard/prompts';
 import {
+  composeDescription,
   createSeriesCharacterSchema,
+  describeChange,
+  filterCharacters,
+  splitDescription,
   updateCharacterSchema,
+  videoTitle,
   type Character,
+  type CharacterPart,
+  type CharacterScope,
+  type CharacterVersion,
+  type LibraryCharacter,
   type CreateSeriesCharacterInput,
   type CostCheck,
   type McpCall,
@@ -16,17 +25,23 @@ import type { AppDatabase } from '../db/client.js';
 import type { CharacterRow, CharacterVersionRow, GenerationRow } from '../db/schema.js';
 import type { GenerationRequest, GenerationService, SucceededHandler } from '../generations/service.js';
 import { findSeries, type Clock } from '../series/repository.js';
+import { liveSeriesSettings, seriesSettingsForVideo } from '../series/settings.js';
 import { StudioError, VIDEO_NOT_FOUND } from '../studio/errors.js';
 import { findVersion as findBoardVersion, listViews } from '../templeBoards/repository.js';
+import { findTemple } from '../temples/repository.js';
 import { findVideo } from '../videos/repository.js';
 import {
+  characterUsageBySeries,
   findCharacter,
   findCharacterName,
   findCharacterVersion,
   insertCharacter,
   insertCharacterVersion,
   latestCharacterGeneration,
+  latestFrameVersionFor,
+  listCharacterVersions,
   listCharactersFor,
+  listLibraryCharacters,
   listSeriesCharacters,
   updateCharacter,
   updateCharacterVersion,
@@ -38,6 +53,9 @@ export const CHARACTER_SHEET_NODE = 'character-sheet';
 export const CHARACTER_LOOK_NODE = 'character-look';
 
 export type CharacterGeneration = { service: GenerationService; writer: PromptWriter };
+
+/** 用到某個角色的影片（角色詳情） */
+export type CharacterUsage = { id: string; seriesId: string; title: string; stage: string; version: number };
 
 export type CharacterOutcome = { status: 'consent_required'; check: CostCheck } | { status: 'accepted'; character: Character };
 
@@ -53,6 +71,12 @@ export type CharacterService = {
   namesOf(ids: readonly string[]): string[];
   /** 系列角色庫：這個系列的系列角色（使用者 2026-11-05 提出）；系列不存在：StudioError 404 */
   listForSeries(seriesId: string): Character[];
+  /** 系列頁角色庫：系列角色加上這個系列影片的影片專屬角色，可搜尋與依範圍篩選；系列不存在：StudioError 404 */
+  listLibrary(seriesId: string, options?: { scope?: CharacterScope; query?: string }): LibraryCharacter[];
+  /** 角色的所有版本（三視圖、定裝圖、確認日期、差別說明），舊的在前；找不到：StudioError 404 */
+  versions(characterId: string): CharacterVersion[];
+  /** 用到這個角色的影片與它們使用的版本；找不到：StudioError 404 */
+  usage(characterId: string): CharacterUsage[];
   /** 系列角色庫新增角色：第 1 版用系列的預設圖片模型；同系列已有同名的系列角色：StudioError 409；系列不存在：StudioError 404 */
   createForSeries(seriesId: string, input: CreateSeriesCharacterInput): Character;
   /** 修改外觀描述與連續性鎖：目前版本已確認時另存新版本（要重新產生定裝圖）；找不到：StudioError 404 */
@@ -62,8 +86,9 @@ export type CharacterService = {
    * 沒有同意憑證或憑證不符：consent_required；沒有設定生成服務：StudioError 503；外觀描述空白：StudioError 400
    * videoId 為 null（系列角色庫）：只限系列角色，用系列的預設圖片模型，費用與同意憑證算在系列；
    * 影片專屬角色沒有指定影片：StudioError 400「請指定是哪一支影片」
+   * part（第 14 階段）：只重生三視圖（sheet）或定裝圖（look）一張；已確認的版本會另存為新版本（另一張沿用原版本）
    */
-  generate(characterId: string, videoId: string | null, consentToken: string | null | undefined): Promise<CharacterOutcome>;
+  generate(characterId: string, videoId: string | null, consentToken: string | null | undefined, part?: CharacterPart): Promise<CharacterOutcome>;
   /** 確認：三視圖與定裝圖都產生完成才可以；否則 StudioError 409「「名稱」的定裝圖還沒產生完成」 */
   confirm(characterId: string): Character;
   /** 設為系列角色：要先確認；系列角色同系列的影片都能沿用 */
@@ -113,6 +138,48 @@ export function createCharacterService(deps: {
     return { row, version };
   }
 
+  function toVersion(version: CharacterVersionRow): CharacterVersion {
+    return {
+      id: version.id,
+      version: version.version,
+      description: version.description,
+      identityAnchors: version.identityAnchors,
+      look: version.look,
+      changeNote: version.changeNote,
+      continuityLocks: version.continuityLocks,
+      sheetAssetId: version.sheetAssetId,
+      lookAssetId: version.lookAssetId,
+      imageModel: version.imageModel,
+      confirmedAt: version.confirmedAt,
+    };
+  }
+
+  /**
+   * 外觀文字：有給身份錨點或造型時分開存、外觀描述由兩者組成（沒給的那欄沿用上一版）；
+   * 只給整段外觀描述（舊寫法）時照存，身份錨點與造型留空；都沒有：StudioError 400
+   */
+  function resolveText(
+    input: { description?: string | undefined; identityAnchors?: string | undefined; look?: string | undefined },
+    previous: CharacterVersionRow | null,
+  ): { description: string; identityAnchors: string | null; look: string | null } {
+    let result: { description: string; identityAnchors: string | null; look: string | null };
+    if (input.identityAnchors !== undefined || input.look !== undefined) {
+      const before = previous ? splitDescription(previous) : { identityAnchors: '', look: '' };
+      const identityAnchors = (input.identityAnchors ?? before.identityAnchors).trim();
+      const look = (input.look ?? before.look).trim();
+      result = { description: composeDescription(identityAnchors, look), identityAnchors: identityAnchors || null, look: look || null };
+    } else {
+      result = { description: (input.description ?? '').trim(), identityAnchors: null, look: null };
+    }
+    if (!result.description) throw new StudioError(400, '請填寫角色的外觀描述');
+    return result;
+  }
+
+  function textOf(version: CharacterVersionRow) {
+    const split = splitDescription(version);
+    return { identityAnchors: split.identityAnchors, look: split.look, continuityLocks: version.continuityLocks };
+  }
+
   function toCharacter(row: CharacterRow, version: CharacterVersionRow): Character {
     let state: Character['state'] = 'draft';
     let error: string | null = null;
@@ -132,16 +199,7 @@ export function createCharacterService(deps: {
       isSeries: row.isSeries,
       seriesId: row.seriesId,
       videoId: row.videoId,
-      version: {
-        id: version.id,
-        version: version.version,
-        description: version.description,
-        continuityLocks: version.continuityLocks,
-        sheetAssetId: version.sheetAssetId,
-        lookAssetId: version.lookAssetId,
-        imageModel: version.imageModel,
-        confirmedAt: version.confirmedAt,
-      },
+      version: toVersion(version),
       state,
       error,
     };
@@ -188,7 +246,9 @@ export function createCharacterService(deps: {
     const node = input.part === 'sheet' ? CHARACTER_SHEET_NODE : CHARACTER_LOOK_NODE;
     const file = prompt(node);
     const { context } = input;
-    const seriesRow = findSeries(db, context.seriesId);
+    // 有指定影片時用建立影片時保存的系列設定；系列角色庫（沒有影片）用系列目前的設定
+    const video = context.videoId ? findVideo(db, context.videoId) : null;
+    const seriesRow = (video ? seriesSettingsForVideo(db, video) : null) ?? liveSeriesSettings(db, context.seriesId);
     const boardVersion = context.templeBoardVersionId ? findBoardVersion(db, context.templeBoardVersionId) : null;
     const firstView = boardVersion ? listViews(db, boardVersion.id)[0] : undefined;
     const locks = input.version.continuityLocks;
@@ -258,6 +318,9 @@ export function createCharacterService(deps: {
             characterId: id,
             version: 1,
             description: item.description?.trim() ?? '',
+            identityAnchors: null,
+            look: null,
+            changeNote: null,
             continuityLocks: [...(item.continuityLocks ?? [])].map((lock) => lock.trim()).filter(Boolean),
             sheetAssetId: null,
             lookAssetId: null,
@@ -269,6 +332,37 @@ export function createCharacterService(deps: {
         result.set(name, id);
       }
       return result;
+    },
+
+    listLibrary(seriesId, options = {}) {
+      requireSeries(seriesId);
+      const usage = characterUsageBySeries(db, seriesId);
+      const all = listLibraryCharacters(db, seriesId).flatMap((row) => {
+        const version = row.currentVersionId ? findCharacterVersion(db, row.currentVersionId) : null;
+        return version ? [{ ...toCharacter(row, version), videoCount: usage.get(row.id)?.length ?? 0 }] : [];
+      });
+      return filterCharacters(all, { scope: options.scope ?? 'all', query: options.query ?? '' });
+    },
+
+    versions(characterId) {
+      requireCharacter(characterId);
+      return listCharacterVersions(db, characterId).map(toVersion);
+    },
+
+    usage(characterId) {
+      const { row, version } = requireCharacter(characterId);
+      const seriesId = row.seriesId ?? (row.videoId ? findVideo(db, row.videoId)?.seriesId : null) ?? null;
+      if (!seriesId) return [];
+      const versions = listCharacterVersions(db, characterId);
+      const numberOf = new Map(versions.map((each) => [each.id, each.version]));
+      return (characterUsageBySeries(db, seriesId).get(characterId) ?? []).flatMap((videoId) => {
+        const video = findVideo(db, videoId);
+        const temple = video ? findTemple(db, video.templeId) : null;
+        if (!video || !temple) return [];
+        // 這支影片依據的版本：最近一張精緻圖生成時記下的角色版本；還沒有精緻圖就是目前的版本
+        const used = latestFrameVersionFor(db, videoId, numberOf) ?? version.version;
+        return [{ id: video.id, seriesId: video.seriesId, title: videoTitle(temple.name, video.creativeInput), stage: video.stage, version: used }];
+      });
     },
 
     listForSeries(seriesId) {
@@ -285,6 +379,7 @@ export function createCharacterService(deps: {
       if (listSeriesCharacters(db, seriesId).some((row) => row.name === input.name)) {
         throw new StudioError(409, `這個系列已經有角色「${input.name}」`);
       }
+      const text = resolveText(input, null);
       const id = clock.newId();
       const versionId = clock.newId();
       db.transaction(() => {
@@ -293,7 +388,10 @@ export function createCharacterService(deps: {
           id: versionId,
           characterId: id,
           version: 1,
-          description: input.description,
+          description: text.description,
+          identityAnchors: text.identityAnchors,
+          look: text.look,
+          changeNote: null,
           continuityLocks: input.continuityLocks,
           sheetAssetId: null,
           lookAssetId: null,
@@ -312,17 +410,23 @@ export function createCharacterService(deps: {
     update(characterId, rawInput) {
       const { row, version } = requireCharacter(characterId);
       const input = updateCharacterSchema.parse(rawInput);
+      const text = resolveText(input, version);
       if (!version.confirmedAt) {
-        updateCharacterVersion(db, version.id, { description: input.description, continuityLocks: input.continuityLocks });
+        updateCharacterVersion(db, version.id, { ...text, continuityLocks: input.continuityLocks });
         return load(characterId);
       }
       const versionId = clock.newId();
+      const changeNote = describeChange(
+        { version: version.version, ...textOf(version) },
+        { identityAnchors: text.identityAnchors ?? '', look: text.look ?? text.description, continuityLocks: input.continuityLocks },
+      );
       db.transaction(() => {
         insertCharacterVersion(db, {
           id: versionId,
           characterId,
           version: version.version + 1,
-          description: input.description,
+          ...text,
+          changeNote,
           continuityLocks: input.continuityLocks,
           sheetAssetId: null,
           lookAssetId: null,
@@ -336,26 +440,56 @@ export function createCharacterService(deps: {
       return changed;
     },
 
-    async generate(characterId, videoId, consentToken) {
+    async generate(characterId, videoId, consentToken, part) {
       const { row, version } = requireCharacter(characterId);
       const context = generateContext(row, videoId);
       if (!version.description.trim()) throw new StudioError(400, '請填寫角色的外觀描述');
-      if (version.confirmedAt) throw new StudioError(409, `「${row.name}」已經確認；要修改請先改外觀描述`);
+      // 已確認的版本不能整批重生；只重生其中一張時，另存為新版本
+      if (version.confirmedAt && !part) throw new StudioError(409, `「${row.name}」已經確認；要修改請先改外觀描述`);
       const generation = deps.generation;
       if (!generation) throw new StudioError(503, deps.unavailableMessage ?? '還沒設定生成服務');
       const model = context.imageModel;
-      const items = [{ model, units: 2 }];
+      const parts: CharacterPart[] = part ? [part] : ['sheet', 'look'];
       const scope = context.videoId ?? { seriesId: context.seriesId };
-      const precheck = generation.service.precheck(scope, items, consentToken, [[{ model, units: 1 }], [{ model, units: 1 }]]);
+      const precheck = generation.service.precheck(
+        scope,
+        [{ model, units: parts.length }],
+        consentToken,
+        parts.map(() => [{ model, units: 1 }]),
+      );
       if (!precheck.ok) return { status: 'consent_required', check: precheck.check };
-      // 這個版本用這支影片（或系列角色庫：系列預設）的圖片模型產生
-      if (version.imageModel !== model) updateCharacterVersion(db, version.id, { imageModel: model });
-      const current = findCharacterVersion(db, version.id) ?? version;
-      const requests = [
-        await buildRequest(generation, { context, character: row, version: current, part: 'sheet' }),
-        await buildRequest(generation, { context, character: row, version: current, part: 'look' }),
-      ];
-      updateCharacterVersion(db, version.id, { sheetAssetId: null, lookAssetId: null });
+
+      // 要產生圖片的版本：已確認的版本另存為新版本（文字不變，另一張沿用原版本的圖），否則就是目前這一版
+      let target: CharacterVersionRow = { ...version, imageModel: model };
+      const forkFromConfirmed = Boolean(version.confirmedAt);
+      if (forkFromConfirmed) {
+        target = {
+          ...version,
+          id: clock.newId(),
+          version: version.version + 1,
+          changeNote: describeChange({ version: version.version, ...textOf(version) }, textOf(version), part),
+          sheetAssetId: part === 'sheet' ? null : version.sheetAssetId,
+          lookAssetId: part === 'look' ? null : version.lookAssetId,
+          imageModel: model,
+          confirmedAt: null,
+        };
+      }
+      const requests = [];
+      for (const each of parts) requests.push(await buildRequest(generation, { context, character: row, version: target, part: each }));
+
+      if (forkFromConfirmed) {
+        db.transaction(() => {
+          insertCharacterVersion(db, target);
+          updateCharacter(db, row.id, { currentVersionId: target.id });
+        });
+        deps.onVersionChanged?.(load(characterId));
+      } else {
+        updateCharacterVersion(db, target.id, {
+          imageModel: model,
+          ...(parts.includes('sheet') ? { sheetAssetId: null } : {}),
+          ...(parts.includes('look') ? { lookAssetId: null } : {}),
+        });
+      }
       const outcome = await generation.service.submitBatch(requests, consentToken);
       if (outcome.status === 'consent_required') return { status: 'consent_required', check: outcome.check };
       return { status: 'accepted', character: load(characterId) };
@@ -375,7 +509,8 @@ export function createCharacterService(deps: {
       if (!version.confirmedAt) throw new StudioError(409, `請先確認「${row.name}」的定裝圖`);
       const seriesId = row.seriesId ?? (row.videoId ? findVideo(db, row.videoId)?.seriesId : null) ?? null;
       if (!seriesId) throw new StudioError(409, '找不到這個角色的系列');
-      updateCharacter(db, row.id, { isSeries: true, seriesId });
+      // 設為系列角色後屬於系列，不再屬於原本那支影片（同 05：系列角色 video_id 為 null）
+      updateCharacter(db, row.id, { isSeries: true, seriesId, videoId: null });
       return load(characterId);
     },
 

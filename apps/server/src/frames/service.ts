@@ -39,7 +39,8 @@ import { videos, type FrameRow, type GenerationRow } from '../db/schema.js';
 import type { GenerationRequest, GenerationService, SucceededHandler } from '../generations/service.js';
 import { findPhoto } from '../photos/repository.js';
 import type { PlanService } from '../plans/service.js';
-import { findSeries, type Clock } from '../series/repository.js';
+import type { Clock } from '../series/repository.js';
+import { seriesSettingsForVideo } from '../series/settings.js';
 import { StudioError, VIDEO_NOT_FOUND } from '../studio/errors.js';
 import { findVersion as findBoardVersion, listViews } from '../templeBoards/repository.js';
 import { findVideo } from '../videos/repository.js';
@@ -247,7 +248,7 @@ export function createFrameService(deps: {
       throw new StudioError(503, error instanceof Error ? error.message : '參考圖拼接失敗');
     });
 
-    const series = findSeries(db, video.seriesId);
+    const series = seriesSettingsForVideo(db, video);
     const characters = cast.map((c) => ({ name: c.name, continuityLocks: c.version.continuityLocks }));
     const appearanceLocks = boardVersion?.appearanceLocks ?? [];
     const locks = frameLocks(characters, appearanceLocks);

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { costLimitSchema } from './costs.js';
 import { IMAGE_MODEL_KEYS, VIDEO_MODEL_KEYS } from './models.js';
 import { photoSchema } from './photos.js';
+import { seriesSnapshotSchema } from './seriesSnapshot.js';
 import { reusableTempleBoardSchema } from './templeBoards.js';
 import { templeSummarySchema } from './temples.js';
 
@@ -65,6 +66,8 @@ export const videoSchema = z.object({
   costLimit: z.number().int().nullable(),
   /** 複製來源（第 12 階段）；不是複製的影片為 null */
   copiedFromVideoId: z.string().nullable().default(null),
+  /** 建立影片時保存的系列設定（第 14 階段）；舊資料補上建立當下可取得的設定，仍可能為 null */
+  seriesSnapshot: seriesSnapshotSchema.nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

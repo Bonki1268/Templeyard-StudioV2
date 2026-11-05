@@ -3,6 +3,11 @@ import {
   assetResponseSchema,
   assistResponseSchema,
   characterListResponseSchema,
+  characterUsageResponseSchema,
+  characterVersionsResponseSchema,
+  libraryCharactersResponseSchema,
+  questionnaireDefaultsViewSchema,
+  settingsSchema,
   characterResponseSchema,
   chatListResponseSchema,
   clipsResponseSchema,
@@ -48,7 +53,17 @@ import {
   type TempleBoard,
   type UpdateTempleBoardInput,
   type CreatePhotoInput,
+  type CharacterPart,
+  type CharacterScope,
+  type CharacterUsageItem,
+  type CharacterVersion,
   type CreateSeriesCharacterInput,
+  type DefaultsPatch,
+  type LibraryCharacter,
+  type QuestionnaireDefaultsView,
+  type Settings,
+  type VideoFilter,
+  type VideoSort,
   type CreateSeriesInput,
   type ImageUpload,
   type Photo,
@@ -342,9 +357,9 @@ export async function patchCharacter(characterId: string, input: UpdateCharacter
   return characterResponseSchema.parse(await request(`/api/characters/${characterId}`, { method: 'PATCH', body: JSON.stringify(input) })).character;
 }
 
-/** videoId 為 null：系列角色庫，用系列的預設圖片模型 */
-export async function generateCharacter(characterId: string, videoId: string | null, consentToken: string | undefined): Promise<void> {
-  await postGenerate(`/api/characters/${characterId}/generate`, { ...(videoId ? { videoId } : {}), ...(consentToken ? { consentToken } : {}) });
+/** videoId 為 null：系列角色庫，用系列的預設圖片模型；part：只重生三視圖或定裝圖（第 14 階段） */
+export async function generateCharacter(characterId: string, videoId: string | null, consentToken: string | undefined, part?: CharacterPart): Promise<void> {
+  await postGenerate(`/api/characters/${characterId}/generate`, { ...(videoId ? { videoId } : {}), ...(consentToken ? { consentToken } : {}), ...(part ? { part } : {}) });
 }
 
 export async function confirmCharacter(characterId: string): Promise<Character> {
@@ -456,6 +471,47 @@ export async function copyVideo(videoId: string): Promise<Video> {
 
 // ── 系列設定的影片列表（2026-11-04） ──
 
-export async function fetchSeriesVideos(seriesId: string): Promise<SeriesVideosResponse> {
-  return seriesVideosResponseSchema.parse(await request(`/api/series/${seriesId}/videos`));
+export async function fetchSeriesVideos(seriesId: string, options: { status?: VideoFilter; sort?: VideoSort } = {}): Promise<SeriesVideosResponse> {
+  const query = new URLSearchParams();
+  if (options.status) query.set('status', options.status);
+  if (options.sort) query.set('sort', options.sort);
+  const suffix = query.size > 0 ? `?${query.toString()}` : '';
+  return seriesVideosResponseSchema.parse(await request(`/api/series/${seriesId}/videos${suffix}`));
+}
+
+// ── 系列頁（第 14 階段）：角色庫、角色詳情、問卷預設值、費用設定 ──
+
+export async function fetchLibraryCharacters(seriesId: string, options: { scope?: CharacterScope; q?: string } = {}): Promise<LibraryCharacter[]> {
+  const query = new URLSearchParams();
+  if (options.scope) query.set('scope', options.scope);
+  if (options.q) query.set('q', options.q);
+  const suffix = query.size > 0 ? `?${query.toString()}` : '';
+  return libraryCharactersResponseSchema.parse(await request(`/api/series/${seriesId}/characters${suffix}`)).characters;
+}
+
+export async function fetchCharacterVersions(characterId: string): Promise<CharacterVersion[]> {
+  return characterVersionsResponseSchema.parse(await request(`/api/characters/${characterId}/versions`)).versions;
+}
+
+export async function fetchCharacterUsage(characterId: string): Promise<CharacterUsageItem[]> {
+  return characterUsageResponseSchema.parse(await request(`/api/characters/${characterId}/usage`)).videos;
+}
+
+export async function fetchQuestionnaireDefaults(seriesId: string): Promise<QuestionnaireDefaultsView> {
+  return questionnaireDefaultsViewSchema.parse(await request(`/api/series/${seriesId}/questionnaire-defaults`));
+}
+
+export async function patchQuestionnaireDefaults(seriesId: string, defaults: DefaultsPatch): Promise<QuestionnaireDefaultsView> {
+  const body = await request(`/api/series/${seriesId}/questionnaire-defaults`, { method: 'PATCH', body: JSON.stringify({ defaults }) });
+  return questionnaireDefaultsViewSchema.parse(body);
+}
+
+export async function fetchSettings(): Promise<Settings> {
+  const body = (await request('/api/settings')) as { settings?: unknown };
+  return settingsSchema.parse(body.settings);
+}
+
+export async function patchSettings(input: Partial<Settings>): Promise<Settings> {
+  const body = (await request('/api/settings', { method: 'PATCH', body: JSON.stringify(input) })) as { settings?: unknown };
+  return settingsSchema.parse(body.settings);
 }

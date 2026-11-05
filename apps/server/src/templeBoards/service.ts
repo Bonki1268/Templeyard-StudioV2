@@ -37,7 +37,8 @@ import type { AppDatabase } from '../db/client.js';
 import { templeBoards, templeBoardVersions, templeViews, videos, type TempleBoardVersionRow, type TempleViewRow, type VideoRow } from '../db/schema.js';
 import type { GenerationRequest, GenerationService, SucceededHandler } from '../generations/service.js';
 import { listPhotosForVideo } from '../photos/repository.js';
-import { findSeries, type Clock } from '../series/repository.js';
+import type { Clock } from '../series/repository.js';
+import { seriesSettingsForVideo } from '../series/settings.js';
 import { findTemple } from '../temples/repository.js';
 import { findVideo } from '../videos/repository.js';
 import {
@@ -287,7 +288,7 @@ export function createTempleBoardService(deps: TempleBoardServiceDeps): TempleBo
     const max = preflight(model);
     const references = referencePhotos(input.photos, input.ownPhotoIds, max);
     const temple = findTemple(db, input.video.templeId);
-    const series = findSeries(db, input.video.seriesId);
+    const series = seriesSettingsForVideo(db, input.video);
     const file = prompt();
     const variables = templeViewVariables({
       temple: { name: temple?.name ?? '', district: temple?.district ?? '', deity: temple?.deity ?? '' },

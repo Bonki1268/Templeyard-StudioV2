@@ -1,4 +1,4 @@
-import { createSeriesCharacterSchema, generateCharacterSchema, updateCharacterSchema, type ApiError } from '@templeyard/shared';
+import { createSeriesCharacterSchema, generateCharacterSchema, parseCharacterScope, updateCharacterSchema, type ApiError } from '@templeyard/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import type { CharacterService } from '../characters/service.js';
@@ -42,8 +42,19 @@ export function registerCharacterRoutes(app: FastifyInstance, characters: Charac
     handle(reply, () => ({ characters: characters.listForVideo(request.params.id) })),
   );
 
-  app.get<SeriesParams>('/api/series/:id/characters', async (request, reply) =>
-    handle(reply, () => ({ characters: characters.listForSeries(request.params.id) })),
+  // 系列頁角色庫（第 14 階段）：系列角色加上這個系列影片的影片專屬角色；?scope=all|series|video、?q= 搜尋名稱或描述
+  app.get<SeriesParams & { Querystring: { scope?: string; q?: string } }>('/api/series/:id/characters', async (request, reply) => {
+    const scope = parseCharacterScope(request.query.scope);
+    if (!scope) return reply.status(400).send(errorBody('篩選條件不正確'));
+    return handle(reply, () => ({ characters: characters.listLibrary(request.params.id, { scope, query: request.query.q ?? '' }) }));
+  });
+
+  app.get<CharacterParams>('/api/characters/:cid/versions', async (request, reply) =>
+    handle(reply, () => ({ versions: characters.versions(request.params.cid) })),
+  );
+
+  app.get<CharacterParams>('/api/characters/:cid/usage', async (request, reply) =>
+    handle(reply, () => ({ videos: characters.usage(request.params.cid) })),
   );
 
   app.post<SeriesParams>('/api/series/:id/characters', async (request, reply) => {
@@ -62,7 +73,7 @@ export function registerCharacterRoutes(app: FastifyInstance, characters: Charac
     const parsed = generateBodySchema.safeParse(request.body ?? {});
     if (!parsed.success) return reply.status(400).send(invalid(parsed.error));
     return handle(reply, async () => {
-      const outcome = await characters.generate(request.params.cid, parsed.data.videoId ?? null, parsed.data.consentToken);
+      const outcome = await characters.generate(request.params.cid, parsed.data.videoId ?? null, parsed.data.consentToken, parsed.data.part);
       if (outcome.status === 'consent_required') return reply.status(409).send({ message: CONSENT_MESSAGE, check: outcome.check });
       return reply.status(202).send({ character: outcome.character });
     });

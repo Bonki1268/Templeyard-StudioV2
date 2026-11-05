@@ -3,7 +3,11 @@ import { useState } from 'react';
 import { Route, Routes } from 'react-router';
 import { CreateVideoPage } from './pages/CreateVideoPage';
 import { SeriesHomePage } from './pages/SeriesHomePage';
-import { SeriesSettingsPage } from './pages/SeriesSettingsPage';
+import { CharacterDetailPage } from './pages/series/CharacterDetailPage';
+import { SeriesCharactersTab } from './pages/series/SeriesCharactersTab';
+import { SeriesSettingsTab } from './pages/series/SeriesSettingsTab';
+import { SeriesShell, SeriesTabsLayout } from './pages/series/SeriesShell';
+import { SeriesVideosTab } from './pages/series/SeriesVideosTab';
 import { ShotDetailPage } from './pages/ShotDetailPage';
 import { StudioPage } from './pages/StudioPage';
 import { TempleBoardPage } from './pages/TempleBoardPage';
@@ -17,7 +21,14 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <Routes>
         <Route path="/" element={<SeriesHomePage />} />
-        <Route path="/series/:sid/settings" element={<SeriesSettingsPage />} />
+        <Route path="/series/:sid" element={<SeriesShell />}>
+          <Route element={<SeriesTabsLayout />}>
+            <Route path="settings" element={<SeriesSettingsTab />} />
+            <Route path="characters" element={<SeriesCharactersTab />} />
+            <Route path="videos" element={<SeriesVideosTab />} />
+          </Route>
+          <Route path="characters/:cid" element={<CharacterDetailPage />} />
+        </Route>
         <Route path="/series/:sid/videos/new" element={<CreateVideoPage />} />
         <Route path="/videos/:vid/temple-board" element={<TempleBoardPage />} />
         <Route path="/videos/:vid/studio" element={<StudioPage />} />

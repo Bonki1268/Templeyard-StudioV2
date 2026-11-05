@@ -30,7 +30,7 @@ export function SeriesCard({ series }: { series: Series }) {
           {series.name}
         </h3>
       </div>
-      {tags.length > 0 && (
+      {videos.isSuccess && tags.length > 0 && (
         <ul className={styles.tags} aria-label={`${series.name}的標籤`}>
           {tags.map((tag) => (
             <li key={tag}>

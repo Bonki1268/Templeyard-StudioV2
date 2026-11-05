@@ -33,7 +33,8 @@ import type { z } from 'zod';
 import type { AppDatabase } from '../db/client.js';
 import { videos } from '../db/schema.js';
 import { listPhotosForVideo } from '../photos/repository.js';
-import { findSeries, type Clock } from '../series/repository.js';
+import type { Clock } from '../series/repository.js';
+import { seriesSettingsForVideo } from '../series/settings.js';
 import { StudioError, VIDEO_NOT_FOUND } from '../studio/errors.js';
 import { findQuestionnaire } from '../studio/repository.js';
 import { latestViewGeneration, listViews } from '../templeBoards/repository.js';
@@ -184,7 +185,7 @@ export function createPlanService(deps: {
   /** story-script 節點的變數（prompt-studio/prompts/story-script.json） */
   function storyVariables(video: Video): Record<string, unknown> {
     const temple = findTemple(db, video.templeId);
-    const seriesRow = findSeries(db, video.seriesId);
+    const seriesRow = seriesSettingsForVideo(db, video);
     if (!temple || !seriesRow) throw new Error('影片的寺廟或系列不存在');
     const answers = findQuestionnaire(db, video.id)?.answers ?? [];
     const story = answers.find((answer) => answer.questionId === 'story')?.custom ?? video.creativeInput ?? '';

@@ -20,12 +20,24 @@ type SeriesLike = {
   questionnaireDefaults: Record<string, unknown> | null;
 };
 
-/** 影片建立時，從系列目前的設定做一份快照 */
-export function makeSeriesSnapshot(_series: SeriesLike): SeriesSnapshot {
-  throw new Error('尚未實作：makeSeriesSnapshot');
+function readDefaults(value: unknown): SeriesSnapshot['questionnaireDefaults'] {
+  const parsed = questionnaireDefaultsSchema.safeParse(value);
+  return parsed.success ? structuredClone(parsed.data) : null;
+}
+
+/** 影片建立時，從系列目前的設定做一份快照（問卷預設值格式不正確時當成沒有） */
+export function makeSeriesSnapshot(series: SeriesLike): SeriesSnapshot {
+  return {
+    visualStyle: series.visualStyle,
+    direction: series.direction,
+    defaultImageModel: series.defaultImageModel,
+    defaultVideoModel: series.defaultVideoModel,
+    questionnaireDefaults: readDefaults(series.questionnaireDefaults),
+  };
 }
 
 /** 這支影片用的系列設定：有格式正確的快照用快照，否則（舊資料）用系列目前的設定 */
-export function seriesSettingsOf(_snapshot: unknown, _live: SeriesLike): SeriesSnapshot {
-  throw new Error('尚未實作：seriesSettingsOf');
+export function seriesSettingsOf(snapshot: unknown, live: SeriesLike): SeriesSnapshot {
+  const parsed = seriesSnapshotSchema.safeParse(snapshot);
+  return parsed.success ? parsed.data : makeSeriesSnapshot(live);
 }

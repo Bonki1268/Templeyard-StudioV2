@@ -34,12 +34,17 @@ export type CostCheck = {
 export const settingsSchema = z.object({
   /** 單筆同意門檻（點數）；null 表示還沒設定，每次付費生成都要同意 */
   consentThresholdCredits: z.number().int().min(0).nullable(),
+  /** 新影片的費用上限（點數）；null 表示新影片不設上限（第 14 階段，系列設定的費用區塊） */
+  defaultVideoCostLimitCredits: z.number().int().min(0).nullable().default(null),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 
-export const updateSettingsSchema = z.object({
-  consentThresholdCredits: credits('同意門檻要是 0 以上的整數點數').nullable(),
-});
+export const updateSettingsSchema = z
+  .object({
+    consentThresholdCredits: credits('同意門檻要是 0 以上的整數點數').nullable(),
+    defaultVideoCostLimitCredits: credits('費用上限要是 0 以上的整數點數').nullable(),
+  })
+  .partial();
 
 export const COST_LIMIT_ERROR = '費用上限要是 0 以上的整數點數';
 export const costLimitSchema = credits(COST_LIMIT_ERROR).nullable();
